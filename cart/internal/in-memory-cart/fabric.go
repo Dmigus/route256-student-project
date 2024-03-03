@@ -8,6 +8,6 @@ import (
 type InMemoryCartFabric struct {
 }
 
-func (i *InMemoryCartFabric) Create(ctx context.Context) (repository.Cart, error) {
+func (i *InMemoryCartFabric) Create(_ context.Context) (repository.Cart, error) {
 	return New(), nil
 }

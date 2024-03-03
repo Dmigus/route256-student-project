@@ -17,37 +17,36 @@ func New() *InMemoryCart {
 	}
 }
 
-func (u *InMemoryCart) Add(ctx context.Context, skuId modifier.SkuId, count uint16) error {
+func (u *InMemoryCart) Add(_ context.Context, skuId modifier.SkuId, count uint16) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	u.items[skuId] += count
 	return nil
 }
 
-func (u *InMemoryCart) Delete(ctx context.Context, skuId modifier.SkuId) error {
+func (u *InMemoryCart) Delete(_ context.Context, skuId modifier.SkuId) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	delete(u.items, skuId)
 	return nil
 }
 
-func (u *InMemoryCart) Clear(ctx context.Context) error {
+func (u *InMemoryCart) Clear(_ context.Context) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	clear(u.items)
 	return nil
 }
 
-func (u *InMemoryCart) Range(ctx context.Context, f func(ctx context.Context, skuId modifier.SkuId, count uint16)) error {
+// Обходит все пары (ИД товара, количество) и вызывает функцию f до того момента, пока f возвращает true. Предполагается, что в случае ошибки f вернёт false и обход сразу завершится.
+func (u *InMemoryCart) Range(ctx context.Context, f func(ctx context.Context, skuId modifier.SkuId, count uint16) bool) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	continueRange := true
 	for skuId, count := range u.items {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			f(ctx, skuId, count)
+		continueRange = f(ctx, skuId, count)
+		if !continueRange {
+			return
 		}
 	}
-	return nil
 }

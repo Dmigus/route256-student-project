@@ -6,7 +6,7 @@ import (
 )
 
 type CartToList interface {
-	Range(ctx context.Context, f func(ctx context.Context, skuId modifier.SkuId, count uint16)) error
+	Range(ctx context.Context, f func(ctx context.Context, skuId modifier.SkuId, count uint16) bool)
 }
 
 type Repository interface {
@@ -37,10 +37,12 @@ func (cl *CartListerService) ListCartContent(ctx context.Context, user modifier.
 
 func (cl *CartListerService) compCartContent(ctx context.Context, cart CartToList) (CartContent, error) {
 	content := CartContent{}
-	err := cart.Range(ctx, func(ctx context.Context, skuId modifier.SkuId, count uint16) {
+	var errGlob error
+	cart.Range(ctx, func(ctx context.Context, skuId modifier.SkuId, count uint16) bool {
 		prodInfo, err := cl.productService.GetProductInfo(ctx, skuId)
 		if err != nil {
-			return
+			errGlob = err
+			return false
 		}
 		itInfo := ItemInfo{
 			SkuId: skuId,
@@ -50,9 +52,10 @@ func (cl *CartListerService) compCartContent(ctx context.Context, cart CartToLis
 		}
 		content.items = append(content.items, itInfo)
 		content.totalPrice += uint32(count) * prodInfo.price
+		return true
 	})
-	if err != nil {
-		return CartContent{}, err
+	if errGlob != nil {
+		return CartContent{}, errGlob
 	}
 	return content, nil
 }
