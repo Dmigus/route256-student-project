@@ -19,8 +19,8 @@ type Repository interface {
 }
 
 type ProductInfo struct {
-	name  string
-	price service.Price
+	Name  string
+	Price service.Price
 }
 
 type ProductService interface {
@@ -46,6 +46,7 @@ func (cl *CartListerService) ListCartContent(ctx context.Context, user service.U
 	if err != nil {
 		return nil, err
 	}
+	// TODO: сортировка
 	return createCartContent(items, productInfos), nil
 }
 
@@ -54,9 +55,9 @@ func createCartContent(items []CartItem, prodInfos []ProductInfo) *CartContent {
 	for i := range items {
 		itInfo := ItemInfo{
 			SkuId: items[i].SkuId,
-			Name:  prodInfos[i].name,
+			Name:  prodInfos[i].Name,
 			Count: items[i].Count,
-			Price: prodInfos[i].price,
+			Price: prodInfos[i].Price,
 		}
 		content.addItem(itInfo)
 	}
