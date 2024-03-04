@@ -1,7 +1,8 @@
-package cart_repository
+package cartrepository
 
 import (
 	"context"
+	"route256.ozon.ru/project/cart/internal/service"
 	"route256.ozon.ru/project/cart/internal/service/lister"
 	"route256.ozon.ru/project/cart/internal/service/modifier"
 	"sync"
@@ -18,18 +19,18 @@ type CartFabric interface {
 
 type CartRepository struct {
 	cartFabric CartFabric
-	carts      map[modifier.User]Cart
+	carts      map[service.User]Cart
 	mu         sync.Mutex
 }
 
 func New(cartFabric CartFabric) *CartRepository {
 	return &CartRepository{
 		cartFabric: cartFabric,
-		carts:      make(map[modifier.User]Cart),
+		carts:      make(map[service.User]Cart),
 	}
 }
 
-func (c *CartRepository) CartByUser(ctx context.Context, user modifier.User) (Cart, error) {
+func (c *CartRepository) CartByUser(ctx context.Context, user service.User) (Cart, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if cart, exists := c.carts[user]; exists {

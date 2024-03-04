@@ -1,8 +1,8 @@
-package in_memory_cart
+package inmemorycart
 
 import (
 	"context"
-	repository "route256.ozon.ru/project/cart/internal/cart-repository"
+	repository "route256.ozon.ru/project/cart/internal/cartrepository"
 )
 
 type InMemoryCartFabric struct {

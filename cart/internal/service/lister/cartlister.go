@@ -2,24 +2,29 @@ package lister
 
 import (
 	"context"
-	"route256.ozon.ru/project/cart/internal/service/modifier"
+	"route256.ozon.ru/project/cart/internal/service"
 )
 
+type CartItem struct {
+	SkuId service.SkuId
+	Count service.ItemCount
+}
+
 type CartToList interface {
-	Range(ctx context.Context, f func(ctx context.Context, skuId modifier.SkuId, count uint16) bool)
+	ListItems(ctx context.Context) ([]CartItem, error)
 }
 
 type Repository interface {
-	CartByUser(ctx context.Context, user modifier.User) (CartToList, error)
+	CartByUser(ctx context.Context, user service.User) (CartToList, error)
 }
 
-type productInfo struct {
+type ProductInfo struct {
 	name  string
-	price uint32
+	price service.Price
 }
 
 type ProductService interface {
-	GetProductInfo(ctx context.Context, skuId modifier.SkuId) (productInfo, error)
+	GetProductsInfo(ctx context.Context, skuIds []service.SkuId) ([]ProductInfo, error)
 }
 
 type CartListerService struct {
@@ -27,35 +32,41 @@ type CartListerService struct {
 	productService ProductService
 }
 
-func (cl *CartListerService) ListCartContent(ctx context.Context, user modifier.User) (CartContent, error) {
+func (cl *CartListerService) ListCartContent(ctx context.Context, user service.User) (*CartContent, error) {
 	cart, err := cl.repo.CartByUser(ctx, user)
 	if err != nil {
-		return CartContent{}, err
+		return nil, err
 	}
-	return cl.compCartContent(ctx, cart)
+	items, err := cart.ListItems(ctx)
+	if err != nil {
+		return nil, err
+	}
+	skuIds := extractSkuIds(items)
+	productInfos, err := cl.productService.GetProductsInfo(ctx, skuIds)
+	if err != nil {
+		return nil, err
+	}
+	return createCartContent(items, productInfos), nil
 }
 
-func (cl *CartListerService) compCartContent(ctx context.Context, cart CartToList) (CartContent, error) {
-	content := CartContent{}
-	var errGlob error
-	cart.Range(ctx, func(ctx context.Context, skuId modifier.SkuId, count uint16) bool {
-		prodInfo, err := cl.productService.GetProductInfo(ctx, skuId)
-		if err != nil {
-			errGlob = err
-			return false
-		}
+func createCartContent(items []CartItem, prodInfos []ProductInfo) *CartContent {
+	content := &CartContent{}
+	for i := range items {
 		itInfo := ItemInfo{
-			SkuId: skuId,
-			Name:  prodInfo.name,
-			Count: count,
-			Price: prodInfo.price,
+			SkuId: items[i].SkuId,
+			Name:  prodInfos[i].name,
+			Count: items[i].Count,
+			Price: prodInfos[i].price,
 		}
-		content.items = append(content.items, itInfo)
-		content.totalPrice += uint32(count) * prodInfo.price
-		return true
-	})
-	if errGlob != nil {
-		return CartContent{}, errGlob
+		content.addItem(itInfo)
 	}
-	return content, nil
+	return content
+}
+
+func extractSkuIds(items []CartItem) []service.SkuId {
+	skuIds := make([]service.SkuId, len(items))
+	for i, item := range items {
+		skuIds[i] = item.SkuId
+	}
+	return skuIds
 }
