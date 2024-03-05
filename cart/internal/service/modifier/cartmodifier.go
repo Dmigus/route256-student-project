@@ -14,7 +14,7 @@ type CartToModify interface {
 }
 
 type Repository interface {
-	CartByUser(ctx context.Context, user service.User) (CartToModify, error)
+	CartToModifyByUser(ctx context.Context, user service.User) (CartToModify, error)
 }
 
 type ProductService interface {
@@ -27,6 +27,13 @@ type CartModifierService struct {
 	productService ProductService
 }
 
+func New(repo Repository, productService ProductService) *CartModifierService {
+	return &CartModifierService{
+		repo:           repo,
+		productService: productService,
+	}
+}
+
 var ErrItemNotExists = errors.New("item is not exist")
 
 func (cs *CartModifierService) AddItem(ctx context.Context, user service.User, skuId service.SkuId, count service.ItemCount) error {
@@ -35,7 +42,7 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user service.User, s
 	} else if !exists {
 		return ErrItemNotExists
 	}
-	if cart, err := cs.repo.CartByUser(ctx, user); err != nil {
+	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
 		return err
 	} else {
 		return cart.Add(ctx, skuId, count)
@@ -43,7 +50,7 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user service.User, s
 }
 
 func (cs *CartModifierService) DeleteItem(ctx context.Context, user service.User, skuId service.SkuId) error {
-	if cart, err := cs.repo.CartByUser(ctx, user); err != nil {
+	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
 		return err
 	} else {
 		return cart.Delete(ctx, skuId)
@@ -51,7 +58,7 @@ func (cs *CartModifierService) DeleteItem(ctx context.Context, user service.User
 }
 
 func (cs *CartModifierService) ClearCart(ctx context.Context, user service.User) error {
-	if cart, err := cs.repo.CartByUser(ctx, user); err != nil {
+	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
 		return err
 	} else {
 		return cart.Clear(ctx)

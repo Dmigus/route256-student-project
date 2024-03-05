@@ -15,7 +15,7 @@ type CartToList interface {
 }
 
 type Repository interface {
-	CartByUser(ctx context.Context, user service.User) (CartToList, error)
+	CartToListByUser(ctx context.Context, user service.User) (CartToList, error)
 }
 
 type ProductInfo struct {
@@ -32,8 +32,12 @@ type CartListerService struct {
 	productService ProductService
 }
 
+func New(repo Repository, productService ProductService) *CartListerService {
+	return &CartListerService{repo: repo, productService: productService}
+}
+
 func (cl *CartListerService) ListCartContent(ctx context.Context, user service.User) (*CartContent, error) {
-	cart, err := cl.repo.CartByUser(ctx, user)
+	cart, err := cl.repo.CartToListByUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}

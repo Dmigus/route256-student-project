@@ -30,7 +30,7 @@ func New(cartFabric CartFabric) *CartRepository {
 	}
 }
 
-func (c *CartRepository) CartByUser(ctx context.Context, user service.User) (Cart, error) {
+func (c *CartRepository) getCartByUser(ctx context.Context, user service.User) (Cart, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if cart, exists := c.carts[user]; exists {
@@ -42,4 +42,12 @@ func (c *CartRepository) CartByUser(ctx context.Context, user service.User) (Car
 	}
 	c.carts[user] = newCart
 	return newCart, nil
+}
+
+func (c *CartRepository) CartToListByUser(ctx context.Context, user service.User) (lister.CartToList, error) {
+	return c.getCartByUser(ctx, user)
+}
+
+func (c *CartRepository) CartToModifyByUser(ctx context.Context, user service.User) (modifier.CartToModify, error) {
+	return c.getCartByUser(ctx, user)
 }

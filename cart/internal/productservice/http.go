@@ -14,11 +14,11 @@ import (
 
 type ProductService struct {
 	token   string
-	baseURL url.URL
+	baseURL *url.URL
 	client  http.Client
 }
 
-func New(baseURL url.URL, token string) *ProductService {
+func New(baseURL *url.URL, token string) *ProductService {
 	return &ProductService{
 		baseURL: baseURL,
 		token:   token,
@@ -42,7 +42,7 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId service.SkuId)
 		return false, fmt.Errorf("error during request: %s\n", err)
 	}
 	var respDTO listSkusResponse
-	err = p.parseResponse(response, &response)
+	err = p.parseResponse(response, &respDTO)
 	if err != nil {
 		return false, err
 	}

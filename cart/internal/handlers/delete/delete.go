@@ -14,10 +14,10 @@ const (
 )
 
 type Delete struct {
-	cartService modifier.CartModifierService
+	cartService *modifier.CartModifierService
 }
 
-func New(cartService modifier.CartModifierService) *Delete {
+func New(cartService *modifier.CartModifierService) *Delete {
 	return &Delete{
 		cartService: cartService,
 	}
@@ -33,7 +33,7 @@ func (h *Delete) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type deleteItemReq struct {

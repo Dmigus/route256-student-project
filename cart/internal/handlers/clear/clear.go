@@ -10,10 +10,10 @@ import (
 const UserIdSegment = "userId"
 
 type Clear struct {
-	cartService modifier.CartModifierService
+	cartService *modifier.CartModifierService
 }
 
-func New(cartService modifier.CartModifierService) *Clear {
+func New(cartService *modifier.CartModifierService) *Clear {
 	return &Clear{
 		cartService: cartService,
 	}
@@ -30,5 +30,5 @@ func (h *Clear) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }

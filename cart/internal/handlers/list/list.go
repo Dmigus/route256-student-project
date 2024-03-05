@@ -12,10 +12,10 @@ import (
 const UserIdSegment = "userId"
 
 type List struct {
-	cartService lister.CartListerService
+	cartService *lister.CartListerService
 }
 
-func New(cartService lister.CartListerService) *List {
+func New(cartService *lister.CartListerService) *List {
 	return &List{
 		cartService: cartService,
 	}
@@ -34,6 +34,10 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dto := listToDTO(list)
+	if isCartEmpty(dto) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	marshalled, err := json.Marshal(dto)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -64,4 +68,8 @@ func listToDTO(content *lister.CartContent) listResponse {
 		return lr.Items[i].SkuId < lr.Items[j].SkuId
 	})
 	return lr
+}
+
+func isCartEmpty(list listResponse) bool {
+	return len(list.Items) == 0
 }

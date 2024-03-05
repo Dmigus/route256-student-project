@@ -16,10 +16,10 @@ const (
 )
 
 type Add struct {
-	cartService modifier.CartModifierService
+	cartService *modifier.CartModifierService
 }
 
-func New(cartService modifier.CartModifierService) *Add {
+func New(cartService *modifier.CartModifierService) *Add {
 	return &Add{
 		cartService: cartService,
 	}

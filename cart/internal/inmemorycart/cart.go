@@ -8,13 +8,13 @@ import (
 )
 
 type InMemoryCart struct {
-	items map[service.SkuId]service.ItemCount // мб стоит заменить на sync.Map
+	items map[service.SkuId]service.ItemCount
 	mu    sync.Mutex
 }
 
 func New() *InMemoryCart {
 	return &InMemoryCart{
-		items: make(map[service.SkuId]uint16),
+		items: make(map[service.SkuId]service.ItemCount),
 	}
 }
 
