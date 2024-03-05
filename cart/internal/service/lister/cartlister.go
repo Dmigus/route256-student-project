@@ -46,7 +46,6 @@ func (cl *CartListerService) ListCartContent(ctx context.Context, user service.U
 	if err != nil {
 		return nil, err
 	}
-	// TODO: сортировка
 	return createCartContent(items, productInfos), nil
 }
 

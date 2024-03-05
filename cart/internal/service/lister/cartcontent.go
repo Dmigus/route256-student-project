@@ -12,11 +12,11 @@ type ItemInfo struct {
 }
 
 type CartContent struct {
-	totalPrice service.Price
-	items      []ItemInfo
+	TotalPrice service.Price
+	Items      []ItemInfo
 }
 
 func (cc *CartContent) addItem(it ItemInfo) {
-	cc.items = append(cc.items, it)
-	cc.totalPrice += it.Price * service.Price(it.Count)
+	cc.Items = append(cc.Items, it)
+	cc.TotalPrice += it.Price * service.Price(it.Count)
 }
