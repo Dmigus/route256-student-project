@@ -40,7 +40,7 @@ func Run() {
 	listHandler := list.New(cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", list.UserIdSegment), listHandler)
 
-	if err = http.ListenAndServe("127.0.0.1:8080", mux); err != nil {
+	if err = http.ListenAndServe("0.0.0.0:8080", mux); err != nil {
 		log.Fatal(err)
 	}
 }
