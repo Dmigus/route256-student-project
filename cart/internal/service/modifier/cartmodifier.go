@@ -34,30 +34,32 @@ func New(repo Repository, productService ProductService) *CartModifierService {
 }
 
 func (cs *CartModifierService) AddItem(ctx context.Context, user service.User, skuId service.SkuId, count service.ItemCount) error {
-	if exists, err := cs.productService.IsItemPresent(ctx, skuId); err != nil {
+	exists, err := cs.productService.IsItemPresent(ctx, skuId)
+	if err != nil {
 		return fmt.Errorf("could not check item %d presence: %w", skuId, err)
-	} else if !exists {
+	}
+	if !exists {
 		return nil
 	}
-	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
+	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+	if err != nil {
 		return err
-	} else {
-		return cart.Add(ctx, skuId, count)
 	}
+	return cart.Add(ctx, skuId, count)
 }
 
 func (cs *CartModifierService) DeleteItem(ctx context.Context, user service.User, skuId service.SkuId) error {
-	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
+	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+	if err != nil {
 		return err
-	} else {
-		return cart.Delete(ctx, skuId)
 	}
+	return cart.Delete(ctx, skuId)
 }
 
 func (cs *CartModifierService) ClearCart(ctx context.Context, user service.User) error {
-	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
+	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+	if err != nil {
 		return err
-	} else {
-		return cart.Clear(ctx)
 	}
+	return cart.Clear(ctx)
 }

@@ -102,7 +102,6 @@ func parseCount(data []byte) (service.ItemCount, error) {
 	err := json.Unmarshal(data, &reqBody)
 	if err != nil || reqBody.Count == 0 {
 		return 0, errIncorrectCount
-	} else {
-		return reqBody.Count, nil
 	}
+	return reqBody.Count, nil
 }

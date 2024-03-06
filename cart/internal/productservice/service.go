@@ -53,9 +53,8 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId service.SkuId)
 	}
 	if len(respDTO.Skus) > 0 && respDTO.Skus[0] == int64(skuId) {
 		return true, nil
-	} else {
-		return false, nil
 	}
+	return false, nil
 }
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
@@ -115,7 +114,7 @@ func (p *ProductService) parseResponse(response *http.Response, toObj any) error
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(resBody, toObj); err != nil {
+	if err = json.Unmarshal(resBody, toObj); err != nil {
 		return err
 	}
 	return nil

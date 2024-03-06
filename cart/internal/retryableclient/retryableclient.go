@@ -1,6 +1,9 @@
 package retryableclient
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 type RetryableClient struct {
 	client *http.Client
@@ -31,16 +34,22 @@ func (rr retryRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	var res *http.Response
 	var err error
 	for attempts := 0; attempts < rr.maxRetries; attempts++ {
-		select {
-		// проверка, что контекст к этому моменту не отменён
-		case <-r.Context().Done():
+		if contextWasDone(r.Context()) {
 			return nil, r.Context().Err()
-		default:
-			res, err = rr.next.RoundTrip(r)
-			if !rr.retryCondition(res, err) {
-				return res, err
-			}
+		}
+		res, err = rr.next.RoundTrip(r)
+		if !rr.retryCondition(res, err) {
+			return res, err
 		}
 	}
 	return res, err
+}
+
+func contextWasDone(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
