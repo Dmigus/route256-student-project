@@ -3,21 +3,15 @@ package modifier
 import (
 	"context"
 	"fmt"
-	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/models"
 )
 
-type CartToModify interface {
-	Add(ctx context.Context, skuId usecases.SkuId, count usecases.ItemCount) error
-	Delete(ctx context.Context, skuId usecases.SkuId) error
-	Clear(ctx context.Context) error
-}
-
 type repository interface {
-	CartToModifyByUser(ctx context.Context, user usecases.User) (CartToModify, error)
+	CartByUser(ctx context.Context, user models.UserId) (*models.InMemoryCart, error)
 }
 
 type productService interface {
-	IsItemPresent(ctx context.Context, skuId usecases.SkuId) (bool, error)
+	IsItemPresent(ctx context.Context, skuId models.SkuId) (bool, error)
 }
 
 // CartModifierService предназначен для модификации корзин пользователей
@@ -33,7 +27,7 @@ func New(repo repository, productService productService) *CartModifierService {
 	}
 }
 
-func (cs *CartModifierService) AddItem(ctx context.Context, user usecases.User, skuId usecases.SkuId, count usecases.ItemCount) error {
+func (cs *CartModifierService) AddItem(ctx context.Context, user models.UserId, skuId models.SkuId, count models.ItemCount) error {
 	exists, err := cs.productService.IsItemPresent(ctx, skuId)
 	if err != nil {
 		return fmt.Errorf("could not check item %d presence: %w", skuId, err)
@@ -41,23 +35,23 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user usecases.User, 
 	if !exists {
 		return nil
 	}
-	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+	cart, err := cs.repo.CartByUser(ctx, user)
 	if err != nil {
 		return err
 	}
 	return cart.Add(ctx, skuId, count)
 }
 
-func (cs *CartModifierService) DeleteItem(ctx context.Context, user usecases.User, skuId usecases.SkuId) error {
-	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+func (cs *CartModifierService) DeleteItem(ctx context.Context, user models.UserId, skuId models.SkuId) error {
+	cart, err := cs.repo.CartByUser(ctx, user)
 	if err != nil {
 		return err
 	}
 	return cart.Delete(ctx, skuId)
 }
 
-func (cs *CartModifierService) ClearCart(ctx context.Context, user usecases.User) error {
-	cart, err := cs.repo.CartToModifyByUser(ctx, user)
+func (cs *CartModifierService) ClearCart(ctx context.Context, user models.UserId) error {
+	cart, err := cs.repo.CartByUser(ctx, user)
 	if err != nil {
 		return err
 	}

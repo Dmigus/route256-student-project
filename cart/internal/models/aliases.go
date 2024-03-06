@@ -1,7 +1,7 @@
-package usecases
+package models
 
 type (
-	User      = int64
+	UserId    = int64
 	SkuId     = int64
 	ItemCount = uint16
 	Price     = uint32

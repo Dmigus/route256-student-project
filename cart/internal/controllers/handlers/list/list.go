@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"route256.ozon.ru/project/cart/internal/usecases"
-	"route256.ozon.ru/project/cart/internal/usecases/lister"
+	"route256.ozon.ru/project/cart/internal/models"
 	"sort"
 	"strconv"
 )
@@ -17,7 +16,7 @@ const UserIdSegment = "userId"
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type cartListerService interface {
-	ListCartContent(ctx context.Context, user usecases.User) (*lister.CartContent, error)
+	ListCartContent(ctx context.Context, user models.UserId) (*models.CartContent, error)
 }
 
 type List struct {
@@ -51,6 +50,7 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(marshalled)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -59,7 +59,7 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseUserId(r *http.Request) (usecases.User, error) {
+func parseUserId(r *http.Request) (models.UserId, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
@@ -68,17 +68,17 @@ func parseUserId(r *http.Request) (usecases.User, error) {
 	return userId, nil
 }
 
-func listToDTO(content *lister.CartContent) listResponse {
+func listToDTO(content *models.CartContent) listResponse {
 	lr := listResponse{
-		TotalPrice: content.TotalPrice,
-		Items:      make([]listResponseItem, 0, len(content.Items)),
+		TotalPrice: content.GetPrice(),
+		Items:      make([]listResponseItem, 0, len(content.GetItems())),
 	}
-	for _, item := range content.Items {
+	for _, item := range content.GetItems() {
 		lr.Items = append(lr.Items, listResponseItem{
-			SkuId: item.SkuId,
-			Name:  item.Name,
-			Count: item.Count,
-			Price: item.Price,
+			SkuId: item.CartItem.SkuId,
+			Name:  item.ProductInfo.Name,
+			Count: item.CartItem.Count,
+			Price: item.ProductInfo.Price,
 		})
 	}
 	sort.Slice(lr.Items, func(i, j int) bool {

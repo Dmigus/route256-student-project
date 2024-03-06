@@ -2,52 +2,28 @@ package repository
 
 import (
 	"context"
-	"route256.ozon.ru/project/cart/internal/usecases"
-	"route256.ozon.ru/project/cart/internal/usecases/lister"
-	"route256.ozon.ru/project/cart/internal/usecases/modifier"
+	"route256.ozon.ru/project/cart/internal/models"
 	"sync"
 )
 
-type Cart interface {
-	lister.CartToList
-	modifier.CartToModify
-}
-
-type cartCreator interface {
-	Create(ctx context.Context) (Cart, error)
-}
-
 type CartRepository struct {
-	cartCreator cartCreator
-	carts       map[usecases.User]Cart
-	mu          sync.Mutex
+	carts map[models.UserId]*models.InMemoryCart
+	mu    sync.Mutex
 }
 
-func New(cartCreator cartCreator) *CartRepository {
+func New() *CartRepository {
 	return &CartRepository{
-		cartCreator: cartCreator,
-		carts:       make(map[usecases.User]Cart),
+		carts: make(map[models.UserId]*models.InMemoryCart),
 	}
 }
 
-func (c *CartRepository) getCartByUser(ctx context.Context, user usecases.User) (Cart, error) {
+func (c *CartRepository) CartByUser(_ context.Context, user models.UserId) (*models.InMemoryCart, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if cart, exists := c.carts[user]; exists {
 		return cart, nil
 	}
-	newCart, err := c.cartCreator.Create(ctx)
-	if err != nil {
-		return nil, err
-	}
+	newCart := models.NewInMemoryCart()
 	c.carts[user] = newCart
 	return newCart, nil
-}
-
-func (c *CartRepository) CartToListByUser(ctx context.Context, user usecases.User) (lister.CartToList, error) {
-	return c.getCartByUser(ctx, user)
-}
-
-func (c *CartRepository) CartToModifyByUser(ctx context.Context, user usecases.User) (modifier.CartToModify, error) {
-	return c.getCartByUser(ctx, user)
 }

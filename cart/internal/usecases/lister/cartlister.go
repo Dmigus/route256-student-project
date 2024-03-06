@@ -2,29 +2,15 @@ package lister
 
 import (
 	"context"
-	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/models"
 )
 
-type CartItem struct {
-	SkuId usecases.SkuId
-	Count usecases.ItemCount
-}
-
-type CartToList interface {
-	ListItems(ctx context.Context) ([]CartItem, error)
-}
-
 type repository interface {
-	CartToListByUser(ctx context.Context, user usecases.User) (CartToList, error)
-}
-
-type ProductInfo struct {
-	Name  string
-	Price usecases.Price
+	CartByUser(ctx context.Context, user models.UserId) (*models.InMemoryCart, error)
 }
 
 type productService interface {
-	GetProductsInfo(ctx context.Context, skuIds []usecases.SkuId) ([]ProductInfo, error)
+	GetProductsInfo(ctx context.Context, skuIds []models.SkuId) ([]models.ProductInfo, error)
 }
 
 type CartListerService struct {
@@ -36,8 +22,8 @@ func New(repo repository, productService productService) *CartListerService {
 	return &CartListerService{repo: repo, productService: productService}
 }
 
-func (cl *CartListerService) ListCartContent(ctx context.Context, user usecases.User) (*CartContent, error) {
-	cart, err := cl.repo.CartToListByUser(ctx, user)
+func (cl *CartListerService) ListCartContent(ctx context.Context, user models.UserId) (*models.CartContent, error) {
+	cart, err := cl.repo.CartByUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -53,22 +39,20 @@ func (cl *CartListerService) ListCartContent(ctx context.Context, user usecases.
 	return createCartContent(items, productInfos), nil
 }
 
-func createCartContent(items []CartItem, prodInfos []ProductInfo) *CartContent {
-	content := &CartContent{}
+func createCartContent(items []models.CartItem, prodInfos []models.ProductInfo) *models.CartContent {
+	content := models.NewCartContent()
 	for i := range items {
-		itInfo := ItemInfo{
-			SkuId: items[i].SkuId,
-			Name:  prodInfos[i].Name,
-			Count: items[i].Count,
-			Price: prodInfos[i].Price,
+		itInfo := models.CartItemInfo{
+			CartItem:    items[i],
+			ProductInfo: prodInfos[i],
 		}
-		content.addItem(itInfo)
+		content.Add(itInfo)
 	}
 	return content
 }
 
-func extractSkuIds(items []CartItem) []usecases.SkuId {
-	skuIds := make([]usecases.SkuId, len(items))
+func extractSkuIds(items []models.CartItem) []models.SkuId {
+	skuIds := make([]models.SkuId, len(items))
 	for i, item := range items {
 		skuIds[i] = item.SkuId
 	}

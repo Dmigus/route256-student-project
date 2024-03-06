@@ -8,8 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/usecases"
-	"route256.ozon.ru/project/cart/internal/usecases/lister"
+	"route256.ozon.ru/project/cart/internal/models"
 )
 
 type HTTPClient interface {
@@ -32,7 +31,7 @@ func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService 
 }
 
 // IsItemPresent принимает ИД товара и возращает true, если он существует в "специальном сервисе"
-func (p *ProductService) IsItemPresent(ctx context.Context, skuId usecases.SkuId) (bool, error) {
+func (p *ProductService) IsItemPresent(ctx context.Context, skuId models.SkuId) (bool, error) {
 	reqBody := listSkusRequest{
 		Token:         p.token,
 		StartAfterSku: int64(skuId) - 1,
@@ -58,8 +57,8 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId usecases.SkuId
 }
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
-func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []usecases.SkuId) ([]lister.ProductInfo, error) {
-	prodInfos := make([]lister.ProductInfo, 0, len(skuIds))
+func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []models.SkuId) ([]models.ProductInfo, error) {
+	prodInfos := make([]models.ProductInfo, 0, len(skuIds))
 	for _, skuId := range skuIds {
 		prodInfo, err := p.getProductInfo(ctx, skuId)
 		if err != nil {
@@ -70,26 +69,26 @@ func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []usecases.
 	return prodInfos, nil
 }
 
-func (p *ProductService) getProductInfo(ctx context.Context, skuId usecases.SkuId) (lister.ProductInfo, error) {
+func (p *ProductService) getProductInfo(ctx context.Context, skuId models.SkuId) (models.ProductInfo, error) {
 	reqBody := getProductRequest{
 		Token: p.token,
 		Sku:   skuId,
 	}
 	req, err := p.newPOSTRequest(ctx, "get_product", reqBody)
 	if err != nil {
-		return lister.ProductInfo{}, err
+		return models.ProductInfo{}, err
 	}
 	response, err := p.client.Do(req)
 	if err != nil {
-		return lister.ProductInfo{}, fmt.Errorf("error during request: %s\n", err)
+		return models.ProductInfo{}, fmt.Errorf("error during request: %s\n", err)
 	}
 	var respDTO getProductResponse
 	if err = p.parseResponse(response, &respDTO); err != nil {
-		return lister.ProductInfo{}, err
+		return models.ProductInfo{}, err
 	}
-	return lister.ProductInfo{
+	return models.ProductInfo{
 		Name:  respDTO.Name,
-		Price: usecases.Price(respDTO.Price),
+		Price: models.Price(respDTO.Price),
 	}, nil
 }
 
