@@ -12,17 +12,22 @@ import (
 	"route256.ozon.ru/project/cart/internal/service/lister"
 )
 
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+// ProductService возвращает информацию о товарах в "специальном сервисе"
 type ProductService struct {
 	token   string
 	baseURL *url.URL
-	client  http.Client
+	client  HTTPClient
 }
 
-func New(baseURL *url.URL, token string) *ProductService {
+func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService {
 	return &ProductService{
 		baseURL: baseURL,
 		token:   token,
-		client:  http.Client{},
+		client:  httpClient,
 	}
 }
 

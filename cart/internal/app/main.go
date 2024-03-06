@@ -12,6 +12,7 @@ import (
 	"route256.ozon.ru/project/cart/internal/handlers/list"
 	"route256.ozon.ru/project/cart/internal/inmemorycart"
 	"route256.ozon.ru/project/cart/internal/productservice"
+	"route256.ozon.ru/project/cart/internal/retryableclient"
 	"route256.ozon.ru/project/cart/internal/service/lister"
 	"route256.ozon.ru/project/cart/internal/service/modifier"
 )
@@ -23,7 +24,8 @@ func Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	prodService := productservice.New(baseUrl, "testtoken")
+	clientForProductService := retryableclient.NewRetryableClient(3, productservice.RetryCondition)
+	prodService := productservice.New(clientForProductService, baseUrl, "testtoken")
 	cartModifierService := modifier.New(cartRepo, prodService)
 	cartListerService := lister.New(cartRepo, prodService)
 

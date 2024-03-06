@@ -35,7 +35,7 @@ func New(cartService *modifier.CartModifierService) *Add {
 func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req, err := addItemReqFromR(r)
 	if err != nil {
-		if err == errIO {
+		if errors.Is(err, errIO) {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			http.Error(w, err.Error(), http.StatusBadRequest)
