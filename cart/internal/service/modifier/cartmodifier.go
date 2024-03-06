@@ -2,7 +2,6 @@ package modifier
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"route256.ozon.ru/project/cart/internal/service"
 )
@@ -34,13 +33,11 @@ func New(repo Repository, productService ProductService) *CartModifierService {
 	}
 }
 
-var ErrItemNotExists = errors.New("item is not exist")
-
 func (cs *CartModifierService) AddItem(ctx context.Context, user service.User, skuId service.SkuId, count service.ItemCount) error {
 	if exists, err := cs.productService.IsItemPresent(ctx, skuId); err != nil {
 		return fmt.Errorf("could not check item %d presence: %w", skuId, err)
 	} else if !exists {
-		return ErrItemNotExists
+		return nil
 	}
 	if cart, err := cs.repo.CartToModifyByUser(ctx, user); err != nil {
 		return err
