@@ -11,6 +11,7 @@ import (
 	delete2 "route256.ozon.ru/project/cart/internal/handlers/delete"
 	"route256.ozon.ru/project/cart/internal/handlers/list"
 	"route256.ozon.ru/project/cart/internal/inmemorycart"
+	"route256.ozon.ru/project/cart/internal/middleware"
 	"route256.ozon.ru/project/cart/internal/productservice"
 	"route256.ozon.ru/project/cart/internal/retryableclient"
 	"route256.ozon.ru/project/cart/internal/service/lister"
@@ -42,7 +43,8 @@ func Run() {
 	listHandler := list.New(cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", list.UserIdSegment), listHandler)
 
-	if err = http.ListenAndServe("0.0.0.0:8080", mux); err != nil {
+	loggedReqsHandler := middleware.NewLogger(mux)
+	if err = http.ListenAndServe("0.0.0.0:8080", loggedReqsHandler); err != nil {
 		log.Fatal(err)
 	}
 }
