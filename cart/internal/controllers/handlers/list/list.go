@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"route256.ozon.ru/project/cart/internal/service"
-	"route256.ozon.ru/project/cart/internal/service/lister"
+	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/usecases/lister"
 	"sort"
 	"strconv"
 )
@@ -17,7 +17,7 @@ const UserIdSegment = "userId"
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type cartListerService interface {
-	ListCartContent(ctx context.Context, user service.User) (*lister.CartContent, error)
+	ListCartContent(ctx context.Context, user usecases.User) (*lister.CartContent, error)
 }
 
 type List struct {
@@ -59,7 +59,7 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseUserId(r *http.Request) (service.User, error) {
+func parseUserId(r *http.Request) (usecases.User, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {

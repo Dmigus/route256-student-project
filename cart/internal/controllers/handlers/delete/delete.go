@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"route256.ozon.ru/project/cart/internal/service"
+	"route256.ozon.ru/project/cart/internal/usecases"
 	"strconv"
 )
 
@@ -21,7 +21,7 @@ var (
 )
 
 type itemDeleterService interface {
-	DeleteItem(ctx context.Context, user service.User, skuId service.SkuId) error
+	DeleteItem(ctx context.Context, user usecases.User, skuId usecases.SkuId) error
 }
 
 type Delete struct {
@@ -48,8 +48,8 @@ func (h *Delete) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type deleteItemReq struct {
-	userId service.User
-	skuId  service.SkuId
+	userId usecases.User
+	skuId  usecases.SkuId
 }
 
 func deleteItemReqFromR(r *http.Request) (*deleteItemReq, error) {
@@ -65,7 +65,7 @@ func deleteItemReqFromR(r *http.Request) (*deleteItemReq, error) {
 	}, nil
 }
 
-func parseUserId(r *http.Request) (service.User, error) {
+func parseUserId(r *http.Request) (usecases.User, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
@@ -74,7 +74,7 @@ func parseUserId(r *http.Request) (service.User, error) {
 	return userId, nil
 }
 
-func parseSkuId(r *http.Request) (service.SkuId, error) {
+func parseSkuId(r *http.Request) (usecases.SkuId, error) {
 	skuIdStr := r.PathValue(SkuIdSegment)
 	skuId, err := strconv.ParseInt(skuIdStr, 10, 64)
 	if err != nil {

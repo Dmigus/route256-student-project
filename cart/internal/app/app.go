@@ -5,28 +5,28 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/cartrepository"
-	addPkg "route256.ozon.ru/project/cart/internal/handlers/add"
-	clearPkg "route256.ozon.ru/project/cart/internal/handlers/clear"
-	deletePkg "route256.ozon.ru/project/cart/internal/handlers/delete"
-	listPkg "route256.ozon.ru/project/cart/internal/handlers/list"
-	"route256.ozon.ru/project/cart/internal/inmemorycart"
-	"route256.ozon.ru/project/cart/internal/middleware"
-	"route256.ozon.ru/project/cart/internal/productservice"
-	"route256.ozon.ru/project/cart/internal/retryableclient"
-	"route256.ozon.ru/project/cart/internal/service/lister"
-	"route256.ozon.ru/project/cart/internal/service/modifier"
+	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
+	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
+	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
+	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
+	"route256.ozon.ru/project/cart/internal/controllers/middleware"
+	productservice2 "route256.ozon.ru/project/cart/internal/providers/productservice"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/retryableclient"
+	"route256.ozon.ru/project/cart/internal/providers/repository"
+	"route256.ozon.ru/project/cart/internal/providers/repository/inmemorycart"
+	"route256.ozon.ru/project/cart/internal/usecases/lister"
+	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 )
 
 func Run() {
-	inMemoryCartFabric := &inmemorycart.CartCreator{}
-	cartRepo := cartrepository.New(inMemoryCartFabric)
+	inMemoryCartCreator := &inmemorycart.CartCreator{}
+	cartRepo := repository.New(inMemoryCartCreator)
 	baseUrl, err := url.Parse("http://route256.pavl.uk:8080/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	clientForProductService := retryableclient.NewRetryableClient(3, productservice.RetryCondition)
-	prodService := productservice.New(clientForProductService, baseUrl, "testtoken")
+	clientForProductService := retryableclient.NewRetryableClient(3, productservice2.RetryCondition)
+	prodService := productservice2.New(clientForProductService, baseUrl, "testtoken")
 	cartModifierService := modifier.New(cartRepo, prodService)
 	cartListerService := lister.New(cartRepo, prodService)
 

@@ -8,8 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/service"
-	"route256.ozon.ru/project/cart/internal/service/lister"
+	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/usecases/lister"
 )
 
 type HTTPClient interface {
@@ -32,7 +32,7 @@ func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService 
 }
 
 // IsItemPresent принимает ИД товара и возращает true, если он существует в "специальном сервисе"
-func (p *ProductService) IsItemPresent(ctx context.Context, skuId service.SkuId) (bool, error) {
+func (p *ProductService) IsItemPresent(ctx context.Context, skuId usecases.SkuId) (bool, error) {
 	reqBody := listSkusRequest{
 		Token:         p.token,
 		StartAfterSku: int64(skuId) - 1,
@@ -58,7 +58,7 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId service.SkuId)
 }
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
-func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []service.SkuId) ([]lister.ProductInfo, error) {
+func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []usecases.SkuId) ([]lister.ProductInfo, error) {
 	prodInfos := make([]lister.ProductInfo, 0, len(skuIds))
 	for _, skuId := range skuIds {
 		prodInfo, err := p.getProductInfo(ctx, skuId)
@@ -70,7 +70,7 @@ func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []service.S
 	return prodInfos, nil
 }
 
-func (p *ProductService) getProductInfo(ctx context.Context, skuId service.SkuId) (lister.ProductInfo, error) {
+func (p *ProductService) getProductInfo(ctx context.Context, skuId usecases.SkuId) (lister.ProductInfo, error) {
 	reqBody := getProductRequest{
 		Token: p.token,
 		Sku:   skuId,
@@ -89,7 +89,7 @@ func (p *ProductService) getProductInfo(ctx context.Context, skuId service.SkuId
 	}
 	return lister.ProductInfo{
 		Name:  respDTO.Name,
-		Price: service.Price(respDTO.Price),
+		Price: usecases.Price(respDTO.Price),
 	}, nil
 }
 

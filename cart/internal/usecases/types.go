@@ -1,4 +1,4 @@
-package service
+package usecases
 
 type (
 	User      = int64

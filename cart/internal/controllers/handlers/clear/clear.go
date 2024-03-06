@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"route256.ozon.ru/project/cart/internal/service"
+	"route256.ozon.ru/project/cart/internal/usecases"
 	"strconv"
 )
 
@@ -14,7 +14,7 @@ const UserIdSegment = "userId"
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type clearCartService interface {
-	ClearCart(ctx context.Context, user service.User) error
+	ClearCart(ctx context.Context, user usecases.User) error
 }
 
 type Clear struct {
@@ -40,7 +40,7 @@ func (h *Clear) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func parseUserId(r *http.Request) (service.User, error) {
+func parseUserId(r *http.Request) (usecases.User, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {

@@ -2,7 +2,7 @@ package inmemorycart
 
 import (
 	"context"
-	repository "route256.ozon.ru/project/cart/internal/cartrepository"
+	"route256.ozon.ru/project/cart/internal/providers/repository"
 )
 
 type CartCreator struct {

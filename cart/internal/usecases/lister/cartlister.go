@@ -2,41 +2,41 @@ package lister
 
 import (
 	"context"
-	"route256.ozon.ru/project/cart/internal/service"
+	"route256.ozon.ru/project/cart/internal/usecases"
 )
 
 type CartItem struct {
-	SkuId service.SkuId
-	Count service.ItemCount
+	SkuId usecases.SkuId
+	Count usecases.ItemCount
 }
 
 type CartToList interface {
 	ListItems(ctx context.Context) ([]CartItem, error)
 }
 
-type Repository interface {
-	CartToListByUser(ctx context.Context, user service.User) (CartToList, error)
+type repository interface {
+	CartToListByUser(ctx context.Context, user usecases.User) (CartToList, error)
 }
 
 type ProductInfo struct {
 	Name  string
-	Price service.Price
+	Price usecases.Price
 }
 
-type ProductService interface {
-	GetProductsInfo(ctx context.Context, skuIds []service.SkuId) ([]ProductInfo, error)
+type productService interface {
+	GetProductsInfo(ctx context.Context, skuIds []usecases.SkuId) ([]ProductInfo, error)
 }
 
 type CartListerService struct {
-	repo           Repository
-	productService ProductService
+	repo           repository
+	productService productService
 }
 
-func New(repo Repository, productService ProductService) *CartListerService {
+func New(repo repository, productService productService) *CartListerService {
 	return &CartListerService{repo: repo, productService: productService}
 }
 
-func (cl *CartListerService) ListCartContent(ctx context.Context, user service.User) (*CartContent, error) {
+func (cl *CartListerService) ListCartContent(ctx context.Context, user usecases.User) (*CartContent, error) {
 	cart, err := cl.repo.CartToListByUser(ctx, user)
 	if err != nil {
 		return nil, err
@@ -67,8 +67,8 @@ func createCartContent(items []CartItem, prodInfos []ProductInfo) *CartContent {
 	return content
 }
 
-func extractSkuIds(items []CartItem) []service.SkuId {
-	skuIds := make([]service.SkuId, len(items))
+func extractSkuIds(items []CartItem) []usecases.SkuId {
+	skuIds := make([]usecases.SkuId, len(items))
 	for i, item := range items {
 		skuIds[i] = item.SkuId
 	}
