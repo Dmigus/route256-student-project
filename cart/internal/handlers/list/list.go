@@ -2,6 +2,8 @@ package list
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/service"
 	"route256.ozon.ru/project/cart/internal/service/lister"
@@ -10,6 +12,8 @@ import (
 )
 
 const UserIdSegment = "userId"
+
+var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type List struct {
 	cartService *lister.CartListerService
@@ -22,13 +26,12 @@ func New(cartService *lister.CartListerService) *List {
 }
 
 func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	userIdStr := r.PathValue(UserIdSegment)
-	userId, err := strconv.Atoi(userIdStr)
+	userId, err := parseUserId(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	list, err := h.cartService.ListCartContent(r.Context(), service.User(userId))
+	list, err := h.cartService.ListCartContent(r.Context(), userId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -49,6 +52,15 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func parseUserId(r *http.Request) (service.User, error) {
+	userIdStr := r.PathValue(UserIdSegment)
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		return 0, errIncorrectUserId
+	}
+	return userId, nil
 }
 
 func listToDTO(content *lister.CartContent) listResponse {

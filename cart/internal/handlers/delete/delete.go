@@ -2,6 +2,8 @@ package delete
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/service"
 	"route256.ozon.ru/project/cart/internal/service/modifier"
@@ -12,6 +14,9 @@ const (
 	UserIdSegment = "userId"
 	SkuIdSegment  = "skuId"
 )
+
+var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+var errIncorrectSkuId = fmt.Errorf("skuId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type Delete struct {
 	cartService *modifier.CartModifierService
@@ -42,16 +47,32 @@ type deleteItemReq struct {
 }
 
 func deleteItemReqFromR(r *http.Request) (*deleteItemReq, error) {
-	userIdStr := r.PathValue(UserIdSegment)
-	userId, err1 := strconv.Atoi(userIdStr)
-	skuIdStr := r.PathValue(SkuIdSegment)
-	skuId, err2 := strconv.Atoi(skuIdStr)
+	userId, err1 := parseUserId(r)
+	skuId, err2 := parseSkuId(r)
 	allErrs := errors.Join(err1, err2)
 	if allErrs != nil {
 		return nil, allErrs
 	}
 	return &deleteItemReq{
-		userId: service.User(userId),
-		skuId:  service.SkuId(skuId),
+		userId: userId,
+		skuId:  skuId,
 	}, nil
+}
+
+func parseUserId(r *http.Request) (service.User, error) {
+	userIdStr := r.PathValue(UserIdSegment)
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		return 0, errIncorrectUserId
+	}
+	return userId, nil
+}
+
+func parseSkuId(r *http.Request) (service.SkuId, error) {
+	skuIdStr := r.PathValue(SkuIdSegment)
+	skuId, err := strconv.ParseInt(skuIdStr, 10, 64)
+	if err != nil {
+		return 0, errIncorrectSkuId
+	}
+	return skuId, nil
 }
