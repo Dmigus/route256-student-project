@@ -1,11 +1,11 @@
 package clear
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/service"
-	"route256.ozon.ru/project/cart/internal/service/modifier"
 	"strconv"
 )
 
@@ -13,13 +13,17 @@ const UserIdSegment = "userId"
 
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
-type Clear struct {
-	cartService *modifier.CartModifierService
+type clearCartService interface {
+	ClearCart(ctx context.Context, user service.User) error
 }
 
-func New(cartService *modifier.CartModifierService) *Clear {
+type Clear struct {
+	cartCleaner clearCartService
+}
+
+func New(cartService clearCartService) *Clear {
 	return &Clear{
-		cartService: cartService,
+		cartCleaner: cartService,
 	}
 }
 
@@ -29,7 +33,7 @@ func (h *Clear) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = h.cartService.ClearCart(r.Context(), userId); err != nil {
+	if err = h.cartCleaner.ClearCart(r.Context(), userId); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

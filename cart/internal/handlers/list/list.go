@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -15,13 +16,17 @@ const UserIdSegment = "userId"
 
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
-type List struct {
-	cartService *lister.CartListerService
+type cartListerService interface {
+	ListCartContent(ctx context.Context, user service.User) (*lister.CartContent, error)
 }
 
-func New(cartService *lister.CartListerService) *List {
+type List struct {
+	cartLister cartListerService
+}
+
+func New(cartService cartListerService) *List {
 	return &List{
-		cartService: cartService,
+		cartLister: cartService,
 	}
 }
 
@@ -31,7 +36,7 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	list, err := h.cartService.ListCartContent(r.Context(), userId)
+	list, err := h.cartLister.ListCartContent(r.Context(), userId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

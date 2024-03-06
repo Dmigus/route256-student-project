@@ -1,12 +1,12 @@
 package delete
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/service"
-	"route256.ozon.ru/project/cart/internal/service/modifier"
 	"strconv"
 )
 
@@ -15,16 +15,22 @@ const (
 	SkuIdSegment  = "skuId"
 )
 
-var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
-var errIncorrectSkuId = fmt.Errorf("skuId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+var (
+	errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+	errIncorrectSkuId  = fmt.Errorf("skuId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+)
 
-type Delete struct {
-	cartService *modifier.CartModifierService
+type itemDeleterService interface {
+	DeleteItem(ctx context.Context, user service.User, skuId service.SkuId) error
 }
 
-func New(cartService *modifier.CartModifierService) *Delete {
+type Delete struct {
+	deleter itemDeleterService
+}
+
+func New(cartService itemDeleterService) *Delete {
 	return &Delete{
-		cartService: cartService,
+		deleter: cartService,
 	}
 }
 
@@ -34,7 +40,7 @@ func (h *Delete) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = h.cartService.DeleteItem(r.Context(), req.userId, req.skuId); err != nil {
+	if err = h.deleter.DeleteItem(r.Context(), req.userId, req.skuId); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -1,6 +1,7 @@
 package add
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/service"
-	"route256.ozon.ru/project/cart/internal/service/modifier"
 	"strconv"
 )
 
@@ -17,18 +17,24 @@ const (
 	SkuIdSegment  = "skuId"
 )
 
-var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
-var errIncorrectSkuId = fmt.Errorf("skuId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
-var errIncorrectCount = fmt.Errorf("request body must contain Count in range [%d, %d]", 1, math.MaxUint16)
-var errIO = errors.New("reading bytes from request body failed")
+var (
+	errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+	errIncorrectSkuId  = fmt.Errorf("skuId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
+	errIncorrectCount  = fmt.Errorf("request body must contain Count in range [%d, %d]", 1, math.MaxUint16)
+	errIO              = errors.New("reading bytes from request body failed")
+)
 
-type Add struct {
-	cartService *modifier.CartModifierService
+type itemAdderService interface {
+	AddItem(ctx context.Context, user service.User, skuId service.SkuId, count service.ItemCount) error
 }
 
-func New(cartService *modifier.CartModifierService) *Add {
+type Add struct {
+	adder itemAdderService
+}
+
+func New(cartService itemAdderService) *Add {
 	return &Add{
-		cartService: cartService,
+		adder: cartService,
 	}
 }
 
@@ -42,7 +48,7 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err = h.cartService.AddItem(r.Context(), req.userId, req.skuId, req.count); err != nil {
+	if err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
