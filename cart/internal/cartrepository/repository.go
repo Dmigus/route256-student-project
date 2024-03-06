@@ -13,20 +13,20 @@ type Cart interface {
 	modifier.CartToModify
 }
 
-type CartFabric interface {
+type CartCreator interface {
 	Create(ctx context.Context) (Cart, error)
 }
 
 type CartRepository struct {
-	cartFabric CartFabric
-	carts      map[service.User]Cart
-	mu         sync.Mutex
+	cartCreator CartCreator
+	carts       map[service.User]Cart
+	mu          sync.Mutex
 }
 
-func New(cartFabric CartFabric) *CartRepository {
+func New(cartCreator CartCreator) *CartRepository {
 	return &CartRepository{
-		cartFabric: cartFabric,
-		carts:      make(map[service.User]Cart),
+		cartCreator: cartCreator,
+		carts:       make(map[service.User]Cart),
 	}
 }
 
@@ -36,7 +36,7 @@ func (c *CartRepository) getCartByUser(ctx context.Context, user service.User) (
 	if cart, exists := c.carts[user]; exists {
 		return cart, nil
 	}
-	newCart, err := c.cartFabric.Create(ctx)
+	newCart, err := c.cartCreator.Create(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -53,9 +53,9 @@ type deleteItemReq struct {
 }
 
 func deleteItemReqFromR(r *http.Request) (*deleteItemReq, error) {
-	userId, err1 := parseUserId(r)
-	skuId, err2 := parseSkuId(r)
-	allErrs := errors.Join(err1, err2)
+	userId, errUserId := parseUserId(r)
+	skuId, errSkuId := parseSkuId(r)
+	allErrs := errors.Join(errUserId, errSkuId)
 	if allErrs != nil {
 		return nil, allErrs
 	}

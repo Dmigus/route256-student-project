@@ -62,14 +62,14 @@ type addItemReq struct {
 }
 
 func addItemReqFromR(r *http.Request) (*addItemReq, error) {
-	userId, err1 := parseUserId(r)
-	skuId, err2 := parseSkuId(r)
-	bodyData, err3 := io.ReadAll(r.Body)
-	if err3 != nil {
+	bodyData, err := io.ReadAll(r.Body)
+	if err != nil {
 		return nil, errIO
 	}
-	count, err3 := parseCount(bodyData)
-	if allErrs := errors.Join(err1, err2, err3); allErrs != nil {
+	userId, errUserId := parseUserId(r)
+	skuId, errSkuId := parseSkuId(r)
+	count, errCount := parseCount(bodyData)
+	if allErrs := errors.Join(errUserId, errSkuId, errCount); allErrs != nil {
 		return nil, allErrs
 	}
 	return &addItemReq{

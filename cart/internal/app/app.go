@@ -19,7 +19,7 @@ import (
 )
 
 func Run() {
-	inMemoryCartFabric := &inmemorycart.Fabric{}
+	inMemoryCartFabric := &inmemorycart.CartCreator{}
 	cartRepo := cartrepository.New(inMemoryCartFabric)
 	baseUrl, err := url.Parse("http://route256.pavl.uk:8080/")
 	if err != nil {

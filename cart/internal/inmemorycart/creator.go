@@ -5,9 +5,9 @@ import (
 	repository "route256.ozon.ru/project/cart/internal/cartrepository"
 )
 
-type Fabric struct {
+type CartCreator struct {
 }
 
-func (i *Fabric) Create(_ context.Context) (repository.Cart, error) {
+func (i *CartCreator) Create(_ context.Context) (repository.Cart, error) {
 	return New(), nil
 }
