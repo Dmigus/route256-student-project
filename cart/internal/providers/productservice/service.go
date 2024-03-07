@@ -31,7 +31,7 @@ func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService 
 }
 
 // IsItemPresent принимает ИД товара и возращает true, если он существует в "специальном сервисе"
-func (p *ProductService) IsItemPresent(ctx context.Context, skuId models.SkuId) (bool, error) {
+func (p *ProductService) IsItemPresent(ctx context.Context, skuId int64) (bool, error) {
 	reqBody := listSkusRequest{
 		Token:         p.token,
 		StartAfterSku: int64(skuId) - 1,
@@ -57,7 +57,7 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId models.SkuId) 
 }
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
-func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []models.SkuId) ([]models.ProductInfo, error) {
+func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
 	prodInfos := make([]models.ProductInfo, 0, len(skuIds))
 	for _, skuId := range skuIds {
 		prodInfo, err := p.getProductInfo(ctx, skuId)
@@ -69,7 +69,7 @@ func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []models.Sk
 	return prodInfos, nil
 }
 
-func (p *ProductService) getProductInfo(ctx context.Context, skuId models.SkuId) (models.ProductInfo, error) {
+func (p *ProductService) getProductInfo(ctx context.Context, skuId int64) (models.ProductInfo, error) {
 	reqBody := getProductRequest{
 		Token: p.token,
 		Sku:   skuId,
@@ -88,7 +88,7 @@ func (p *ProductService) getProductInfo(ctx context.Context, skuId models.SkuId)
 	}
 	return models.ProductInfo{
 		Name:  respDTO.Name,
-		Price: models.Price(respDTO.Price),
+		Price: uint32(respDTO.Price),
 	}, nil
 }
 

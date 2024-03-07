@@ -8,16 +8,16 @@ import (
 
 type InMemoryCartRepository struct {
 	mu    sync.Mutex
-	carts map[models.UserId]*models.Cart
+	carts map[int64]*models.Cart
 }
 
 func New() *InMemoryCartRepository {
 	return &InMemoryCartRepository{
-		carts: make(map[models.UserId]*models.Cart),
+		carts: make(map[int64]*models.Cart),
 	}
 }
 
-func (c *InMemoryCartRepository) GetCart(_ context.Context, user models.UserId) (*models.Cart, error) {
+func (c *InMemoryCartRepository) GetCart(_ context.Context, user int64) (*models.Cart, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if cart, exists := c.carts[user]; exists {
@@ -28,7 +28,7 @@ func (c *InMemoryCartRepository) GetCart(_ context.Context, user models.UserId) 
 	return newCart, nil
 }
 
-func (c *InMemoryCartRepository) SaveCart(_ context.Context, user models.UserId, cart *models.Cart) error {
+func (c *InMemoryCartRepository) SaveCart(_ context.Context, user int64, cart *models.Cart) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.carts[user] = cart

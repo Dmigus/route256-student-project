@@ -7,12 +7,12 @@ import (
 )
 
 type repository interface {
-	GetCart(ctx context.Context, user models.UserId) (*models.Cart, error)
-	SaveCart(ctx context.Context, user models.UserId, cart *models.Cart) error
+	GetCart(ctx context.Context, user int64) (*models.Cart, error)
+	SaveCart(ctx context.Context, user int64, cart *models.Cart) error
 }
 
 type productService interface {
-	IsItemPresent(ctx context.Context, skuId models.SkuId) (bool, error)
+	IsItemPresent(ctx context.Context, skuId int64) (bool, error)
 }
 
 // CartModifierService предназначен для модификации корзин пользователей
@@ -28,7 +28,7 @@ func New(repo repository, productService productService) *CartModifierService {
 	}
 }
 
-func (cs *CartModifierService) AddItem(ctx context.Context, user models.UserId, skuId models.SkuId, count models.ItemCount) error {
+func (cs *CartModifierService) AddItem(ctx context.Context, user int64, skuId int64, count uint16) error {
 	exists, err := cs.productService.IsItemPresent(ctx, skuId)
 	if err != nil {
 		return fmt.Errorf("could not check item %d presence: %w", skuId, err)
@@ -44,7 +44,7 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user models.UserId, 
 	return cs.repo.SaveCart(ctx, user, cart)
 }
 
-func (cs *CartModifierService) DeleteItem(ctx context.Context, user models.UserId, skuId models.SkuId) error {
+func (cs *CartModifierService) DeleteItem(ctx context.Context, user int64, skuId int64) error {
 	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (cs *CartModifierService) DeleteItem(ctx context.Context, user models.UserI
 	return cs.repo.SaveCart(ctx, user, cart)
 }
 
-func (cs *CartModifierService) ClearCart(ctx context.Context, user models.UserId) error {
+func (cs *CartModifierService) ClearCart(ctx context.Context, user int64) error {
 	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
 		return err

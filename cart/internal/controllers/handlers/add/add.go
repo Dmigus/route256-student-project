@@ -8,7 +8,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"route256.ozon.ru/project/cart/internal/models"
 	"strconv"
 )
 
@@ -25,7 +24,7 @@ var (
 )
 
 type itemAdderService interface {
-	AddItem(ctx context.Context, user models.UserId, skuId models.SkuId, count models.ItemCount) error
+	AddItem(ctx context.Context, user int64, skuId int64, count uint16) error
 }
 
 type Add struct {
@@ -56,9 +55,9 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type addItemReq struct {
-	userId models.UserId
-	skuId  models.SkuId
-	count  models.ItemCount
+	userId int64
+	skuId  int64
+	count  uint16
 }
 
 func addItemReqFromR(r *http.Request) (*addItemReq, error) {
@@ -79,7 +78,7 @@ func addItemReqFromR(r *http.Request) (*addItemReq, error) {
 	}, nil
 }
 
-func parseUserId(r *http.Request) (models.UserId, error) {
+func parseUserId(r *http.Request) (int64, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {
@@ -88,7 +87,7 @@ func parseUserId(r *http.Request) (models.UserId, error) {
 	return userId, nil
 }
 
-func parseSkuId(r *http.Request) (models.SkuId, error) {
+func parseSkuId(r *http.Request) (int64, error) {
 	skuIdStr := r.PathValue(SkuIdSegment)
 	skuId, err := strconv.ParseInt(skuIdStr, 10, 64)
 	if err != nil {
@@ -97,7 +96,7 @@ func parseSkuId(r *http.Request) (models.SkuId, error) {
 	return skuId, nil
 }
 
-func parseCount(data []byte) (models.ItemCount, error) {
+func parseCount(data []byte) (uint16, error) {
 	var reqBody addRequest
 	err := json.Unmarshal(data, &reqBody)
 	if err != nil || reqBody.Count == 0 {

@@ -16,7 +16,7 @@ const UserIdSegment = "userId"
 var errIncorrectUserId = fmt.Errorf("userId must be number in range [%d, %d]", math.MinInt64, math.MaxInt64)
 
 type cartListerService interface {
-	ListCartContent(ctx context.Context, user models.UserId) (*models.CartContent, error)
+	ListCartContent(ctx context.Context, user int64) (*models.CartContent, error)
 }
 
 type List struct {
@@ -59,7 +59,7 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseUserId(r *http.Request) (models.UserId, error) {
+func parseUserId(r *http.Request) (int64, error) {
 	userIdStr := r.PathValue(UserIdSegment)
 	userId, err := strconv.ParseInt(userIdStr, 10, 64)
 	if err != nil {

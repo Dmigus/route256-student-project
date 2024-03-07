@@ -6,11 +6,11 @@ import (
 )
 
 type repository interface {
-	GetCart(ctx context.Context, user models.UserId) (*models.Cart, error)
+	GetCart(ctx context.Context, user int64) (*models.Cart, error)
 }
 
 type productService interface {
-	GetProductsInfo(ctx context.Context, skuIds []models.SkuId) ([]models.ProductInfo, error)
+	GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error)
 }
 
 type CartListerService struct {
@@ -22,7 +22,7 @@ func New(repo repository, productService productService) *CartListerService {
 	return &CartListerService{repo: repo, productService: productService}
 }
 
-func (cl *CartListerService) ListCartContent(ctx context.Context, user models.UserId) (*models.CartContent, error) {
+func (cl *CartListerService) ListCartContent(ctx context.Context, user int64) (*models.CartContent, error) {
 	cart, err := cl.repo.GetCart(ctx, user)
 	if err != nil {
 		return nil, err
@@ -48,8 +48,8 @@ func createCartContent(items []models.CartItem, prodInfos []models.ProductInfo) 
 	return content
 }
 
-func extractSkuIds(items []models.CartItem) []models.SkuId {
-	skuIds := make([]models.SkuId, len(items))
+func extractSkuIds(items []models.CartItem) []int64 {
+	skuIds := make([]int64, len(items))
 	for i, item := range items {
 		skuIds[i] = item.SkuId
 	}
