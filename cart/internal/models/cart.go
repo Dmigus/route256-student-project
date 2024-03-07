@@ -5,44 +5,41 @@ import (
 	"sync"
 )
 
-type InMemoryCart struct {
-	items map[SkuId]ItemCount
+type Cart struct {
 	mu    sync.Mutex
+	items map[SkuId]ItemCount
 }
 
-func NewInMemoryCart() *InMemoryCart {
-	return &InMemoryCart{
+func NewCart() *Cart {
+	return &Cart{
 		items: make(map[SkuId]ItemCount),
 	}
 }
 
-func (u *InMemoryCart) Add(_ context.Context, skuId SkuId, count ItemCount) error {
+func (u *Cart) Add(_ context.Context, skuId SkuId, count ItemCount) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	u.items[skuId] += count
-	return nil
 }
 
-func (u *InMemoryCart) Delete(_ context.Context, skuId SkuId) error {
+func (u *Cart) Delete(_ context.Context, skuId SkuId) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	delete(u.items, skuId)
-	return nil
 }
 
-func (u *InMemoryCart) Clear(_ context.Context) error {
+func (u *Cart) Clear(_ context.Context) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	clear(u.items)
-	return nil
 }
 
-func (u *InMemoryCart) ListItems(_ context.Context) ([]CartItem, error) {
+func (u *Cart) ListItems(_ context.Context) []CartItem {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	items := make([]CartItem, 0, len(u.items))
 	for skuId, count := range u.items {
 		items = append(items, CartItem{SkuId: skuId, Count: count})
 	}
-	return items, nil
+	return items
 }

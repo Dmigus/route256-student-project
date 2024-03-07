@@ -6,7 +6,7 @@ import (
 )
 
 type repository interface {
-	CartByUser(ctx context.Context, user models.UserId) (*models.InMemoryCart, error)
+	GetCart(ctx context.Context, user models.UserId) (*models.Cart, error)
 }
 
 type productService interface {
@@ -23,14 +23,11 @@ func New(repo repository, productService productService) *CartListerService {
 }
 
 func (cl *CartListerService) ListCartContent(ctx context.Context, user models.UserId) (*models.CartContent, error) {
-	cart, err := cl.repo.CartByUser(ctx, user)
+	cart, err := cl.repo.GetCart(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-	items, err := cart.ListItems(ctx)
-	if err != nil {
-		return nil, err
-	}
+	items := cart.ListItems(ctx)
 	skuIds := extractSkuIds(items)
 	productInfos, err := cl.productService.GetProductsInfo(ctx, skuIds)
 	if err != nil {

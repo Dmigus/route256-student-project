@@ -15,6 +15,7 @@ FROM alpine AS release-stage
 WORKDIR /app
 
 COPY --from=build-stage /app/bin/app /app/bin/app
+COPY --from=build-stage /app/configs /app/configs/
 
 EXPOSE 8080
 

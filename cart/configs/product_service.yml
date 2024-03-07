@@ -1,0 +1,3 @@
+baseURL: ${PS_BASE_URL|http://route256.pavl.uk:8080}
+maxRetries: ${PS_MAX_RETRIES|3}
+accessToken: ${ACCESS_TOKEN|testtoken}

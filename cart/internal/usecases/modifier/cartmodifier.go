@@ -7,7 +7,8 @@ import (
 )
 
 type repository interface {
-	CartByUser(ctx context.Context, user models.UserId) (*models.InMemoryCart, error)
+	GetCart(ctx context.Context, user models.UserId) (*models.Cart, error)
+	SaveCart(ctx context.Context, user models.UserId, cart *models.Cart) error
 }
 
 type productService interface {
@@ -35,25 +36,28 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user models.UserId, 
 	if !exists {
 		return nil
 	}
-	cart, err := cs.repo.CartByUser(ctx, user)
+	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
 		return err
 	}
-	return cart.Add(ctx, skuId, count)
+	cart.Add(ctx, skuId, count)
+	return cs.repo.SaveCart(ctx, user, cart)
 }
 
 func (cs *CartModifierService) DeleteItem(ctx context.Context, user models.UserId, skuId models.SkuId) error {
-	cart, err := cs.repo.CartByUser(ctx, user)
+	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
 		return err
 	}
-	return cart.Delete(ctx, skuId)
+	cart.Delete(ctx, skuId)
+	return cs.repo.SaveCart(ctx, user, cart)
 }
 
 func (cs *CartModifierService) ClearCart(ctx context.Context, user models.UserId) error {
-	cart, err := cs.repo.CartByUser(ctx, user)
+	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
 		return err
 	}
-	return cart.Clear(ctx)
+	cart.Clear(ctx)
+	return cs.repo.SaveCart(ctx, user, cart)
 }
