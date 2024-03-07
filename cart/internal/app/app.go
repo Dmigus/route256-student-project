@@ -28,7 +28,6 @@ func Run() {
 		panic(err)
 	}
 	cartRepo := repository.New()
-	fmt.Println(config.String("baseURL"))
 	baseUrl, err := url.Parse(config.String("baseURL"))
 	if err != nil {
 		log.Fatal(err)
