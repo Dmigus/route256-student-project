@@ -13,6 +13,8 @@ import (
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
 	"route256.ozon.ru/project/cart/internal/controllers/middleware"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
 	"route256.ozon.ru/project/cart/internal/usecases/modifier"
@@ -37,9 +39,11 @@ func (a *App) Run() {
 	}
 	retryPolicy := client.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	clientForProductService := client.NewRetryableClient(retryPolicy)
-	prodService := productservice.New(clientForProductService, baseUrl, prodServConfig.AccessToken)
-	cartModifierService := modifier.New(cartRepo, prodService)
-	cartListerService := lister.New(cartRepo, prodService)
+	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
+	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
+	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
+	cartModifierService := modifier.New(cartRepo, itPresChecker)
+	cartListerService := lister.New(cartRepo, prodInfoGetter)
 
 	mux := http.NewServeMux()
 	addHandler := addPkg.New(cartModifierService)
