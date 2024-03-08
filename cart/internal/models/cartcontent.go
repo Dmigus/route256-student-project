@@ -1,7 +1,7 @@
 package models
 
 type CartContent struct {
-	totalPrice Price
+	totalPrice uint32
 	items      []CartItemInfo
 }
 
@@ -11,10 +11,10 @@ func NewCartContent() *CartContent {
 
 func (cc *CartContent) Add(it CartItemInfo) {
 	cc.items = append(cc.items, it)
-	cc.totalPrice += it.ProductInfo.Price * Price(it.CartItem.Count)
+	cc.totalPrice += it.ProductInfo.Price * uint32(it.CartItem.Count)
 }
 
-func (cc *CartContent) GetPrice() Price {
+func (cc *CartContent) GetPrice() uint32 {
 	return cc.totalPrice
 }
 

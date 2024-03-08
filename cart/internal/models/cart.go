@@ -7,22 +7,22 @@ import (
 
 type Cart struct {
 	mu    sync.Mutex
-	items map[SkuId]ItemCount
+	items map[int64]uint16
 }
 
 func NewCart() *Cart {
 	return &Cart{
-		items: make(map[SkuId]ItemCount),
+		items: make(map[int64]uint16),
 	}
 }
 
-func (u *Cart) Add(_ context.Context, skuId SkuId, count ItemCount) {
+func (u *Cart) Add(_ context.Context, skuId int64, count uint16) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	u.items[skuId] += count
 }
 
-func (u *Cart) Delete(_ context.Context, skuId SkuId) {
+func (u *Cart) Delete(_ context.Context, skuId int64) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	delete(u.items, skuId)

@@ -1,6 +1,6 @@
 package models
 
 type CartItem struct {
-	SkuId SkuId
-	Count ItemCount
+	SkuId int64
+	Count uint16
 }

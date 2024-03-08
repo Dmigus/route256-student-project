@@ -8,17 +8,19 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"route256.ozon.ru/project/cart/internal/client"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
 	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
 	"route256.ozon.ru/project/cart/internal/controllers/middleware"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
-	"route256.ozon.ru/project/cart/internal/providers/productservice/retryableclient"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
 	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 )
+
+const status420 = 420
 
 func Run() {
 	config.WithOptions(config.ParseEnv)
@@ -32,9 +34,8 @@ func Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	clientForProductService := retryableclient.NewRetryableClient(
-		config.Int("maxRetries"),
-		productservice.RetryCondition)
+	retryPolicy := client.NewRetryOnStatusCodes([]int{status420, http.StatusTooManyRequests}, config.Int("maxRetries"))
+	clientForProductService := client.NewRetryableClient(retryPolicy)
 	prodService := productservice.New(clientForProductService, baseUrl, config.String("accessToken"))
 	cartModifierService := modifier.New(cartRepo, prodService)
 	cartListerService := lister.New(cartRepo, prodService)

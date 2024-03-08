@@ -1,19 +1,22 @@
-package retryableclient
+package client
 
 import (
 	"context"
 	"net/http"
 )
 
+type retryPolicy interface {
+	ShouldBeRetried(attempts int, req *http.Request, resp *http.Response, respErr error) bool
+}
+
 type RetryableClient struct {
 	client *http.Client
 }
 
-func NewRetryableClient(maxRetries int, retryCondition func(*http.Response, error) bool) *RetryableClient {
+func NewRetryableClient(policy retryPolicy) *RetryableClient {
 	retryRT := retryRoundTripper{
-		next:           http.DefaultTransport,
-		maxRetries:     maxRetries,
-		retryCondition: retryCondition,
+		next:   http.DefaultTransport,
+		policy: policy,
 	}
 	return &RetryableClient{
 		client: &http.Client{Transport: retryRT},
@@ -25,24 +28,22 @@ func (rc *RetryableClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 type retryRoundTripper struct {
-	next           http.RoundTripper
-	maxRetries     int
-	retryCondition func(*http.Response, error) bool
+	next   http.RoundTripper
+	policy retryPolicy
 }
 
 func (rr retryRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	var res *http.Response
+	var response *http.Response
 	var err error
-	for attempts := 0; attempts < rr.maxRetries; attempts++ {
+	for attemptNum := 1; ; attemptNum++ {
 		if contextWasDone(r.Context()) {
 			return nil, r.Context().Err()
 		}
-		res, err = rr.next.RoundTrip(r)
-		if !rr.retryCondition(res, err) {
-			return res, err
+		response, err = rr.next.RoundTrip(r)
+		if !rr.policy.ShouldBeRetried(attemptNum, r, response, err) {
+			return response, err
 		}
 	}
-	return res, err
 }
 
 func contextWasDone(ctx context.Context) bool {

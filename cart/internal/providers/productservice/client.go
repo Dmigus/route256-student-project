@@ -15,15 +15,15 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// ProductService возвращает информацию о товарах в "специальном сервисе"
-type ProductService struct {
+// Client возвращает информацию о товарах в "специальном сервисе"
+type Client struct {
 	token   string
 	baseURL *url.URL
 	client  HTTPClient
 }
 
-func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService {
-	return &ProductService{
+func New(httpClient HTTPClient, baseURL *url.URL, token string) *Client {
+	return &Client{
 		baseURL: baseURL,
 		token:   token,
 		client:  httpClient,
@@ -31,10 +31,10 @@ func New(httpClient HTTPClient, baseURL *url.URL, token string) *ProductService 
 }
 
 // IsItemPresent принимает ИД товара и возращает true, если он существует в "специальном сервисе"
-func (p *ProductService) IsItemPresent(ctx context.Context, skuId int64) (bool, error) {
+func (p *Client) IsItemPresent(ctx context.Context, skuId int64) (bool, error) {
 	reqBody := listSkusRequest{
 		Token:         p.token,
-		StartAfterSku: int64(skuId) - 1,
+		StartAfterSku: skuId - 1,
 		Count:         1,
 	}
 	req, err := p.newPOSTRequest(ctx, "list_skus", reqBody)
@@ -57,7 +57,7 @@ func (p *ProductService) IsItemPresent(ctx context.Context, skuId int64) (bool, 
 }
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
-func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
+func (p *Client) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
 	prodInfos := make([]models.ProductInfo, 0, len(skuIds))
 	for _, skuId := range skuIds {
 		prodInfo, err := p.getProductInfo(ctx, skuId)
@@ -69,7 +69,7 @@ func (p *ProductService) GetProductsInfo(ctx context.Context, skuIds []int64) ([
 	return prodInfos, nil
 }
 
-func (p *ProductService) getProductInfo(ctx context.Context, skuId int64) (models.ProductInfo, error) {
+func (p *Client) getProductInfo(ctx context.Context, skuId int64) (models.ProductInfo, error) {
 	reqBody := getProductRequest{
 		Token: p.token,
 		Sku:   skuId,
@@ -92,7 +92,7 @@ func (p *ProductService) getProductInfo(ctx context.Context, skuId int64) (model
 	}, nil
 }
 
-func (p *ProductService) newPOSTRequest(ctx context.Context, method string, reqBody any) (*http.Request, error) {
+func (p *Client) newPOSTRequest(ctx context.Context, method string, reqBody any) (*http.Request, error) {
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (p *ProductService) newPOSTRequest(ctx context.Context, method string, reqB
 	return req, nil
 }
 
-func (p *ProductService) parseResponse(response *http.Response, toObj any) error {
+func (p *Client) parseResponse(response *http.Response, toObj any) error {
 	resBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return err

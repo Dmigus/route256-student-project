@@ -2,5 +2,5 @@ package models
 
 type ProductInfo struct {
 	Name  string
-	Price Price
+	Price uint32
 }
