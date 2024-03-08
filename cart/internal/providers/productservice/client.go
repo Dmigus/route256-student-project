@@ -4,11 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"route256.ozon.ru/project/cart/internal/models"
+)
+
+var (
+	errUnmarshableBody    = fmt.Errorf("error unmarshalling response body from Product Service")
+	errInvalidSkusArray   = fmt.Errorf("no list sku in response")
+	errInvalidPrice       = fmt.Errorf("returned price is not valid")
+	errInvalidProductName = fmt.Errorf("returned name is not valid")
+	errSkuIdIsNotUInt32   = fmt.Errorf("SkuId is not in range UInt32")
 )
 
 type HTTPClient interface {
@@ -32,9 +42,12 @@ func New(httpClient HTTPClient, baseURL *url.URL, token string) *Client {
 
 // IsItemPresent принимает ИД товара и возращает true, если он существует в "специальном сервисе"
 func (p *Client) IsItemPresent(ctx context.Context, skuId int64) (bool, error) {
+	if err := p.checkSkuId(skuId); err != nil {
+		return false, errSkuIdIsNotUInt32
+	}
 	reqBody := listSkusRequest{
 		Token:         p.token,
-		StartAfterSku: skuId - 1,
+		StartAfterSku: uint32(skuId - 1),
 		Count:         1,
 	}
 	req, err := p.newPOSTRequest(ctx, "list_skus", reqBody)
@@ -50,7 +63,11 @@ func (p *Client) IsItemPresent(ctx context.Context, skuId int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if len(respDTO.Skus) > 0 && respDTO.Skus[0] == int64(skuId) {
+	err = validateListSkusResponse(respDTO)
+	if err != nil {
+		return false, err
+	}
+	if len(*respDTO.Skus) > 0 && (*respDTO.Skus)[0] == uint32(skuId) {
 		return true, nil
 	}
 	return false, nil
@@ -70,9 +87,12 @@ func (p *Client) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.
 }
 
 func (p *Client) getProductInfo(ctx context.Context, skuId int64) (models.ProductInfo, error) {
+	if err := p.checkSkuId(skuId); err != nil {
+		return models.ProductInfo{}, errSkuIdIsNotUInt32
+	}
 	reqBody := getProductRequest{
 		Token: p.token,
-		Sku:   skuId,
+		Sku:   uint32(skuId),
 	}
 	req, err := p.newPOSTRequest(ctx, "get_product", reqBody)
 	if err != nil {
@@ -86,9 +106,13 @@ func (p *Client) getProductInfo(ctx context.Context, skuId int64) (models.Produc
 	if err = p.parseResponse(response, &respDTO); err != nil {
 		return models.ProductInfo{}, err
 	}
+	err = validateGetProductResponse(respDTO)
+	if err != nil {
+		return models.ProductInfo{}, err
+	}
 	return models.ProductInfo{
-		Name:  respDTO.Name,
-		Price: uint32(respDTO.Price),
+		Name:  *respDTO.Name,
+		Price: *respDTO.Price,
 	}, nil
 }
 
@@ -114,7 +138,32 @@ func (p *Client) parseResponse(response *http.Response, toObj any) error {
 		return err
 	}
 	if err = json.Unmarshal(resBody, toObj); err != nil {
-		return err
+		return errUnmarshableBody
 	}
 	return nil
+}
+
+func (p *Client) checkSkuId(skuId int64) error {
+	if skuId < 0 || skuId > math.MaxUint32 {
+		return errSkuIdIsNotUInt32
+	}
+	return nil
+}
+
+func validateListSkusResponse(resp listSkusResponse) error {
+	if resp.Skus == nil {
+		return errInvalidSkusArray
+	}
+	return nil
+}
+
+func validateGetProductResponse(resp getProductResponse) error {
+	var err error
+	if resp.Name == nil || !models.IsStringValidName(*resp.Name) {
+		err = errors.Join(err, errInvalidProductName)
+	}
+	if resp.Price == nil {
+		err = errors.Join(err, errInvalidPrice)
+	}
+	return err
 }

@@ -2,20 +2,20 @@ package productservice
 
 type listSkusRequest struct {
 	Token         string `json:"token"`
-	StartAfterSku int64  `json:"startAfterSku"`
-	Count         int64  `json:"count"`
+	StartAfterSku uint32 `json:"startAfterSku"`
+	Count         uint32 `json:"count"`
 }
 
 type listSkusResponse struct {
-	Skus []int64 `json:"skus"`
+	Skus *[]uint32 `json:"skus"`
 }
 
 type getProductRequest struct {
 	Token string `json:"token"`
-	Sku   int64  `json:"sku"`
+	Sku   uint32 `json:"sku"`
 }
 
 type getProductResponse struct {
-	Name  string `json:"name"`
-	Price int64  `json:"price"`
+	Name  *string `json:"name"`
+	Price *uint32 `json:"price"`
 }

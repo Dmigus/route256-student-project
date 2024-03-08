@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"route256.ozon.ru/project/cart/internal/models"
 	"strconv"
 )
 
@@ -99,8 +100,8 @@ func parseSkuId(r *http.Request) (int64, error) {
 func parseCount(data []byte) (uint16, error) {
 	var reqBody addRequest
 	err := json.Unmarshal(data, &reqBody)
-	if err != nil || reqBody.Count == 0 {
+	if err != nil || reqBody.Count == nil || !models.IsNumberValidCount(*reqBody.Count) {
 		return 0, errIncorrectCount
 	}
-	return reqBody.Count, nil
+	return *reqBody.Count, nil
 }
