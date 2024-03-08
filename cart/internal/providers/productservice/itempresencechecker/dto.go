@@ -11,5 +11,5 @@ func (l *listSkusRequest) SetToken(token string) {
 }
 
 type listSkusResponse struct {
-	Skus *[]uint32 `json:"skus"`
+	Skus []uint32 `json:"skus"`
 }

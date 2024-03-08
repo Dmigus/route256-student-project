@@ -45,7 +45,7 @@ func (ipc *ItemPresenceChecker) IsItemPresent(ctx context.Context, skuId int64) 
 	if err != nil {
 		return false, err
 	}
-	if len(*respDTO.Skus) > 0 && (*respDTO.Skus)[0] == uint32(skuId) {
+	if len(respDTO.Skus) > 0 && respDTO.Skus[0] == uint32(skuId) {
 		return true, nil
 	}
 	return false, nil
