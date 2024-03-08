@@ -1,0 +1,14 @@
+{
+  "Server" :{
+    "Host": "0.0.0.0",
+    "Port": 8080
+  },
+  "ProductService": {
+    "BaseURL": "http://route256.pavl.uk:8080",
+    "AccessToken": "testtoken",
+    "RetryPolicy": {
+      "RetryStatusCodes": [420, 429],
+      "MaxRetries": 3
+    }
+  }
+}

@@ -2,8 +2,6 @@ package app
 
 import (
 	"fmt"
-	"github.com/gookit/config/v2"
-	"github.com/gookit/config/v2/yaml"
 	"log"
 	"net/http"
 	"net/netip"
@@ -20,23 +18,26 @@ import (
 	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 )
 
-const status420 = 420
+type App struct {
+	config Config
+}
 
-func Run() {
-	config.WithOptions(config.ParseEnv)
-	config.AddDriver(yaml.Driver)
-	err := config.LoadFiles("configs/product_service.yml", "configs/server.yml")
-	if err != nil {
-		panic(err)
+func NewApp(config Config) *App {
+	return &App{
+		config: config,
 	}
+}
+
+func (a *App) Run() {
+	prodServConfig := a.config.ProductService
 	cartRepo := repository.New()
-	baseUrl, err := url.Parse(config.String("baseURL"))
+	baseUrl, err := url.Parse(prodServConfig.BaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	retryPolicy := client.NewRetryOnStatusCodes([]int{status420, http.StatusTooManyRequests}, config.Int("maxRetries"))
+	retryPolicy := client.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	clientForProductService := client.NewRetryableClient(retryPolicy)
-	prodService := productservice.New(clientForProductService, baseUrl, config.String("accessToken"))
+	prodService := productservice.New(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	cartModifierService := modifier.New(cartRepo, prodService)
 	cartListerService := lister.New(cartRepo, prodService)
 
@@ -55,11 +56,12 @@ func Run() {
 
 	loggedReqsHandler := middleware.NewLogger(mux)
 
-	hostAddr, err := netip.ParseAddr(config.String("host"))
+	serverConfig := a.config.Server
+	hostAddr, err := netip.ParseAddr(serverConfig.Host)
 	if err != nil {
 		log.Fatal(err)
 	}
-	port := uint16(config.Uint("port"))
+	port := serverConfig.Port
 	fullAddr := netip.AddrPortFrom(hostAddr, port)
 	if err = http.ListenAndServe(fullAddr.String(), loggedReqsHandler); err != nil {
 		log.Fatal(err)
