@@ -61,6 +61,7 @@ func TestAddItemWithoutErr(t *testing.T) {
 }
 
 func TestAddItemWithErrs(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		ctx   context.Context
 		user  int64
@@ -128,6 +129,7 @@ func TestAddItemWithErrs(t *testing.T) {
 }
 
 func TestCartModifierService_DeleteItem(t *testing.T) {
+	t.Parallel()
 	mc := minimock.NewController(t)
 	errorToThrow := fmt.Errorf("oops error")
 	type fields struct {
