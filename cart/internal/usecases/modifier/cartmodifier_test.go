@@ -51,6 +51,7 @@ func TestAddItemWithoutErr(t *testing.T) {
 
 	adder := New(repo, prodServ)
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := adder.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
@@ -117,10 +118,171 @@ func TestAddItemWithErrs(t *testing.T) {
 
 	adder := New(repo, prodServ)
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := adder.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
 			assert.ErrorIs(t, err, tt.err)
+		})
+	}
+}
+
+func TestCartModifierService_DeleteItem(t *testing.T) {
+	mc := minimock.NewController(t)
+	errorToThrow := fmt.Errorf("oops error")
+	type fields struct {
+		repo           repository
+		productService productService
+	}
+	type args struct {
+		ctx   context.Context
+		user  int64
+		skuId int64
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr error
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(models.NewCart(), nil).
+					SaveCartMock.
+					Return(nil),
+			},
+			args: args{
+				context.Background(),
+				123,
+				123,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "error getting user cart",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(nil, errorToThrow),
+			},
+			args: args{
+				context.Background(),
+				123,
+				123,
+			},
+			wantErr: errorToThrow,
+		},
+		{
+			name: "error saving user cart",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(models.NewCart(), nil).
+					SaveCartMock.
+					Return(errorToThrow),
+			},
+			args: args{
+				context.Background(),
+				123,
+				123,
+			},
+			wantErr: errorToThrow,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cs := &CartModifierService{
+				repo:           tt.fields.repo,
+				productService: tt.fields.productService,
+			}
+			err := cs.DeleteItem(tt.args.ctx, tt.args.user, tt.args.skuId)
+			assert.ErrorIs(t, err, tt.wantErr, fmt.Errorf("CartModifierService.DeleteItem() error = %v, wantErr %v", err, tt.wantErr))
+		})
+	}
+}
+
+func TestCartModifierService_ClearCart(t *testing.T) {
+	mc := minimock.NewController(t)
+	errorToThrow := fmt.Errorf("oops error")
+	type fields struct {
+		repo           repository
+		productService productService
+	}
+	type args struct {
+		ctx  context.Context
+		user int64
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr error
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(models.NewCart(), nil).
+					SaveCartMock.
+					Return(nil),
+			},
+			args: args{
+				context.Background(),
+				123,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "error getting user cart",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(nil, errorToThrow),
+			},
+			args: args{
+				context.Background(),
+				123,
+			},
+			wantErr: errorToThrow,
+		},
+		{
+			name: "error saving user cart",
+			fields: fields{
+				repo: NewRepositoryMock(mc).
+					GetCartMock.
+					When(minimock.AnyContext, 123).
+					Then(models.NewCart(), nil).
+					SaveCartMock.
+					Return(errorToThrow),
+			},
+			args: args{
+				context.Background(),
+				123,
+			},
+			wantErr: errorToThrow,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cs := &CartModifierService{
+				repo:           tt.fields.repo,
+				productService: tt.fields.productService,
+			}
+			err := cs.ClearCart(tt.args.ctx, tt.args.user)
+			assert.ErrorIs(t, err, tt.wantErr, fmt.Errorf("CartModifierService.ClearCart() error = %v, wantErr %v", err, tt.wantErr))
 		})
 	}
 }
