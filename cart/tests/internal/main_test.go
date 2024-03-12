@@ -19,6 +19,7 @@ import (
 )
 
 func TestAddCheckDeleteCheck(t *testing.T) {
+	t.Parallel()
 	config, err := app.NewConfig("../../configs/config.json")
 	if err != nil {
 		log.Fatal(err)
@@ -85,6 +86,7 @@ func TestAddCheckDeleteCheck(t *testing.T) {
 }
 
 func TestAddAddCheckClearCheck(t *testing.T) {
+	t.Parallel()
 	config, err := app.NewConfig("../../configs/config.json")
 	if err != nil {
 		log.Fatal(err)

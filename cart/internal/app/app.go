@@ -23,7 +23,6 @@ import (
 type App struct {
 	config              Config
 	cartRepo            *repository.InMemoryCartRepository
-	rcPerformer         *productservice.RemoteCallPerformer
 	itPresChecker       *itempresencechecker.ItemPresenceChecker
 	prodInfoGetter      *productinfogetter.ProductInfoGetter
 	cartModifierService *modifier.CartModifierService

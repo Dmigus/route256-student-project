@@ -104,22 +104,22 @@ func TestCartListerService_ListCartContentPositive(t *testing.T) {
 func Test_createCartContent(t *testing.T) {
 	t.Parallel()
 	items := []models.CartItem{
-		{123, 1},
-		{456, 10},
+		{SkuId: 123, Count: 1},
+		{SkuId: 456, Count: 10},
 	}
 	prodInfos := []models.ProductInfo{
-		{"item123", 100},
-		{"item456", 200},
+		{Name: "item123", Price: 100},
+		{Name: "item456", Price: 200},
 	}
 
 	want := &models.CartContent{}
 	want.Add(models.CartItemInfo{
-		CartItem:    models.CartItem{123, 1},
-		ProductInfo: models.ProductInfo{"item123", 100},
+		CartItem:    models.CartItem{SkuId: 123, Count: 1},
+		ProductInfo: models.ProductInfo{Name: "item123", Price: 100},
 	})
 	want.Add(models.CartItemInfo{
-		CartItem:    models.CartItem{456, 10},
-		ProductInfo: models.ProductInfo{"item456", 200},
+		CartItem:    models.CartItem{SkuId: 456, Count: 10},
+		ProductInfo: models.ProductInfo{Name: "item456", Price: 200},
 	})
 
 	got := createCartContent(items, prodInfos)
