@@ -27,10 +27,7 @@ type App struct {
 	prodInfoGetter      *productinfogetter.ProductInfoGetter
 	cartModifierService *modifier.CartModifierService
 	cartListerService   *lister.CartListerService
-	AddHandler          *addPkg.Add
-	ClearHandler        *clearPkg.Clear
-	DeleteHandler       *deletePkg.Delete
-	ListHandler         *listPkg.List
+	HttpController      http.Handler
 }
 
 func NewApp(config Config) *App {
@@ -67,26 +64,28 @@ func (a *App) InitCartServices() {
 	a.cartListerService = lister.New(a.cartRepo, a.prodInfoGetter)
 }
 
-func (a *App) InitHandlers() {
+func (a *App) InitController() http.Handler {
+	if a.HttpController != nil {
+		return a.HttpController
+	}
 	if a.cartModifierService == nil && a.cartListerService == nil {
 		a.InitCartServices()
 	}
-	a.AddHandler = addPkg.New(a.cartModifierService)
-	a.ClearHandler = clearPkg.New(a.cartModifierService)
-	a.DeleteHandler = deletePkg.New(a.cartModifierService)
-	a.ListHandler = listPkg.New(a.cartListerService)
+	mux := http.NewServeMux()
+	addHandler := addPkg.New(a.cartModifierService)
+	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
+	clearHandler := clearPkg.New(a.cartModifierService)
+	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
+	deleteHandler := deletePkg.New(a.cartModifierService)
+	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
+	listHandler := listPkg.New(a.cartListerService)
+	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
+	a.HttpController = middleware.NewLogger(mux)
+	return a.HttpController
 }
 
 func (a *App) Run() {
-	a.InitHandlers()
-	mux := http.NewServeMux()
-	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), a.AddHandler)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), a.ClearHandler)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), a.DeleteHandler)
-	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), a.ListHandler)
-
-	loggedReqsHandler := middleware.NewLogger(mux)
-
+	a.InitController()
 	serverConfig := a.config.Server
 	hostAddr, err := netip.ParseAddr(serverConfig.Host)
 	if err != nil {
@@ -94,7 +93,7 @@ func (a *App) Run() {
 	}
 	port := serverConfig.Port
 	fullAddr := netip.AddrPortFrom(hostAddr, port)
-	if err = http.ListenAndServe(fullAddr.String(), loggedReqsHandler); err != nil {
+	if err = http.ListenAndServe(fullAddr.String(), a.HttpController); err != nil {
 		log.Fatal(err)
 	}
 }
