@@ -21,7 +21,17 @@ import (
 )
 
 type App struct {
-	config Config
+	config              Config
+	cartRepo            *repository.InMemoryCartRepository
+	rcPerformer         *productservice.RemoteCallPerformer
+	itPresChecker       *itempresencechecker.ItemPresenceChecker
+	prodInfoGetter      *productinfogetter.ProductInfoGetter
+	cartModifierService *modifier.CartModifierService
+	cartListerService   *lister.CartListerService
+	AddHandler          *addPkg.Add
+	ClearHandler        *clearPkg.Clear
+	DeleteHandler       *deletePkg.Delete
+	ListHandler         *listPkg.List
 }
 
 func NewApp(config Config) *App {
@@ -30,9 +40,12 @@ func NewApp(config Config) *App {
 	}
 }
 
-func (a *App) Run() {
+func (a *App) initRepo() {
+	a.cartRepo = repository.New()
+}
+
+func (a *App) initProductService() {
 	prodServConfig := a.config.ProductService
-	cartRepo := repository.New()
 	baseUrl, err := url.Parse(prodServConfig.BaseURL)
 	if err != nil {
 		log.Fatal(err)
@@ -40,23 +53,38 @@ func (a *App) Run() {
 	retryPolicy := client.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	clientForProductService := client.NewRetryableClient(retryPolicy)
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
-	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
-	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
-	cartModifierService := modifier.New(cartRepo, itPresChecker)
-	cartListerService := lister.New(cartRepo, prodInfoGetter)
+	a.itPresChecker = itempresencechecker.NewItemPresenceChecker(rcPerformer)
+	a.prodInfoGetter = productinfogetter.NewProductInfoGetter(rcPerformer)
+}
 
+func (a *App) InitCartServices() {
+	if a.cartRepo == nil {
+		a.initRepo()
+	}
+	if a.itPresChecker == nil && a.prodInfoGetter == nil {
+		a.initProductService()
+	}
+	a.cartModifierService = modifier.New(a.cartRepo, a.itPresChecker)
+	a.cartListerService = lister.New(a.cartRepo, a.prodInfoGetter)
+}
+
+func (a *App) InitHandlers() {
+	if a.cartModifierService == nil && a.cartListerService == nil {
+		a.InitCartServices()
+	}
+	a.AddHandler = addPkg.New(a.cartModifierService)
+	a.ClearHandler = clearPkg.New(a.cartModifierService)
+	a.DeleteHandler = deletePkg.New(a.cartModifierService)
+	a.ListHandler = listPkg.New(a.cartListerService)
+}
+
+func (a *App) Run() {
+	a.InitHandlers()
 	mux := http.NewServeMux()
-	addHandler := addPkg.New(cartModifierService)
-	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
-
-	clearHandler := clearPkg.New(cartModifierService)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
-
-	deleteHandler := deletePkg.New(cartModifierService)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
-
-	listHandler := listPkg.New(cartListerService)
-	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
+	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), a.AddHandler)
+	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), a.ClearHandler)
+	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), a.DeleteHandler)
+	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), a.ListHandler)
 
 	loggedReqsHandler := middleware.NewLogger(mux)
 
