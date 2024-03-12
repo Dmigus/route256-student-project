@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"route256.ozon.ru/project/cart/internal/models"
 	"testing"
 )
@@ -48,4 +49,39 @@ func TestInMemoryCartRepository_SaveAndGet(t *testing.T) {
 	returnedOtherCard, err := repo.GetCart(context.Background(), otherUserId)
 	require.NoError(t, err, "getting cart failed with error")
 	assert.False(t, returnedOtherCard == newCart, "the same cart returned for different users")
+}
+
+func BenchmarkGetNewCarts(b *testing.B) {
+	repo := New()
+	ctx := context.Background()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		randUserId := rand.Int63()
+		b.StartTimer()
+		_, _ = repo.GetCart(ctx, randUserId)
+	}
+}
+
+func BenchmarkGetSameCart(b *testing.B) {
+	repo := New()
+	ctx := context.Background()
+	userId := int64(123)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = repo.GetCart(ctx, userId)
+	}
+}
+
+func BenchmarkSaveNewCarts(b *testing.B) {
+	repo := New()
+	ctx := context.Background()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		randUserId := rand.Int63()
+		newCart := models.NewCart()
+		b.StartTimer()
+		_ = repo.SaveCart(ctx, randUserId, newCart)
+	}
 }
