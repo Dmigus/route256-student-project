@@ -22,7 +22,8 @@ func TestAddCheckDeleteCheck(t *testing.T) {
 		log.Fatal(err)
 	}
 	appl := app.NewApp(config)
-	controller := appl.InitController()
+	appl.InitController()
+	controller := appl.HttpController
 	host := "http://somehost"
 	ctx := context.Background()
 	// добавляем товар в корзину для пользователя
@@ -83,7 +84,8 @@ func TestAddAddCheckClearCheck(t *testing.T) {
 		log.Fatal(err)
 	}
 	appl := app.NewApp(config)
-	controller := appl.InitController()
+	appl.InitController()
+	controller := appl.HttpController
 	host := "http://somehost"
 
 	ctx := context.Background()

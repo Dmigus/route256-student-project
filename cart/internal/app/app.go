@@ -65,9 +65,9 @@ func (a *App) InitCartServices() {
 	a.cartListerService = lister.New(a.cartRepo, a.prodInfoGetter)
 }
 
-func (a *App) InitController() http.Handler {
+func (a *App) InitController() {
 	if a.HttpController != nil {
-		return a.HttpController
+		return
 	}
 	if a.cartModifierService == nil && a.cartListerService == nil {
 		a.InitCartServices()
@@ -82,7 +82,6 @@ func (a *App) InitController() http.Handler {
 	listHandler := listPkg.New(a.cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
 	a.HttpController = middleware.NewLogger(mux)
-	return a.HttpController
 }
 
 func (a *App) Run() {
