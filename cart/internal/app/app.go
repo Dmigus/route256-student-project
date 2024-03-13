@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"net/url"
 	"route256.ozon.ru/project/cart/internal/client"
+	"route256.ozon.ru/project/cart/internal/client/policies"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
 	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
@@ -46,7 +47,7 @@ func (a *App) initProductService() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	retryPolicy := client.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
+	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	clientForProductService := client.NewRetryableClient(retryPolicy)
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	a.itPresChecker = itempresencechecker.NewItemPresenceChecker(rcPerformer)

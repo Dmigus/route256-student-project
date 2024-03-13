@@ -1,3 +1,4 @@
+.PHONY: build, coverage, lint
 build:
 	go build -o ./bin/app ./cmd
 
