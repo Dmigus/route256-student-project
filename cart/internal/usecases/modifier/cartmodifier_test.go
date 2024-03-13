@@ -9,25 +9,6 @@ import (
 	"testing"
 )
 
-type testHelper struct {
-	getCartRepoMock    *mRepositoryMockGetCart
-	saveCartRepoMock   *mRepositoryMockSaveCart
-	productServiceMock *mProductServiceMockIsItemPresent
-	service            *CartModifierService
-}
-
-func newTestHelper(t *testing.T) testHelper {
-	mc := minimock.NewController(t)
-	helper := testHelper{}
-	repo := NewRepositoryMock(mc)
-	productService := NewProductServiceMock(mc)
-	helper.getCartRepoMock = &(repo.GetCartMock)
-	helper.saveCartRepoMock = &(repo.SaveCartMock)
-	helper.productServiceMock = &(productService.IsItemPresentMock)
-	helper.service = New(repo, productService)
-	return helper
-}
-
 func TestAddItemWithoutErr(t *testing.T) {
 	t.Parallel()
 	type args struct {
@@ -37,9 +18,9 @@ func TestAddItemWithoutErr(t *testing.T) {
 		count uint16
 	}
 	tests := []struct {
-		name         string
-		args         args
-		helperGetter func() testHelper
+		name      string
+		args      args
+		mockSetup func(testHelper)
 	}{
 		{
 			name: "positive",
@@ -49,12 +30,11 @@ func TestAddItemWithoutErr(t *testing.T) {
 				skuId: 123,
 				count: 1,
 			},
-			helperGetter: func() testHelper {
-				h := newTestHelper(t)
+			mockSetup: func(h testHelper) {
 				cart := models.NewCart()
 				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
-				return h
+				h.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(nil)
 			},
 		},
 		{
@@ -65,10 +45,8 @@ func TestAddItemWithoutErr(t *testing.T) {
 				skuId: 124,
 				count: 1,
 			},
-			helperGetter: func() testHelper {
-				h := newTestHelper(t)
+			mockSetup: func(h testHelper) {
 				h.productServiceMock.Expect(minimock.AnyContext, 124).Return(false, nil)
-				return h
 			},
 		},
 	}
@@ -76,7 +54,8 @@ func TestAddItemWithoutErr(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			helper := tt.helperGetter()
+			helper := newTestHelper(t)
+			tt.mockSetup(helper)
 			err := helper.service.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
 			assert.NoError(t, err, "must be no error")
 		})
@@ -93,17 +72,15 @@ func TestAddItemWithErrs(t *testing.T) {
 	}
 	errorToThrow := fmt.Errorf("oops error")
 	tests := []struct {
-		name         string
-		helperGetter func() testHelper
-		args         args
-		err          error
+		name      string
+		mockSetup func(testHelper)
+		args      args
+		err       error
 	}{
 		{
 			name: "error checking good presence",
-			helperGetter: func() testHelper {
-				h := newTestHelper(t)
+			mockSetup: func(h testHelper) {
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(false, errorToThrow)
-				return h
 			},
 			args: args{
 				ctx:   context.Background(),
@@ -115,11 +92,9 @@ func TestAddItemWithErrs(t *testing.T) {
 		},
 		{
 			name: "error getting user cart",
-			helperGetter: func() testHelper {
-				h := newTestHelper(t)
+			mockSetup: func(h testHelper) {
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
 				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
-				return h
 			},
 			args: args{
 				ctx:   context.Background(),
@@ -131,13 +106,11 @@ func TestAddItemWithErrs(t *testing.T) {
 		},
 		{
 			name: "error saving user cart",
-			helperGetter: func() testHelper {
-				h := newTestHelper(t)
+			mockSetup: func(h testHelper) {
 				cart := models.NewCart()
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
 				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
 				h.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(errorToThrow)
-				return h
 			},
 			args: args{
 				ctx:   context.Background(),
@@ -153,7 +126,8 @@ func TestAddItemWithErrs(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			helper := tt.helperGetter()
+			helper := newTestHelper(t)
+			tt.mockSetup(helper)
 			err := helper.service.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
 			assert.ErrorIs(t, err, tt.err)
 		})
@@ -162,32 +136,23 @@ func TestAddItemWithErrs(t *testing.T) {
 
 func TestCartModifierService_DeleteItem(t *testing.T) {
 	t.Parallel()
-	mc := minimock.NewController(t)
 	errorToThrow := fmt.Errorf("oops error")
-	type fields struct {
-		repo           repository
-		productService productService
-	}
 	type args struct {
 		ctx   context.Context
 		user  int64
 		skuId int64
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr error
+		name      string
+		mockSetup func(testHelper)
+		args      args
+		wantErr   error
 	}{
 		{
 			name: "positive",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(models.NewCart(), nil).
-					SaveCartMock.
-					Return(nil),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil)
+				helper.saveCartRepoMock.Return(nil)
 			},
 			args: args{
 				context.Background(),
@@ -198,11 +163,8 @@ func TestCartModifierService_DeleteItem(t *testing.T) {
 		},
 		{
 			name: "error getting user cart",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(nil, errorToThrow),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
 			},
 			args: args{
 				context.Background(),
@@ -213,13 +175,9 @@ func TestCartModifierService_DeleteItem(t *testing.T) {
 		},
 		{
 			name: "error saving user cart",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(models.NewCart(), nil).
-					SaveCartMock.
-					Return(errorToThrow),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil)
+				helper.saveCartRepoMock.Return(errorToThrow)
 			},
 			args: args{
 				context.Background(),
@@ -233,42 +191,31 @@ func TestCartModifierService_DeleteItem(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			cs := &CartModifierService{
-				repo:           tt.fields.repo,
-				productService: tt.fields.productService,
-			}
-			err := cs.DeleteItem(tt.args.ctx, tt.args.user, tt.args.skuId)
-			assert.ErrorIs(t, err, tt.wantErr, fmt.Errorf("CartModifierService.DeleteItem() error = %v, wantErr %v", err, tt.wantErr))
+			helper := newTestHelper(t)
+			tt.mockSetup(helper)
+			err := helper.service.DeleteItem(tt.args.ctx, tt.args.user, tt.args.skuId)
+			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }
 
 func TestCartModifierService_ClearCart(t *testing.T) {
-	mc := minimock.NewController(t)
 	errorToThrow := fmt.Errorf("oops error")
-	type fields struct {
-		repo           repository
-		productService productService
-	}
 	type args struct {
 		ctx  context.Context
 		user int64
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr error
+		name      string
+		mockSetup func(testHelper)
+		args      args
+		wantErr   error
 	}{
 		{
 			name: "positive",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(models.NewCart(), nil).
-					SaveCartMock.
-					Return(nil),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil)
+				helper.saveCartRepoMock.Return(nil)
 			},
 			args: args{
 				context.Background(),
@@ -278,11 +225,8 @@ func TestCartModifierService_ClearCart(t *testing.T) {
 		},
 		{
 			name: "error getting user cart",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(nil, errorToThrow),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
 			},
 			args: args{
 				context.Background(),
@@ -292,13 +236,9 @@ func TestCartModifierService_ClearCart(t *testing.T) {
 		},
 		{
 			name: "error saving user cart",
-			fields: fields{
-				repo: NewRepositoryMock(mc).
-					GetCartMock.
-					When(minimock.AnyContext, 123).
-					Then(models.NewCart(), nil).
-					SaveCartMock.
-					Return(errorToThrow),
+			mockSetup: func(helper testHelper) {
+				helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil)
+				helper.saveCartRepoMock.Return(errorToThrow)
 			},
 			args: args{
 				context.Background(),
@@ -311,12 +251,10 @@ func TestCartModifierService_ClearCart(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			cs := &CartModifierService{
-				repo:           tt.fields.repo,
-				productService: tt.fields.productService,
-			}
-			err := cs.ClearCart(tt.args.ctx, tt.args.user)
-			assert.ErrorIs(t, err, tt.wantErr, fmt.Errorf("CartModifierService.ClearCart() error = %v, wantErr %v", err, tt.wantErr))
+			helper := newTestHelper(t)
+			tt.mockSetup(helper)
+			err := helper.service.ClearCart(tt.args.ctx, tt.args.user)
+			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }
