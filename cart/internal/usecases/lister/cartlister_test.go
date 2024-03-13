@@ -6,42 +6,59 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"reflect"
 	"sort"
 	"testing"
 
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
+type testHelper struct {
+	repoMock           *mRepositoryMockGetCart
+	productServiceMock *mProductServiceMockGetProductsInfo
+	service            *CartListerService
+}
+
+func newTestHelper(t *testing.T) testHelper {
+	mc := minimock.NewController(t)
+	helper := testHelper{}
+	repo := NewRepositoryMock(mc)
+	productService := NewProductServiceMock(mc)
+	helper.repoMock = &(repo.GetCartMock)
+	helper.productServiceMock = &(productService.GetProductsInfoMock)
+	helper.service = New(repo, productService)
+	return helper
+}
+
 func TestCartListerService_ListCartContentErrors(t *testing.T) {
 	t.Parallel()
-	mc := minimock.NewController(t)
 	errorToThrow := fmt.Errorf("oops error")
-	type fields struct {
-		repo           repository
-		productService productService
-	}
 	type args struct {
 		ctx  context.Context
 		user int64
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr error
+		name         string
+		helperGetter func() testHelper
+		args         args
+		wantErr      error
 	}{
 		{
-			name:    "error getting cart",
-			fields:  fields{repo: NewRepositoryMock(mc).GetCartMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)},
+			name: "error getting cart",
+			helperGetter: func() testHelper {
+				helper1 := newTestHelper(t)
+				helper1.repoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
+				return helper1
+			},
 			args:    args{context.Background(), 123},
 			wantErr: errorToThrow,
 		},
 		{
 			name: "error getting products info",
-			fields: fields{
-				repo:           NewRepositoryMock(mc).GetCartMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil),
-				productService: NewProductServiceMock(mc).GetProductsInfoMock.Return(nil, errorToThrow),
+			helperGetter: func() testHelper {
+				helper2 := newTestHelper(t)
+				helper2.repoMock.Expect(minimock.AnyContext, 123).Return(models.NewCart(), nil)
+				helper2.productServiceMock.Return(nil, errorToThrow)
+				return helper2
 			},
 			args:    args{context.Background(), 123},
 			wantErr: errorToThrow,
@@ -51,8 +68,8 @@ func TestCartListerService_ListCartContentErrors(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			cl := New(tt.fields.repo, tt.fields.productService)
-			_, err := cl.ListCartContent(tt.args.ctx, tt.args.user)
+			helper := tt.helperGetter()
+			_, err := helper.service.ListCartContent(tt.args.ctx, tt.args.user)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
@@ -72,8 +89,6 @@ func TestCartListerService_ListCartContentPositive(t *testing.T) {
 		{Name: "item123", Price: 100},
 		{Name: "item456", Price: 50},
 	}
-	//prodService.GetProductsInfoMock.When(minimock.AnyContext, []int64{123, 456}).Then(prodInfos, nil)
-	//prodService.GetProductsInfoMock.When(minimock.AnyContext, []int64{456, 123}).Then(prodInfos, nil)
 	prodService.GetProductsInfoMock.Set(func(_ context.Context, skuIds []int64) (pa1 []models.ProductInfo, err error) {
 		require.Len(t, skuIds, 2, "passed skuIds have wrong len")
 		if skuIds[0] > skuIds[1] {
@@ -123,9 +138,7 @@ func Test_createCartContent(t *testing.T) {
 	})
 
 	got := createCartContent(items, prodInfos)
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("createCartContent() = %v, want %v", got, want)
-	}
+	assert.Equal(t, want, got, fmt.Sprintf("createCartContent() = %v, want %v", got, want))
 }
 
 func Test_extractSkuIds(t *testing.T) {
@@ -166,9 +179,8 @@ func Test_extractSkuIds(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := extractSkuIds(tt.args.items); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("extractSkuIds() = %v, want %v", got, tt.want)
-			}
+			got := extractSkuIds(tt.args.items)
+			assert.Equal(t, tt.want, got, fmt.Sprintf("extractSkuIds() = %v, want %v", got, tt.want))
 		})
 	}
 }
