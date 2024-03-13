@@ -9,6 +9,25 @@ import (
 	"testing"
 )
 
+type testHelper struct {
+	getCartRepoMock    *mRepositoryMockGetCart
+	saveCartRepoMock   *mRepositoryMockSaveCart
+	productServiceMock *mProductServiceMockIsItemPresent
+	service            *CartModifierService
+}
+
+func newTestHelper(t *testing.T) testHelper {
+	mc := minimock.NewController(t)
+	helper := testHelper{}
+	repo := NewRepositoryMock(mc)
+	productService := NewProductServiceMock(mc)
+	helper.getCartRepoMock = &(repo.GetCartMock)
+	helper.saveCartRepoMock = &(repo.SaveCartMock)
+	helper.productServiceMock = &(productService.IsItemPresentMock)
+	helper.service = New(repo, productService)
+	return helper
+}
+
 func TestAddItemWithoutErr(t *testing.T) {
 	t.Parallel()
 	type args struct {
@@ -17,44 +36,48 @@ func TestAddItemWithoutErr(t *testing.T) {
 		skuId int64
 		count uint16
 	}
-	type testStruct struct {
-		name string
-		args args
+	tests := []struct {
+		name         string
+		args         args
+		helperGetter func() testHelper
+	}{
+		{
+			name: "positive",
+			args: args{
+				ctx:   context.Background(),
+				user:  123,
+				skuId: 123,
+				count: 1,
+			},
+			helperGetter: func() testHelper {
+				h := newTestHelper(t)
+				cart := models.NewCart()
+				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
+				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				return h
+			},
+		},
+		{
+			name: "item not exists in product service",
+			args: args{
+				ctx:   context.Background(),
+				user:  124,
+				skuId: 124,
+				count: 1,
+			},
+			helperGetter: func() testHelper {
+				h := newTestHelper(t)
+				h.productServiceMock.Expect(minimock.AnyContext, 124).Return(false, nil)
+				return h
+			},
+		},
 	}
-	tests := []testStruct{}
-	mc := minimock.NewController(t)
-	repo := NewRepositoryMock(mc)
-	repo.SaveCartMock.Return(nil)
-	prodServ := NewProductServiceMock(mc)
-
-	// positive case
-	arg := args{
-		ctx:   context.Background(),
-		user:  123,
-		skuId: 123,
-		count: 1,
-	}
-	cart := models.NewCart()
-	repo.GetCartMock.When(minimock.AnyContext, arg.user).Then(cart, nil)
-	prodServ.IsItemPresentMock.When(minimock.AnyContext, arg.skuId).Then(true, nil)
-	tests = append(tests, testStruct{"positive", arg})
-
-	// item not exists in product service
-	arg = args{
-		ctx:   context.Background(),
-		user:  124,
-		skuId: 124,
-		count: 1,
-	}
-	prodServ.IsItemPresentMock.When(minimock.AnyContext, arg.skuId).Then(false, nil)
-	tests = append(tests, testStruct{"item not exists in product service", arg})
-
-	adder := New(repo, prodServ)
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := adder.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
+			helper := tt.helperGetter()
+			err := helper.service.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
 			assert.NoError(t, err, "must be no error")
 		})
 	}
@@ -68,61 +91,70 @@ func TestAddItemWithErrs(t *testing.T) {
 		skuId int64
 		count uint16
 	}
-
-	type testStruct struct {
-		name string
-		args args
-		err  error
+	errorToThrow := fmt.Errorf("oops error")
+	tests := []struct {
+		name         string
+		helperGetter func() testHelper
+		args         args
+		err          error
+	}{
+		{
+			name: "error checking good presence",
+			helperGetter: func() testHelper {
+				h := newTestHelper(t)
+				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(false, errorToThrow)
+				return h
+			},
+			args: args{
+				ctx:   context.Background(),
+				user:  123,
+				skuId: 123,
+				count: 1,
+			},
+			err: errorToThrow,
+		},
+		{
+			name: "error getting user cart",
+			helperGetter: func() testHelper {
+				h := newTestHelper(t)
+				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
+				return h
+			},
+			args: args{
+				ctx:   context.Background(),
+				user:  123,
+				skuId: 123,
+				count: 1,
+			},
+			err: errorToThrow,
+		},
+		{
+			name: "error saving user cart",
+			helperGetter: func() testHelper {
+				h := newTestHelper(t)
+				cart := models.NewCart()
+				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
+				h.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(errorToThrow)
+				return h
+			},
+			args: args{
+				ctx:   context.Background(),
+				user:  123,
+				skuId: 123,
+				count: 1,
+			},
+			err: errorToThrow,
+		},
 	}
-	tests := []testStruct{}
-	mc := minimock.NewController(t)
-	repo := NewRepositoryMock(mc)
-	repo.SaveCartMock.Return(nil)
-	prodServ := NewProductServiceMock(mc)
 
-	//error checking good presence
-	arg := args{
-		ctx:   context.Background(),
-		user:  123,
-		skuId: 123,
-		count: 1,
-	}
-	err := fmt.Errorf("someerror")
-	prodServ.IsItemPresentMock.When(minimock.AnyContext, arg.skuId).Then(false, err)
-	tests = append(tests, testStruct{"error checking good presence", arg, err})
-
-	// error getting user cart
-	arg = args{
-		ctx:   context.Background(),
-		user:  124,
-		skuId: 124,
-		count: 1,
-	}
-	err = fmt.Errorf("someerror2")
-	prodServ.IsItemPresentMock.When(minimock.AnyContext, arg.skuId).Then(true, nil)
-	repo.GetCartMock.When(minimock.AnyContext, arg.user).Then(nil, err)
-	tests = append(tests, testStruct{"error getting user cart", arg, err})
-
-	// error saving user cart
-	arg = args{
-		ctx:   context.Background(),
-		user:  125,
-		skuId: 125,
-		count: 1,
-	}
-	err = fmt.Errorf("someerror3")
-	cart := models.NewCart()
-	prodServ.IsItemPresentMock.When(minimock.AnyContext, arg.skuId).Then(true, nil)
-	repo.GetCartMock.When(minimock.AnyContext, arg.user).Then(cart, nil)
-	repo.SaveCartMock.When(minimock.AnyContext, arg.user, cart).Then(err)
-	tests = append(tests, testStruct{"error saving user cart", arg, err})
-
-	adder := New(repo, prodServ)
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := adder.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
+			helper := tt.helperGetter()
+			err := helper.service.AddItem(tt.args.ctx, tt.args.user, tt.args.skuId, tt.args.count)
 			assert.ErrorIs(t, err, tt.err)
 		})
 	}
