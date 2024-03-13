@@ -5,6 +5,7 @@ build:
 coverage:
 	@go test -coverprofile=coverage.out  ./... > /dev/null
 	@go tool cover -func coverage.out | grep total:
+	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
 lint:
