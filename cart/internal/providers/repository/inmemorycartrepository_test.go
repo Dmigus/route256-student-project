@@ -6,10 +6,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"route256.ozon.ru/project/cart/internal/models"
+	"sort"
 	"testing"
 )
 
-func TestInMemoryCartRepository_GetCart(t *testing.T) {
+func TestInMemoryCartRepository_GetNewCarts(t *testing.T) {
 	t.Parallel()
 	repo := New()
 	userId := int64(123)
@@ -23,6 +24,27 @@ func TestInMemoryCartRepository_GetCart(t *testing.T) {
 	otherUserCart, err := repo.GetCart(context.Background(), otherUser)
 	require.NoError(t, err, "created cart is not empty")
 	assert.False(t, newCart == otherUserCart, "the same cart returned for different users")
+}
+
+func TestInMemoryCartRepository_GetExistingCarts(t *testing.T) {
+	t.Parallel()
+	repo := New()
+	newCart := models.NewCart()
+	newCart.Add(context.Background(), 456, 10)
+	newCart.Add(context.Background(), 789, 15)
+	userId := int64(123)
+	repo.carts[userId] = newCart
+	returnedCart, err := repo.GetCart(context.Background(), userId)
+	require.NoError(t, err, "saving cart failed with error")
+	returnedItems := returnedCart.ListItems(context.Background())
+	expectedItems := []models.CartItem{
+		{456, 10},
+		{789, 15},
+	}
+	sort.Slice(returnedItems, func(i, j int) bool {
+		return returnedItems[i].SkuId < returnedItems[j].SkuId
+	})
+	assert.Equal(t, expectedItems, returnedItems)
 }
 
 func TestInMemoryCartRepository_SaveCart(t *testing.T) {
@@ -39,16 +61,19 @@ func TestInMemoryCartRepository_SaveAndGet(t *testing.T) {
 	t.Parallel()
 	repo := New()
 	newCart := models.NewCart()
+	newCart.Add(context.Background(), 456, 10)
+	newCart.Add(context.Background(), 789, 15)
 	userId := int64(123)
 	err := repo.SaveCart(context.Background(), userId, newCart)
 	require.NoError(t, err, "saving cart failed with error")
 	returnedCart, err := repo.GetCart(context.Background(), userId)
 	require.NoError(t, err, "getting cart failed with error")
-	assert.True(t, returnedCart == newCart, "returned card is not same as saved for this user")
+	assert.Equal(t, newCart, returnedCart, "returned card is not same as saved for this user")
+
 	otherUserId := int64(456)
 	returnedOtherCard, err := repo.GetCart(context.Background(), otherUserId)
 	require.NoError(t, err, "getting cart failed with error")
-	assert.False(t, returnedOtherCard == newCart, "the same cart returned for different users")
+	assert.NotEqual(t, newCart, returnedOtherCard, "the same cart returned for different users")
 }
 
 func BenchmarkGetNewCarts(b *testing.B) {
