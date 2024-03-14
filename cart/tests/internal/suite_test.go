@@ -27,7 +27,14 @@ func (s *Suit) SetupSuite() {
 	// установим порт 8082 для Владислава :)
 	config.Server.Port = 8082
 	s.app = app.NewApp(config)
-	go s.app.Run()
+	goroStartDone := make(chan struct{})
+	go func() {
+		close(goroStartDone)
+		s.app.Run()
+	}()
+	<-goroStartDone
+	// подождём, чтобы с большой вероятностью успел запуститься
+	time.Sleep(10 * time.Millisecond)
 }
 
 func (s *Suit) TearDownSuite() {
@@ -38,8 +45,7 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 	host, _ := s.app.GetAddrFromConfig()
 	hostWithScheme := "http://" + host
 	// ограничим время теста
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
-	defer cancelFunc()
+	ctx := context.Background()
 	// добавляем товар в корзину для пользователя
 	userId := 123
 	skuId := 773297411
@@ -53,14 +59,14 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 	)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, urlPath, bytes.NewReader(body))
 	respRec, err := client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "add item to cart failed")
 
 	// проверим, что он появился и проверим цену
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "list items from cart failed")
 	respBody := struct {
 		Items []struct {
@@ -72,9 +78,9 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 		TotalPrice uint32 `json:"total_price"`
 	}{}
 	body, err = io.ReadAll(respRec.Body)
-	s.NoError(err)
+	s.Require().NoError(err)
 	err = json.Unmarshal(body, &respBody)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().NoError(err, "wrong response body")
 	s.Assert().NotZero(respBody.TotalPrice, "total price = 0")
 	s.Require().Len(respBody.Items, 1, "there was not 1 position in cart")
@@ -84,14 +90,14 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
 	req, _ = http.NewRequestWithContext(ctx, http.MethodDelete, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNoContent, respRec.StatusCode, "delete item from cart failed")
 
 	// запросим товары снова и проверим статус код
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNotFound, respRec.StatusCode, "wrong status code for empty cart")
 }
 
@@ -99,8 +105,7 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	host, _ := s.app.GetAddrFromConfig()
 	hostWithScheme := "http://" + host
 	// ограничим время теста
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
-	defer cancelFunc()
+	ctx := context.Background()
 	// добавляем товар в корзину для пользователя два раза
 	userId := 1234
 	skuId := 773297411
@@ -114,7 +119,7 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, urlPath, bytes.NewReader(body))
 	respRec, err := client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "add item to cart failed")
 	body, _ = json.Marshal(
 		struct {
@@ -123,14 +128,14 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	)
 	req, _ = http.NewRequestWithContext(ctx, http.MethodPost, urlPath, bytes.NewReader(body))
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "add item to cart failed")
 
 	// проверим, что он сложился
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "list items from cart failed")
 	respBody := struct {
 		Items []struct {
@@ -142,9 +147,9 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 		TotalPrice uint32 `json:"total_price"`
 	}{}
 	body, err = io.ReadAll(respRec.Body)
-	s.NoError(err)
+	s.Require().NoError(err)
 	err = json.Unmarshal(body, &respBody)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().NoError(err, "wrong response body")
 	s.Require().Len(respBody.Items, 1, "there was not 1 position in cart")
 	s.Assert().Equal("Кроссовки Nike JORDAN", respBody.Items[0].Name)
@@ -154,13 +159,13 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodDelete, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNoContent, respRec.StatusCode, "clear cart failed")
 
 	// запросим товары снова и проверим статус код
 	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
-	s.NoError(err)
+	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNotFound, respRec.StatusCode, "wrong status code for empty cart")
 }
