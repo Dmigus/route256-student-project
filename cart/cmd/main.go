@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"route256.ozon.ru/project/cart/internal/app"
+	"syscall"
 )
 
 func main() {
@@ -16,5 +19,9 @@ func main() {
 	}
 	appl := app.NewApp(config)
 	defer appl.Stop()
-	appl.Run()
+	go appl.Run()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
 }

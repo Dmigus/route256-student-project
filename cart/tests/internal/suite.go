@@ -35,7 +35,7 @@ func (s *Suit) TearDownSuite() {
 }
 
 func (s *Suit) TestAddCheckDeleteCheck() {
-	host, _ := s.app.GetAddr()
+	host, _ := s.app.GetAddrFromConfig()
 	hostWithScheme := "http://" + host
 	// ограничим время теста
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
@@ -96,7 +96,7 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 }
 
 func (s *Suit) TestAddAddCheckClearCheck() {
-	host, _ := s.app.GetAddr()
+	host, _ := s.app.GetAddrFromConfig()
 	hostWithScheme := "http://" + host
 	// ограничим время теста
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)

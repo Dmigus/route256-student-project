@@ -26,27 +26,22 @@ import (
 )
 
 type App struct {
-	config              Config
-	cartRepo            *repository.InMemoryCartRepository
-	itPresChecker       *itempresencechecker.ItemPresenceChecker
-	prodInfoGetter      *productinfogetter.ProductInfoGetter
-	cartModifierService *modifier.CartModifierService
-	cartListerService   *lister.CartListerService
-	HttpController      http.Handler
-	server              atomic.Pointer[http.Server]
+	config         Config
+	httpController http.Handler
+	server         atomic.Pointer[http.Server]
 }
 
+// NewApp возращает App, готовый к запуску
 func NewApp(config Config) *App {
-	return &App{
+	app := &App{
 		config: config,
 	}
+	app.init()
+	return app
 }
 
-func (a *App) initRepo() {
-	a.cartRepo = repository.New()
-}
-
-func (a *App) initProductService() {
+func (a *App) init() {
+	cartRepo := repository.New()
 	prodServConfig := a.config.ProductService
 	baseUrl, err := url.Parse(prodServConfig.BaseURL)
 	if err != nil {
@@ -55,41 +50,23 @@ func (a *App) initProductService() {
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	clientForProductService := client.NewRetryableClient(retryPolicy)
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
-	a.itPresChecker = itempresencechecker.NewItemPresenceChecker(rcPerformer)
-	a.prodInfoGetter = productinfogetter.NewProductInfoGetter(rcPerformer)
-}
-
-func (a *App) InitCartServices() {
-	if a.cartRepo == nil {
-		a.initRepo()
-	}
-	if a.itPresChecker == nil && a.prodInfoGetter == nil {
-		a.initProductService()
-	}
-	a.cartModifierService = modifier.New(a.cartRepo, a.itPresChecker)
-	a.cartListerService = lister.New(a.cartRepo, a.prodInfoGetter)
-}
-
-func (a *App) InitController() {
-	if a.HttpController != nil {
-		return
-	}
-	if a.cartModifierService == nil && a.cartListerService == nil {
-		a.InitCartServices()
-	}
+	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
+	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
+	cartModifierService := modifier.New(cartRepo, itPresChecker)
+	cartListerService := lister.New(cartRepo, prodInfoGetter)
 	mux := http.NewServeMux()
-	addHandler := addPkg.New(a.cartModifierService)
+	addHandler := addPkg.New(cartModifierService)
 	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
-	clearHandler := clearPkg.New(a.cartModifierService)
+	clearHandler := clearPkg.New(cartModifierService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
-	deleteHandler := deletePkg.New(a.cartModifierService)
+	deleteHandler := deletePkg.New(cartModifierService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
-	listHandler := listPkg.New(a.cartListerService)
+	listHandler := listPkg.New(cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
-	a.HttpController = middleware.NewLogger(mux)
+	a.httpController = middleware.NewLogger(mux)
 }
 
-func (a *App) GetAddr() (string, error) {
+func (a *App) GetAddrFromConfig() (string, error) {
 	serverConfig := a.config.Server
 	hostAddr, err := netip.ParseAddr(serverConfig.Host)
 	if err != nil {
@@ -103,17 +80,16 @@ func (a *App) GetAddr() (string, error) {
 // Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.
 // Если он уже запущен, то функция ничего не делает. Если не удалось запустить, вся программа завершается с ошибкой
 func (a *App) Run() {
-	if a.server.Load() != nil {
+	if a.isRunning() {
 		return
 	}
-	a.InitController()
-	addr, err := a.GetAddr()
+	addr, err := a.GetAddrFromConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 	newServer := &http.Server{
 		Addr:    addr,
-		Handler: a.HttpController,
+		Handler: a.httpController,
 	}
 	if !a.server.CompareAndSwap(nil, newServer) {
 		return
@@ -136,4 +112,8 @@ func (a *App) Stop() {
 	if err := srvToShutdown.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
+}
+
+func (a *App) isRunning() bool {
+	return a.server.Load() != nil
 }
