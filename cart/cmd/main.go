@@ -14,5 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app.NewApp(config).Run()
+	appl := app.NewApp(config)
+	defer appl.Stop()
+	appl.Run()
 }

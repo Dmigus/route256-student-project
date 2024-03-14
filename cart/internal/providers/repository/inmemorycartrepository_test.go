@@ -26,7 +26,7 @@ func TestInMemoryCartRepository_GetNewCarts(t *testing.T) {
 	assert.False(t, newCart == otherUserCart, "the same cart returned for different users")
 }
 
-func TestInMemoryCartRepository_GetExistingCarts(t *testing.T) {
+func TestInMemoryCartRepository_GetExistingCart(t *testing.T) {
 	t.Parallel()
 	repo := New()
 	newCart := models.NewCart()
@@ -35,7 +35,7 @@ func TestInMemoryCartRepository_GetExistingCarts(t *testing.T) {
 	userId := int64(123)
 	repo.carts[userId] = newCart
 	returnedCart, err := repo.GetCart(context.Background(), userId)
-	require.NoError(t, err, "saving cart failed with error")
+	require.NoError(t, err, "getting cart failed with error")
 	returnedItems := returnedCart.ListItems(context.Background())
 	expectedItems := []models.CartItem{
 		{456, 10},

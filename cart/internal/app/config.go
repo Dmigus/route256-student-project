@@ -7,8 +7,9 @@ import (
 
 type Config struct {
 	Server struct {
-		Host string `json:"Host"`
-		Port uint16 `json:"Port"`
+		Host                  string `json:"Host"`
+		Port                  uint16 `json:"Port"`
+		ShutdownTimoutSeconds uint   `json:"ShutdownTimoutSeconds"`
 	} `json:"Server"`
 	ProductService struct {
 		BaseURL     string `json:"BaseURL"`

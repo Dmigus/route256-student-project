@@ -1,7 +1,8 @@
 {
   "Server" :{
     "Host": "0.0.0.0",
-    "Port": 8080
+    "Port": 8080,
+    "ShutdownTimoutSeconds": 1
   },
   "ProductService": {
     "BaseURL": "http://route256.pavl.uk:8080",
