@@ -2,6 +2,7 @@ package policies
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 )
@@ -75,9 +76,8 @@ func TestRetryOnStatusCodes_ShouldBeRetried(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := policy.ShouldBeRetried(tt.args.attemptNum, tt.args.in1, tt.args.resp, tt.args.respErr); got != tt.want {
-				t.Errorf("RetryOnStatusCodes.ShouldBeRetried() = %v, want %v", got, tt.want)
-			}
+			got := policy.ShouldBeRetried(tt.args.attemptNum, tt.args.in1, tt.args.resp, tt.args.respErr)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

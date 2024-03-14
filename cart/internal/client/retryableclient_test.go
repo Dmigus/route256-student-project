@@ -87,9 +87,8 @@ func Test_contextWasDone(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := contextWasDone(tt.args.ctx); got != tt.want {
-				t.Errorf("contextWasDone() = %v, want %v", got, tt.want)
-			}
+			got := contextWasDone(tt.args.ctx)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
