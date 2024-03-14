@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"sort"
 	"sync"
 )
 
@@ -41,5 +42,13 @@ func (u *Cart) ListItems(_ context.Context) []CartItem {
 	for skuId, count := range u.items {
 		items = append(items, CartItem{SkuId: skuId, Count: count})
 	}
+	return items
+}
+
+func (u *Cart) ListItemsSorted(ctx context.Context) []CartItem {
+	items := u.ListItems(ctx)
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].SkuId < items[j].SkuId
+	})
 	return items
 }
