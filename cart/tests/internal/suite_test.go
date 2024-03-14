@@ -9,49 +9,49 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/app"
 	"strconv"
 	"time"
 )
 
+const addr = "http://0.0.0.0:8082"
+
 type Suit struct {
 	suite.Suite
-	app *app.App
 }
 
 func (s *Suit) SetupSuite() {
-	config, err := app.NewConfig("../../configs/config.json")
-	if err != nil {
-		log.Fatal(err)
+	if err := s.checkAppStartup(10 * time.Second); err != nil {
+		log.Fatal("app is not started")
 	}
-	// установим порт 8082 для Владислава :)
-	config.Server.Port = 8082
-	s.app = app.NewApp(config)
-	goroStartDone := make(chan struct{})
-	go func() {
-		close(goroStartDone)
-		s.app.Run()
-	}()
-	<-goroStartDone
-	// подождём, чтобы с большой вероятностью успел запуститься
-	time.Sleep(10 * time.Millisecond)
 }
 
-func (s *Suit) TearDownSuite() {
-	s.app.Stop()
+func (s *Suit) checkAppStartup(dur time.Duration) error {
+	probeUrl, _ := url.JoinPath(addr, "/healthz/alive")
+	ctx, cancelFunc := context.WithTimeout(context.Background(), dur)
+	defer cancelFunc()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, probeUrl, nil)
+			resp, err := http.DefaultClient.Do(req)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				return nil
+			}
+			<-time.After(time.Second)
+		}
+	}
 }
 
 func (s *Suit) TestAddCheckDeleteCheck() {
-	host, _ := s.app.GetAddrFromConfig()
-	hostWithScheme := "http://" + host
-	// ограничим время теста
 	ctx := context.Background()
 	// добавляем товар в корзину для пользователя
 	userId := 123
 	skuId := 773297411
 	client := http.Client{}
 	var urlPath string
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
 	body, _ := json.Marshal(
 		struct {
 			Count uint16 `json:"count"`
@@ -63,7 +63,7 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "add item to cart failed")
 
 	// проверим, что он появился и проверим цену
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)
@@ -87,14 +87,14 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 	s.Assert().Equal("Кроссовки Nike JORDAN", respBody.Items[0].Name)
 
 	// удалим этот товар
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
 	req, _ = http.NewRequestWithContext(ctx, http.MethodDelete, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNoContent, respRec.StatusCode, "delete item from cart failed")
 
 	// запросим товары снова и проверим статус код
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)
@@ -102,16 +102,13 @@ func (s *Suit) TestAddCheckDeleteCheck() {
 }
 
 func (s *Suit) TestAddAddCheckClearCheck() {
-	host, _ := s.app.GetAddrFromConfig()
-	hostWithScheme := "http://" + host
-	// ограничим время теста
 	ctx := context.Background()
 	// добавляем товар в корзину для пользователя два раза
 	userId := 1234
 	skuId := 773297411
 	client := http.Client{}
 	var urlPath string
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart", strconv.Itoa(skuId))
 	body, _ := json.Marshal(
 		struct {
 			Count uint16 `json:"count"`
@@ -132,7 +129,7 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	s.Require().Equal(http.StatusOK, respRec.StatusCode, "add item to cart failed")
 
 	// проверим, что он сложился
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)
@@ -156,14 +153,14 @@ func (s *Suit) TestAddAddCheckClearCheck() {
 	s.Assert().Equal(6, int(respBody.Items[0].Count), "item count mismatch")
 
 	// очистим корзину
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodDelete, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)
 	s.Require().Equal(http.StatusNoContent, respRec.StatusCode, "clear cart failed")
 
 	// запросим товары снова и проверим статус код
-	urlPath, _ = url.JoinPath(hostWithScheme, "user", strconv.Itoa(userId), "cart")
+	urlPath, _ = url.JoinPath(addr, "user", strconv.Itoa(userId), "cart")
 	req, _ = http.NewRequestWithContext(ctx, http.MethodGet, urlPath, nil)
 	respRec, err = client.Do(req)
 	s.Require().NoError(err)

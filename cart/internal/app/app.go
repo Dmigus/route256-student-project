@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jasongerard/healthz"
 	"log"
 	"net/http"
 	"net/netip"
@@ -63,6 +64,8 @@ func (a *App) init() {
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
 	listHandler := listPkg.New(cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
+	probesMux := healthz.CreateMux()
+	mux.Handle("GET /healthz/alive", probesMux)
 	a.httpController = middleware.NewLogger(mux)
 }
 
