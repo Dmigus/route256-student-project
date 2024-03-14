@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -11,50 +10,40 @@ import (
 
 func Test_retryRoundTripper_RoundTripOnAttempts(t *testing.T) {
 	t.Parallel()
-	mc := minimock.NewController(t)
-	policy := NewRetryPolicyMock(mc)
-	rt := NewHttpRoundTripper(mc)
-
+	helper := newTestHelper(t)
 	req := &http.Request{}
 	resp := &http.Response{}
-	policy.ShouldBeRetriedMock.Set(func(attempts int, req *http.Request, resp *http.Response, respErr error) (b1 bool) {
+	helper.policyMock.Set(func(attempts int, req *http.Request, resp *http.Response, respErr error) (b1 bool) {
 		if attempts < 3 {
 			return true
 		}
 		return false
 	})
-	rt.RoundTripMock.Return(resp, nil)
-
-	rrt := retryRoundTripper{next: rt, policy: policy}
-	responseFromRoundTrip, err := rrt.RoundTrip(req)
+	helper.nextRTMock.Return(resp, nil)
+	responseFromRoundTrip, err := helper.rTripper.RoundTrip(req)
 	require.NoError(t, err, "unexpected err")
 	assert.True(t, resp == responseFromRoundTrip, "response from retryRT differ then source")
-	numberOfCallsRT := len(rt.RoundTripMock.Calls())
+	numberOfCallsRT := len(helper.nextRTMock.Calls())
 	assert.Equal(t, 3, numberOfCallsRT, "roundTripper called an unexpected number of times")
 }
 
 func Test_retryRoundTripper_RoundTripOnContext(t *testing.T) {
 	t.Parallel()
-	mc := minimock.NewController(t)
-	policy := NewRetryPolicyMock(mc)
-	rt := NewHttpRoundTripper(mc)
-
+	helper := newTestHelper(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	req := &http.Request{}
 	req = req.WithContext(ctx)
 	resp := &http.Response{}
-	policy.ShouldBeRetriedMock.Set(func(attempts int, req *http.Request, resp *http.Response, respErr error) (b1 bool) {
+	helper.policyMock.Set(func(attempts int, req *http.Request, resp *http.Response, respErr error) (b1 bool) {
 		if attempts >= 10 {
 			cancel()
 		}
 		return true
 	})
-	rt.RoundTripMock.Return(resp, nil)
-
-	rrt := retryRoundTripper{next: rt, policy: policy}
-	_, err := rrt.RoundTrip(req)
+	helper.nextRTMock.Return(resp, nil)
+	_, err := helper.rTripper.RoundTrip(req)
 	require.ErrorIs(t, err, context.Canceled, "unexpected err")
-	numberOfCallsRT := len(rt.RoundTripMock.Calls())
+	numberOfCallsRT := len(helper.nextRTMock.Calls())
 	assert.Equal(t, 10, numberOfCallsRT, "roundTripper called an unexpected number of times")
 }
 
