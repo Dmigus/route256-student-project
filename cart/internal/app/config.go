@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 )
 
@@ -21,16 +22,18 @@ type Config struct {
 	} `json:"ProductService"`
 }
 
-func NewConfig(configPath string) (Config, error) {
-	config := Config{}
+func NewConfig(configPath string) (conf Config, err error) {
 	file, err := os.Open(configPath)
 	if err != nil {
 		return Config{}, err
 	}
-	defer file.Close()
+	defer func() {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}()
 	jsonParser := json.NewDecoder(file)
-	if err = jsonParser.Decode(&config); err != nil {
+	if err = jsonParser.Decode(&conf); err != nil {
 		return Config{}, err
 	}
-	return config, nil
+	return conf, nil
 }
