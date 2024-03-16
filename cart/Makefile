@@ -14,5 +14,5 @@ lint:
 run-e2e:
 	docker-compose build -q
 	docker-compose up --force-recreate --detach
-	-go test -count=1 ./tests/internal/...
-	docker compose kill -s SIGTERM
+	-go test -count=1 ./...
+	docker-compose down
