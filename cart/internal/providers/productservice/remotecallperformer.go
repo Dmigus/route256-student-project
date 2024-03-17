@@ -12,20 +12,27 @@ import (
 
 var errUnmarshableBody = fmt.Errorf("error unmarshalling response body from Product Service")
 
-type httpClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
+type (
+	httpClient interface {
+		Do(req *http.Request) (*http.Response, error)
+	}
 
-type RequestWithSettableToken interface {
-	SetToken(string)
-}
+	RequestWithSettableToken interface {
+		SetToken(string)
+	}
 
-// RemoteCallPerformer предназначен для осуществления вызова некого метода и получения результата
-type RemoteCallPerformer struct {
-	token   string
-	baseURL *url.URL
-	client  httpClient
-}
+	errorResponse struct {
+		Code    int32  `json:"code"`
+		Message string `json:"message"`
+	}
+
+	// RemoteCallPerformer предназначен для осуществления вызова некого метода и получения результата
+	RemoteCallPerformer struct {
+		token   string
+		baseURL *url.URL
+		client  httpClient
+	}
+)
 
 func NewRCPerformer(httpClient httpClient, baseURL *url.URL, token string) *RemoteCallPerformer {
 	return &RemoteCallPerformer{
@@ -46,6 +53,14 @@ func (rcp *RemoteCallPerformer) Perform(ctx context.Context, method string, reqB
 	response, err := rcp.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error during request: %s\n", err)
+	}
+	if response.StatusCode != http.StatusOK {
+		var errorResp *errorResponse
+		err = rcp.parseResponse(response, errorResp)
+		if err != nil {
+			return fmt.Errorf("recieved %d status code, but failed to decode error response: %w", response.StatusCode, err)
+		}
+		return fmt.Errorf("HTTP request responded with: %d , message: %s", errorResp.Code, errorResp.Message)
 	}
 	return rcp.parseResponse(response, respBody)
 }

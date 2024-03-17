@@ -51,12 +51,8 @@ func (h *List) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(marshalled)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(marshalled)
 }
 
 func parseUserId(r *http.Request) (int64, error) {

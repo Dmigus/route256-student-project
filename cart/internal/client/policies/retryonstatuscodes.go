@@ -1,4 +1,4 @@
-package client
+package policies
 
 import "net/http"
 
