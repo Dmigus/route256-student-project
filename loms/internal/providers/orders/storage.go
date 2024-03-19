@@ -14,6 +14,12 @@ type InMemoryOrdersStorage struct {
 	data map[int64]*models.Order
 }
 
+func NewInMemoryOrdersStorage() *InMemoryOrdersStorage {
+	return &InMemoryOrdersStorage{
+		data: make(map[int64]*models.Order),
+	}
+}
+
 func (i *InMemoryOrdersStorage) Save(_ context.Context, order *models.Order) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()

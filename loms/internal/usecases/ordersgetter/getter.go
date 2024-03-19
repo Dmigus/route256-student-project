@@ -13,6 +13,10 @@ type OrdersGetter struct {
 	orders ordersStorage
 }
 
+func NewOrdersGetter(orders ordersStorage) *OrdersGetter {
+	return &OrdersGetter{orders: orders}
+}
+
 func (og *OrdersGetter) Get(ctx context.Context, orderId int64) (*models.Order, error) {
 	return og.orders.Load(ctx, orderId)
 }

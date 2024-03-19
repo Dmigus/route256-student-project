@@ -22,6 +22,10 @@ type OrdersPayer struct {
 	stocks stockRemover
 }
 
+func NewOrdersPayer(orders orderRepo, stocks stockRemover) *OrdersPayer {
+	return &OrdersPayer{orders: orders, stocks: stocks}
+}
+
 func (or *OrdersPayer) Pay(ctx context.Context, orderId int64) error {
 	order, err := or.orders.Load(ctx, orderId)
 	if err != nil {

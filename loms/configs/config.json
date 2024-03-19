@@ -1,0 +1,9 @@
+{
+  "GRPCServer" :{
+    "Port": 50051,
+    "ShutdownTimoutSeconds": 1
+  },
+  "Stocks" : {
+    "InitData": "./assets/stock-data.json"
+  }
+}

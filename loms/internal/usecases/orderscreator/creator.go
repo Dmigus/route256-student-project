@@ -24,6 +24,10 @@ type OrdersCreator struct {
 	stocks           stocksStorage
 }
 
+func NewOrdersCreator(orderIdGenerator orderIdGenerator, orders ordersStorage, stocks stocksStorage) *OrdersCreator {
+	return &OrdersCreator{orderIdGenerator: orderIdGenerator, orders: orders, stocks: stocks}
+}
+
 func (oc *OrdersCreator) Create(ctx context.Context, _ int64, items []models.OrderItem) (int64, error) {
 	newOrder := oc.createOrderInstance()
 	errReserving := oc.stocks.Reserve(ctx, items)

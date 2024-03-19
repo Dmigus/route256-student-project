@@ -3,13 +3,17 @@ package stocksinfogetter
 import "context"
 
 type stockRepo interface {
-	GetNumOfAvailable(context.Context, uint32) (uint64, error)
+	GetNumOfAvailable(context.Context, int64) (uint64, error)
 }
 
-type Getter struct {
+type StocksInfoGetter struct {
 	stocks stockRepo
 }
 
-func (g *Getter) GetNumOfAvailable(ctx context.Context, skuId uint32) (uint64, error) {
+func NewGetter(stocks stockRepo) *StocksInfoGetter {
+	return &StocksInfoGetter{stocks: stocks}
+}
+
+func (g *StocksInfoGetter) GetNumOfAvailable(ctx context.Context, skuId int64) (uint64, error) {
 	return g.stocks.GetNumOfAvailable(ctx, skuId)
 }

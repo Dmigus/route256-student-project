@@ -12,6 +12,12 @@ type InMemoryStockStorage struct {
 	data map[int64]*ItemUnits
 }
 
+func NewInMemoryStockStorage() *InMemoryStockStorage {
+	return &InMemoryStockStorage{
+		data: make(map[int64]*ItemUnits),
+	}
+}
+
 func (i *InMemoryStockStorage) SetItemUnits(skuId int64, units *ItemUnits) {
 	i.mu.Lock()
 	defer i.mu.Unlock()

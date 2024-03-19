@@ -22,6 +22,10 @@ type OrderCanceller struct {
 	stocks stockCanceller
 }
 
+func NewOrderCanceller(orders orderRepo, stocks stockCanceller) *OrderCanceller {
+	return &OrderCanceller{orders: orders, stocks: stocks}
+}
+
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
 	order, err := oc.orders.Load(ctx, orderId)
 	if err != nil {
