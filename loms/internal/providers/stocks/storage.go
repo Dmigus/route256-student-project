@@ -9,7 +9,13 @@ import (
 
 type InMemoryStockStorage struct {
 	mu   sync.RWMutex
-	data map[int64]*itemUnits
+	data map[int64]*ItemUnits
+}
+
+func (i *InMemoryStockStorage) SetItemUnits(skuId int64, units *ItemUnits) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.data[skuId] = units
 }
 
 // Reserve резервирует товары. Если хотя бы один товар зарезервировать не удалось, то эффект такой же, как будто операции не было. Возвращает первую произошедшую ошибку.
@@ -39,14 +45,25 @@ func (i *InMemoryStockStorage) reserveOne(it models.OrderItem) error {
 	return itemUni.reserve(it.Count)
 }
 
-func (i *InMemoryStockStorage) RemoveReserved(ctx context.Context, items []models.OrderItem) error {
-	//TODO implement me
-	panic("implement me")
+// RemoveReserved удаляет элементы из имеющихся и зарезервированных. Товары не найденные в базе, игнорируются. Реализация никогда не возвращает шибку.
+func (i *InMemoryStockStorage) RemoveReserved(_ context.Context, items []models.OrderItem) error {
+	for _, it := range items {
+		itemUni, err := i.getItemOrErr(it.SkuId)
+		if err != nil {
+			continue
+		}
+		itemUni.removeReserved(it.Count)
+	}
+	return nil
 }
 
-func (i *InMemoryStockStorage) GetNumOfAvailable(ctx context.Context, u uint32) (uint64, error) {
-	//TODO implement me
-	panic("implement me")
+// GetNumOfAvailable возвращает
+func (i *InMemoryStockStorage) GetNumOfAvailable(_ context.Context, skuId int64) (uint64, error) {
+	itemUni, err := i.getItemOrErr(skuId)
+	if err != nil {
+		return 0, err
+	}
+	return itemUni.getNumOfAvailable(), nil
 }
 
 // CancelReserved отменяет резервирование для итемов items. Товары не найденные в базе, игнорируются. Реализация никогда не возвращает шибку.
@@ -61,7 +78,7 @@ func (i *InMemoryStockStorage) CancelReserved(_ context.Context, items []models.
 	return nil
 }
 
-func (i *InMemoryStockStorage) getItemOrErr(skuId int64) (*itemUnits, error) {
+func (i *InMemoryStockStorage) getItemOrErr(skuId int64) (*ItemUnits, error) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	itemUni, exists := i.data[skuId]

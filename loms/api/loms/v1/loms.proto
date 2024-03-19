@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "route256.ozon.ru/project/internal/protoc/loms/v1";
+option go_package = "loms/v1";
 
 import "google/protobuf/empty.proto";
 

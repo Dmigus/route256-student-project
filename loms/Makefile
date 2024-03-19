@@ -30,22 +30,22 @@ bin/protoc-gen-go-grpc:
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc
 
 
-LOMS_PROTO_PATH:=api
-OUT_DIR := "internal/protoc"
+LOMS_PROTO_PATH := api/loms
+OUT_DIR := internal/controllers/protoc
 
 .PHONY: .protoc-generate
 .protoc-generate: .bin-deps .vendor-proto
 	mkdir -p $(OUT_DIR)
 	protoc \
-	-I . \
+	-I $(LOMS_PROTO_PATH) \
 	-I vendor-proto \
 	--plugin=protoc-gen-go=$(LOCAL_BIN)/protoc-gen-go \
-	--go_out= \
-	--go_opt=module="route256.ozon.ru/project" \
+	--go_out=$(OUT_DIR) \
+	--go_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=$(LOCAL_BIN)/protoc-gen-go-grpc \
-	--go-grpc_out=. \
-	--go-grpc_opt=module="route256.ozon.ru/project" \
-	$(LOMS_PROTO_PATH)/**/**/*.proto
+	--go-grpc_out=$(OUT_DIR)  \
+	--go-grpc_opt=paths=source_relative \
+	$(LOMS_PROTO_PATH)/v*/*.proto
 	go mod tidy
 
 
