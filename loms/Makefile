@@ -1,9 +1,14 @@
+coverage:
+	@go test -tags=unit -coverprofile=coverage.out  ./...
+	@go tool cover -func coverage.out | grep total:
+	@go tool cover -html coverage.out -o coverage.html
+	@rm coverage.out
+
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin
 
-#.PHONY: .vendor-rm
-#.vendor-rm:
-#	rm -rf vendor-proto
+.vendor-rm:
+	rm -rf vendor-proto
 
 # Устанавливаем proto описания google/protobuf
 vendor-proto/google/protobuf:
@@ -26,7 +31,6 @@ bin/protoc-gen-go:
 bin/protoc-gen-go-grpc:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
 
-#.PHONY: .bin-deps
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc
 
 
