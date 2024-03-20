@@ -53,7 +53,7 @@ func (a *App) init() {
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
-	cartModifierService := modifier.New(cartRepo, itPresChecker)
+	cartModifierService := modifier.New(cartRepo, itPresChecker, nil)
 	cartListerService := lister.New(cartRepo, prodInfoGetter)
 	mux := http.NewServeMux()
 	addHandler := addPkg.New(cartModifierService)
@@ -105,7 +105,7 @@ func (a *App) Run() {
 // Stop останавливает запущенный сервер в течение ShutdownTimoutSeconds секунд. Если не был запущен, функция ничего не делает. Если не удалось
 // остановить в течение таймаута, вся программа завершается с ошибкой. Возврат из функции произойдёт, когда shutdown завершится.
 func (a *App) Stop() {
-	srvToShutdown := a.server.Swap(nil)
+	srvToShutdown := a.server.Load()
 	if srvToShutdown == nil {
 		return
 	}
@@ -115,6 +115,7 @@ func (a *App) Stop() {
 	if err := srvToShutdown.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
+	a.server.Store(nil)
 }
 
 func (a *App) isRunning() bool {

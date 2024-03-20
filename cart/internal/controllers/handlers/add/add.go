@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/models"
+	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 	"strconv"
 )
 
@@ -49,7 +50,11 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		if errors.Is(err, modifier.ErrNotEnoughNumInStocks) {
+			w.WriteHeader(http.StatusPreconditionFailed)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusOK)
