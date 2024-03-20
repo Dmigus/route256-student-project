@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option go_package = "loms/v1";
+
+import "google/protobuf/empty.proto";
+
+service LOMService {
+  rpc CreateOrder(CreateOrderRequest) returns (OrderId);
+  rpc InfoOrder(OrderId) returns (InfoOrderResponse);
+  rpc PayOrder(OrderId) returns (google.protobuf.Empty);
+  rpc CancelOrder(OrderId) returns (google.protobuf.Empty);
+  rpc ListStocksInfo(ListStocksInfoRequest) returns (ListStocksInfoResponse);
+}
+
+message CreateOrderRequest {
+  int64 user = 1;
+  repeated Item items = 2;
+}
+
+message Item {
+  uint32 sku = 1;
+  uint32 count = 2;
+}
+
+message OrderId {
+  int64 id = 1;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNDEFINED = 0;
+  ORDER_STATUS_NEW = 1;
+  ORDER_STATUS_AWAITING_PAYMENT = 2;
+  ORDER_STATUS_FAILED = 3;
+  ORDER_STATUS_PAYED = 4;
+  ORDER_STATUS_CANCELLED = 5;
+}
+
+message InfoOrderResponse {
+  OrderStatus status = 1;
+  int64 user = 2;
+  repeated Item items = 3;
+}
+
+message ListStocksInfoRequest {
+  uint32 sku = 1;
+}
+
+message ListStocksInfoResponse {
+  uint64 count = 1;
+}

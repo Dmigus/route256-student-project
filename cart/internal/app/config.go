@@ -20,6 +20,9 @@ type Config struct {
 			MaxRetries       int   `json:"MaxRetries"`
 		} `json:"RetryPolicy"`
 	} `json:"ProductService"`
+	LOMS struct {
+		Address string `json:"Address"`
+	}
 }
 
 func NewConfig(configPath string) (conf Config, err error) {

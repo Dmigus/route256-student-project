@@ -9,13 +9,15 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/client"
-	"route256.ozon.ru/project/cart/internal/client/policies"
+	lomsClientPkg "route256.ozon.ru/project/cart/internal/clients/loms"
+	"route256.ozon.ru/project/cart/internal/clients/retriablehttp"
+	"route256.ozon.ru/project/cart/internal/clients/retriablehttp/policies"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
 	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
 	"route256.ozon.ru/project/cart/internal/controllers/middleware"
+	lomsProviderPkg "route256.ozon.ru/project/cart/internal/providers/loms"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
@@ -49,11 +51,18 @@ func (a *App) init() {
 		log.Fatal(err)
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	clientForProductService := client.NewRetryableClient(retryPolicy)
+	clientForProductService := retriablehttp.NewRetryableClient(retryPolicy)
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
-	cartModifierService := modifier.New(cartRepo, itPresChecker, nil)
+
+	lomsConfig := a.config.LOMS
+	lomsClient, err := lomsClientPkg.NewClient(lomsConfig.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
+	loms := lomsProviderPkg.NewLOMSProvider(lomsClient)
+	cartModifierService := modifier.New(cartRepo, itPresChecker, loms)
 	cartListerService := lister.New(cartRepo, prodInfoGetter)
 	mux := http.NewServeMux()
 	addHandler := addPkg.New(cartModifierService)

@@ -11,5 +11,8 @@
       "RetryStatusCodes": [420, 429],
       "MaxRetries": 3
     }
+  },
+  "LOMS": {
+    "Address": ":50051"
   }
 }
