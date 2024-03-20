@@ -12,6 +12,7 @@ type testHelper struct {
 	getCartRepoMock    *mRepositoryMockGetCart
 	saveCartRepoMock   *mRepositoryMockSaveCart
 	productServiceMock *mProductServiceMockIsItemPresent
+	stocksCheckerMock  *mStocksCheckerMockIsItemAvailable
 	service            *CartModifierService
 }
 
@@ -20,9 +21,11 @@ func newTestHelper(t *testing.T) testHelper {
 	helper := testHelper{}
 	repo := NewRepositoryMock(mc)
 	productService := NewProductServiceMock(mc)
+	stocks := NewStocksCheckerMock(mc)
 	helper.getCartRepoMock = &(repo.GetCartMock)
 	helper.saveCartRepoMock = &(repo.SaveCartMock)
 	helper.productServiceMock = &(productService.IsItemPresentMock)
-	helper.service = New(repo, productService)
+	helper.stocksCheckerMock = &(stocks.IsItemAvailableMock)
+	helper.service = New(repo, productService, stocks)
 	return helper
 }

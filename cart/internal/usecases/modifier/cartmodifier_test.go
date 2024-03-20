@@ -35,8 +35,9 @@ func TestAddItemWithoutErr(t *testing.T) {
 			},
 			mockSetup: func(h testHelper) {
 				cart := models.NewCart()
-				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.stocksCheckerMock.Expect(minimock.AnyContext, 123, 1).Return(true, nil)
+				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
 				h.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(nil)
 			},
 		},
@@ -94,9 +95,24 @@ func TestAddItemWithErrs(t *testing.T) {
 			err: errorToThrow,
 		},
 		{
+			name: "error checking number of items",
+			mockSetup: func(h testHelper) {
+				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.stocksCheckerMock.Expect(minimock.AnyContext, 123, 1).Return(false, errorToThrow)
+			},
+			args: args{
+				ctx:   context.Background(),
+				user:  123,
+				skuId: 123,
+				count: 1,
+			},
+			err: errorToThrow,
+		},
+		{
 			name: "error getting user cart",
 			mockSetup: func(h testHelper) {
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.stocksCheckerMock.Expect(minimock.AnyContext, 123, 1).Return(true, nil)
 				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(nil, errorToThrow)
 			},
 			args: args{
@@ -112,6 +128,7 @@ func TestAddItemWithErrs(t *testing.T) {
 			mockSetup: func(h testHelper) {
 				cart := models.NewCart()
 				h.productServiceMock.Expect(minimock.AnyContext, 123).Return(true, nil)
+				h.stocksCheckerMock.Expect(minimock.AnyContext, 123, 1).Return(true, nil)
 				h.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
 				h.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(errorToThrow)
 			},
