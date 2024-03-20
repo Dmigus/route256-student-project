@@ -13,6 +13,7 @@ import (
 	"route256.ozon.ru/project/cart/internal/clients/retriablehttp"
 	"route256.ozon.ru/project/cart/internal/clients/retriablehttp/policies"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
+	checkoutPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/checkout"
 	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
@@ -22,6 +23,7 @@ import (
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
+	"route256.ozon.ru/project/cart/internal/usecases/checkouter"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
 	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 	"sync/atomic"
@@ -64,6 +66,7 @@ func (a *App) init() {
 	loms := lomsProviderPkg.NewLOMSProvider(lomsClient)
 	cartModifierService := modifier.New(cartRepo, itPresChecker, loms)
 	cartListerService := lister.New(cartRepo, prodInfoGetter)
+	checkoutService := checkouter.New(cartRepo, loms)
 	mux := http.NewServeMux()
 	addHandler := addPkg.New(cartModifierService)
 	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
@@ -73,6 +76,8 @@ func (a *App) init() {
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
 	listHandler := listPkg.New(cartListerService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
+	checkoutHandler := checkoutPkg.New(checkoutService)
+	mux.Handle("POST /cart/checkout", checkoutHandler)
 	probesMux := healthz.CreateMux()
 	mux.Handle("GET /healthz/alive", probesMux)
 	a.httpController = middleware.NewLogger(mux)
