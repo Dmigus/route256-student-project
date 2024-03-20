@@ -5,10 +5,10 @@ option go_package = "loms/v1";
 import "google/protobuf/empty.proto";
 
 service LOMService {
-  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
-  rpc InfoOrder(InfoOrderRequest) returns (InfoOrderResponse);
-  rpc PayOrder(PayOrderRequest) returns (google.protobuf.Empty);
-  rpc CancelOrder(CancelOrderRequest) returns (google.protobuf.Empty);
+  rpc CreateOrder(CreateOrderRequest) returns (OrderId);
+  rpc InfoOrder(OrderId) returns (InfoOrderResponse);
+  rpc PayOrder(OrderId) returns (google.protobuf.Empty);
+  rpc CancelOrder(OrderId) returns (google.protobuf.Empty);
   rpc ListStocksInfo(ListStocksInfoRequest) returns (ListStocksInfoResponse);
 }
 
@@ -22,18 +22,8 @@ message Item {
   uint32 count = 2;
 }
 
-// Стоит ли вместо CreateOrderResponse, InfoOrderRequest, PayOrderRequest, CancelOrderRequest сделать одно сообщение
-//message OrderId {
-//  int64 orderID = 1;
-//}
-// и использовать его в методах LOMService?
-
-message CreateOrderResponse {
-  int64 orderID = 1;
-}
-
-message InfoOrderRequest {
-  int64 orderID = 1;
+message OrderId {
+  int64 id = 1;
 }
 
 enum OrderStatus {
@@ -49,14 +39,6 @@ message InfoOrderResponse {
   OrderStatus status = 1;
   int64 user = 2;
   repeated Item items = 3;
-}
-
-message PayOrderRequest {
-  int64 orderID = 1;
-}
-
-message CancelOrderRequest {
-  int64 orderID = 1;
 }
 
 message ListStocksInfoRequest {

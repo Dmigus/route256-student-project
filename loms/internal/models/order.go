@@ -12,13 +12,15 @@ const (
 
 type Order struct {
 	id     int64
+	UserId int64
 	Status OrderStatus
 	Items  []OrderItem
 }
 
-func NewOrder(id int64) *Order {
+func NewOrder(userId, orderId int64) *Order {
 	return &Order{
-		id:     id,
+		UserId: userId,
+		id:     orderId,
 		Status: New,
 	}
 }

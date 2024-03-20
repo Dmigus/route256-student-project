@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-var errOrderNotFound = fmt.Errorf("order not found")
+var errOrderNotFound = fmt.Errorf("order is not found")
 
 type InMemoryOrdersStorage struct {
 	mu   sync.RWMutex
