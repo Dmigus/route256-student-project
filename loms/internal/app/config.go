@@ -1,19 +1,20 @@
 package app
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"os"
 )
+
+//go:embed stock-data.json
+var stockdata []byte
 
 type Config struct {
 	GRPCServer struct {
 		Port                  uint16 `json:"Port"`
 		ShutdownTimoutSeconds uint   `json:"ShutdownTimoutSeconds"`
 	} `json:"GRPCServer"`
-	Stocks struct {
-		InitData string `json:"InitData"`
-	}
 }
 
 func NewConfig(configPath string) (conf Config, err error) {

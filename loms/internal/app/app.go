@@ -1,14 +1,14 @@
 package app
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
-	"os"
 	"route256.ozon.ru/project/loms/internal/controllers"
 	"route256.ozon.ru/project/loms/internal/controllers/mw"
 	servicepb "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
@@ -42,7 +42,7 @@ func NewApp(config Config) *App {
 func (a *App) init() {
 	ordersRepo := orders.NewInMemoryOrdersStorage()
 	stocksRepo := stocks.NewInMemoryStockStorage()
-	err := fillStocksFromFile(stocksRepo, a.config.Stocks.InitData)
+	err := fillStocksFromStockData(stocksRepo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,22 +63,15 @@ func (a *App) init() {
 	a.grpcController = controllers.NewServer(wholeService)
 }
 
-func fillStocksFromFile(stocksRepo *stocks.InMemoryStockStorage, filePath string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err2 := file.Close()
-		err = errors.Join(err, err2)
-	}()
-	jsonParser := json.NewDecoder(file)
+func fillStocksFromStockData(stocksRepo *stocks.InMemoryStockStorage) error {
+	reader := bytes.NewReader(stockdata)
+	jsonParser := json.NewDecoder(reader)
 	var items []struct {
 		Sku        int64  `json:"sku"`
 		TotalCount uint64 `json:"total_count"`
 		Reserved   uint64 `json:"reserved"`
 	}
-	if err = jsonParser.Decode(&items); err != nil {
+	if err := jsonParser.Decode(&items); err != nil {
 		return err
 	}
 	for _, it := range items {
