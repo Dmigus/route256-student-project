@@ -2,11 +2,8 @@ package orderscanceller
 
 import (
 	"context"
-	"fmt"
 	"route256.ozon.ru/project/loms/internal/models"
 )
-
-var errWrongOrderStatus = fmt.Errorf("order status is not awaiting")
 
 type orderRepo interface {
 	Save(context.Context, *models.Order) error
@@ -31,12 +28,15 @@ func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
 	if err != nil {
 		return err
 	}
-	if order.Status != models.AwaitingPayment {
-		return errWrongOrderStatus
+	if order.Status == models.Cancelled {
+		return models.ErrWrongOrderStatus
 	}
-	err = oc.stocks.CancelReserved(ctx, order.Items)
-	if err != nil {
-		return err
+	if order.IsItemsReserved {
+		err = oc.stocks.CancelReserved(ctx, order.Items)
+		if err != nil {
+			return err
+		}
+		order.IsItemsReserved = false
 	}
 	order.Status = models.Cancelled
 	if err = oc.orders.Save(ctx, order); err != nil {

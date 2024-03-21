@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"route256.ozon.ru/project/loms/internal/controllers"
+	"route256.ozon.ru/project/loms/internal/controllers/mw"
 	servicepb "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
 	"route256.ozon.ru/project/loms/internal/providers/orderidgenerator"
 	"route256.ozon.ru/project/loms/internal/providers/orders"
@@ -93,7 +94,11 @@ func (a *App) Run() {
 	if a.server.Load() != nil {
 		return
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			mw.InterpretErrorToCode,
+		),
+	)
 	if !a.server.CompareAndSwap(nil, grpcServer) {
 		return
 	}

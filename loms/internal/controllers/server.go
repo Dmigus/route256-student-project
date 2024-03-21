@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"route256.ozon.ru/project/loms/internal/controllers/converter"
 	v1 "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
@@ -33,7 +31,7 @@ func (s *Server) StocksInfo(ctx context.Context, req *v1.StocksInfoRequest) (*v1
 	skuId := converter.ListStocksInfoRequestToSkuId(req)
 	num, err := s.service.GetNumOfAvailable(ctx, skuId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, err
 	}
 	return converter.CountToStocksInfoResponse(num), nil
 }
@@ -42,14 +40,14 @@ func (s *Server) OrderPay(ctx context.Context, orderId *v1.OrderId) (*emptypb.Em
 	id := converter.OrderIdToId(orderId)
 	err := s.service.PayOrder(ctx, id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }
 func (s *Server) OrderInfo(ctx context.Context, req *v1.OrderId) (*v1.OrderInfoResponse, error) {
 	info, err := s.service.GetOrder(ctx, converter.OrderIdToId(req))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, err
 	}
 	return converter.OrderToOrderInfoResponse(info), nil
 }
@@ -58,7 +56,7 @@ func (s *Server) OrderCreate(ctx context.Context, req *v1.OrderCreateRequest) (*
 	userId, items := converter.OrderCreateReqToModel(req)
 	orderId, err := s.service.CreateOrder(ctx, userId, items)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, err
 	}
 	return converter.IdToOrderCreateResponse(orderId), nil
 }
@@ -66,7 +64,7 @@ func (s *Server) OrderCreate(ctx context.Context, req *v1.OrderCreateRequest) (*
 func (s *Server) OrderCancel(ctx context.Context, req *v1.OrderId) (*emptypb.Empty, error) {
 	err := s.service.CancelOrder(ctx, converter.OrderIdToId(req))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-var errNotEnoughItems = fmt.Errorf("required number of units is not available")
+var ErrNotEnoughItems = fmt.Errorf("required number of units is not available")
 
 type ItemUnits struct {
 	mu              sync.RWMutex
@@ -31,7 +31,7 @@ func (g *ItemUnits) reserve(count uint16) error {
 	available := g.total - g.reserved
 	required := uint64(count)
 	if available < required {
-		return errNotEnoughItems
+		return ErrNotEnoughItems
 	}
 	g.reserved += required
 	return nil

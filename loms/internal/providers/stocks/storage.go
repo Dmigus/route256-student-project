@@ -2,10 +2,13 @@ package stocks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"route256.ozon.ru/project/loms/internal/models"
 	"sync"
 )
+
+var ErrItemIsNotExists = errors.New("item is not exists")
 
 type InMemoryStockStorage struct {
 	mu   sync.RWMutex
@@ -33,6 +36,7 @@ func (i *InMemoryStockStorage) Reserve(ctx context.Context, items []models.Order
 		err = i.reserveOne(it)
 		if err != nil {
 			failed = true
+			err = fmt.Errorf("error reserving %d units if item with skuId = %d: %w", it.Count, it.SkuId, err)
 			break
 		}
 	}
@@ -89,7 +93,7 @@ func (i *InMemoryStockStorage) getItemOrErr(skuId int64) (*ItemUnits, error) {
 	defer i.mu.RUnlock()
 	itemUni, exists := i.data[skuId]
 	if !exists {
-		return nil, fmt.Errorf("item with skuid %d is not exists", skuId)
+		return nil, fmt.Errorf("error getting item with skuid %d: %w", skuId, ErrItemIsNotExists)
 	}
 	return itemUni, nil
 }

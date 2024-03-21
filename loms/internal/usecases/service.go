@@ -2,8 +2,11 @@ package usecases
 
 import (
 	"context"
+	"errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+var ErrService = errors.New("something went wrong during usecase execution")
 
 type ordersCreator interface {
 	Create(ctx context.Context, userId int64, items []models.OrderItem) (int64, error)
@@ -43,21 +46,39 @@ func NewLOMService(
 }
 
 func (s *LOMService) CreateOrder(ctx context.Context, userId int64, items []models.OrderItem) (int64, error) {
-	return s.ordersCreator.Create(ctx, userId, items)
+	res, err := s.ordersCreator.Create(ctx, userId, items)
+	if err != nil {
+		return 0, errors.Join(ErrService, err)
+	}
+	return res, nil
 }
 
 func (s *LOMService) PayOrder(ctx context.Context, orderId int64) error {
-	return s.ordersPayer.Pay(ctx, orderId)
+	if err := s.ordersPayer.Pay(ctx, orderId); err != nil {
+		return errors.Join(ErrService, err)
+	}
+	return nil
 }
 
 func (s *LOMService) GetNumOfAvailable(ctx context.Context, skuId int64) (uint64, error) {
-	return s.stocksInfoGetter.GetNumOfAvailable(ctx, skuId)
+	res, err := s.stocksInfoGetter.GetNumOfAvailable(ctx, skuId)
+	if err != nil {
+		return 0, errors.Join(ErrService, err)
+	}
+	return res, nil
 }
 
 func (s *LOMService) GetOrder(ctx context.Context, orderId int64) (*models.Order, error) {
-	return s.ordersGetter.Get(ctx, orderId)
+	res, err := s.ordersGetter.Get(ctx, orderId)
+	if err != nil {
+		return nil, errors.Join(ErrService, err)
+	}
+	return res, nil
 }
 
 func (s *LOMService) CancelOrder(ctx context.Context, orderId int64) error {
-	return s.ordersCanceller.Cancel(ctx, orderId)
+	if err := s.ordersCanceller.Cancel(ctx, orderId); err != nil {
+		return errors.Join(ErrService, err)
+	}
+	return nil
 }

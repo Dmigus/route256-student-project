@@ -33,6 +33,7 @@ func (oc *OrdersCreator) Create(ctx context.Context, userId int64, items []model
 	errReserving := oc.stocks.Reserve(ctx, items)
 	if errReserving == nil {
 		newOrder.Status = models.AwaitingPayment
+		newOrder.IsItemsReserved = true
 	} else {
 		newOrder.Status = models.Failed
 	}

@@ -18,6 +18,7 @@ func TestOrdersPayerPositive(t *testing.T) {
 	helper := newTestHelper(t)
 	order := models.NewOrder(123, 1234)
 	order.Status = models.AwaitingPayment
+	order.IsItemsReserved = true
 	items := make([]models.OrderItem, 0)
 	order.Items = items
 	helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
@@ -26,6 +27,7 @@ func TestOrdersPayerPositive(t *testing.T) {
 	err := helper.payer.Pay(context.Background(), 1234)
 	require.NoError(t, err)
 	assert.Equal(t, order.Status, models.Payed)
+	assert.False(t, order.IsItemsReserved)
 }
 
 func TestOrdersPayerErrors(t *testing.T) {
@@ -63,13 +65,14 @@ func TestOrdersPayerErrors(t *testing.T) {
 				ctx:     context.Background(),
 				orderId: 1234,
 			},
-			err: errWrongOrderStatus,
+			err: models.ErrWrongOrderStatus,
 		},
 		{
 			name: "error removing stocks",
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)
 				order.Status = models.AwaitingPayment
+				order.IsItemsReserved = true
 				items := make([]models.OrderItem, 0)
 				order.Items = items
 				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
@@ -86,6 +89,7 @@ func TestOrdersPayerErrors(t *testing.T) {
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)
 				order.Status = models.AwaitingPayment
+				order.IsItemsReserved = true
 				items := make([]models.OrderItem, 0)
 				order.Items = items
 				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)

@@ -24,18 +24,18 @@ func NewClient(addr string) (*Client, error) {
 	}, nil
 }
 
-func (L *Client) OrderCreate(ctx context.Context, userId int64, items []models.CartItem) (int64, error) {
+func (c *Client) OrderCreate(ctx context.Context, userId int64, items []models.CartItem) (int64, error) {
 	request := converter.ModelsToOrderCreateRequest(userId, items)
-	response, err := L.client.OrderCreate(ctx, request)
+	response, err := c.client.OrderCreate(ctx, request)
 	if err != nil {
 		return 0, err
 	}
 	return converter.OrderIdToId(response), nil
 }
 
-func (L *Client) GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint64, error) {
+func (c *Client) GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint64, error) {
 	req := converter.SkuIdToStocksInfoRequest(skuId)
-	response, err := L.client.StocksInfo(ctx, req)
+	response, err := c.client.StocksInfo(ctx, req)
 	if err != nil {
 		return 0, err
 	}

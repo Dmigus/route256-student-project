@@ -2,12 +2,12 @@ package orders
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"route256.ozon.ru/project/loms/internal/models"
 	"sync"
 )
 
-var errOrderNotFound = fmt.Errorf("order is not found")
+var ErrOrderNotFound = errors.New("order is not found")
 
 type InMemoryOrdersStorage struct {
 	mu   sync.RWMutex
@@ -32,7 +32,7 @@ func (i *InMemoryOrdersStorage) Load(_ context.Context, orderId int64) (*models.
 	defer i.mu.RUnlock()
 	order, exists := i.data[orderId]
 	if !exists {
-		return nil, errOrderNotFound
+		return nil, ErrOrderNotFound
 	}
 	return order, nil
 }

@@ -17,6 +17,7 @@ func TestOrderCancellerPositive(t *testing.T) {
 	helper := newTestHelper(t)
 	order := models.NewOrder(123, 1234)
 	order.Status = models.AwaitingPayment
+	order.IsItemsReserved = true
 	items := []models.OrderItem{{34, 10}}
 	order.Items = items
 	helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
@@ -25,6 +26,7 @@ func TestOrderCancellerPositive(t *testing.T) {
 	err := helper.canceller.Cancel(minimock.AnyContext, 1234)
 	require.NoError(t, err)
 	assert.Equal(t, models.Cancelled, order.Status)
+	assert.False(t, order.IsItemsReserved)
 }
 
 func TestOrderCancellerErrors(t *testing.T) {
@@ -55,20 +57,21 @@ func TestOrderCancellerErrors(t *testing.T) {
 			name: "error wrong status",
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)
-				order.Status = models.Payed
+				order.Status = models.Cancelled
 				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
 			},
 			args: args{
 				ctx:     context.Background(),
 				orderId: 1234,
 			},
-			err: errWrongOrderStatus,
+			err: models.ErrWrongOrderStatus,
 		},
 		{
 			name: "error canceling reserved stocks",
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)
 				order.Status = models.AwaitingPayment
+				order.IsItemsReserved = true
 				items := make([]models.OrderItem, 0)
 				order.Items = items
 				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
@@ -85,6 +88,7 @@ func TestOrderCancellerErrors(t *testing.T) {
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)
 				order.Status = models.AwaitingPayment
+				order.IsItemsReserved = true
 				items := make([]models.OrderItem, 0)
 				order.Items = items
 				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
