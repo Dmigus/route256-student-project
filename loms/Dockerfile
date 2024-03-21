@@ -18,4 +18,6 @@ COPY --from=build-stage /app/bin/app /app/bin/app
 COPY --from=build-stage /app/configs /app/configs/
 COPY --from=build-stage /app/assets /app/assets
 
+EXPOSE 50051
+
 CMD ["./bin/app"]

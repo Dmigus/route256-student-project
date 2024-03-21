@@ -12,4 +12,6 @@ services:
   loms:
     image: loms
     build: ./loms
+    ports:
+      - "50051:50051"
     stop_signal: SIGTERM
