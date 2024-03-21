@@ -6,3 +6,10 @@ services:
     ports:
       - "8082:8080"
     stop_signal: SIGTERM
+    depends_on:
+      - loms
+
+  loms:
+    image: loms
+    build: ./loms
+    stop_signal: SIGTERM

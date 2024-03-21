@@ -11,7 +11,7 @@ import (
 
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "./configs/config.json", "path to config file")
+	flag.StringVar(&configPath, "config", "./configs/local.json", "path to config file")
 	flag.Parse()
 	config, err := app.NewConfig(configPath)
 	if err != nil {

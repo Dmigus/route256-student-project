@@ -1,3 +1,8 @@
+.PHONY: build
+build: .protoc-generate
+	go build -o ./bin/app ./cmd
+
+.PHONY: coverage
 coverage:
 	@go test -tags=unit -coverprofile=coverage.out  ./...
 	@go tool cover -func coverage.out | grep total:
