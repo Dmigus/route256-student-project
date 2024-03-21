@@ -1,5 +1,5 @@
 .PHONY: build, coverage, lint
-build: .protoc-generate-loms
+build: 
 	go build -o ./bin/app ./cmd
 
 coverage:

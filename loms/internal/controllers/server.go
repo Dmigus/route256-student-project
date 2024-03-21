@@ -2,7 +2,11 @@ package controllers
 
 import (
 	"context"
-	servicepb "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"route256.ozon.ru/project/loms/internal/controllers/converter"
+	v1 "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
@@ -15,7 +19,7 @@ type service interface {
 }
 
 type Server struct {
-	servicepb.UnimplementedLOMServiceServer
+	v1.UnimplementedLOMServiceServer
 	service service
 }
 
@@ -23,4 +27,46 @@ func NewServer(service service) *Server {
 	return &Server{
 		service: service,
 	}
+}
+
+func (s *Server) StocksInfo(ctx context.Context, req *v1.StocksInfoRequest) (*v1.StocksInfoResponse, error) {
+	skuId := converter.ListStocksInfoRequestToSkuId(req)
+	num, err := s.service.GetNumOfAvailable(ctx, skuId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return converter.CountToStocksInfoResponse(num), nil
+}
+
+func (s *Server) OrderPay(ctx context.Context, orderId *v1.OrderId) (*emptypb.Empty, error) {
+	id := converter.OrderIdToId(orderId)
+	err := s.service.PayOrder(ctx, id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return &emptypb.Empty{}, nil
+}
+func (s *Server) OrderInfo(ctx context.Context, req *v1.OrderId) (*v1.OrderInfoResponse, error) {
+	info, err := s.service.GetOrder(ctx, converter.OrderIdToId(req))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return converter.OrderToOrderInfoResponse(info), nil
+}
+
+func (s *Server) OrderCreate(ctx context.Context, req *v1.OrderCreateRequest) (*v1.OrderId, error) {
+	userId, items := converter.OrderCreateReqToModel(req)
+	orderId, err := s.service.CreateOrder(ctx, userId, items)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return converter.IdToOrderCreateResponse(orderId), nil
+}
+
+func (s *Server) OrderCancel(ctx context.Context, req *v1.OrderId) (*emptypb.Empty, error) {
+	err := s.service.CancelOrder(ctx, converter.OrderIdToId(req))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return &emptypb.Empty{}, nil
 }

@@ -5,14 +5,14 @@ option go_package = "loms/v1";
 import "google/protobuf/empty.proto";
 
 service LOMService {
-  rpc CreateOrder(CreateOrderRequest) returns (OrderId);
-  rpc InfoOrder(OrderId) returns (InfoOrderResponse);
-  rpc PayOrder(OrderId) returns (google.protobuf.Empty);
-  rpc CancelOrder(OrderId) returns (google.protobuf.Empty);
-  rpc ListStocksInfo(ListStocksInfoRequest) returns (ListStocksInfoResponse);
+  rpc OrderCreate(OrderCreateRequest) returns (OrderId);
+  rpc OrderInfo(OrderId) returns (OrderInfoResponse);
+  rpc OrderPay(OrderId) returns (google.protobuf.Empty);
+  rpc OrderCancel(OrderId) returns (google.protobuf.Empty);
+  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse);
 }
 
-message CreateOrderRequest {
+message OrderCreateRequest {
   int64 user = 1;
   repeated Item items = 2;
 }
@@ -35,16 +35,16 @@ enum OrderStatus {
   ORDER_STATUS_CANCELLED = 5;
 }
 
-message InfoOrderResponse {
+message OrderInfoResponse {
   OrderStatus status = 1;
   int64 user = 2;
   repeated Item items = 3;
 }
 
-message ListStocksInfoRequest {
+message StocksInfoRequest {
   uint32 sku = 1;
 }
 
-message ListStocksInfoResponse {
+message StocksInfoResponse {
   uint64 count = 1;
 }

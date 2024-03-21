@@ -6,7 +6,7 @@ import (
 )
 
 type lomsClient interface {
-	CreateOrder(ctx context.Context, userId int64, items []models.CartItem) (int64, error)
+	OrderCreate(ctx context.Context, userId int64, items []models.CartItem) (int64, error)
 	GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint64, error)
 }
 
@@ -22,7 +22,7 @@ func NewLOMSProvider(client lomsClient) *LOMS {
 
 // CreateOrder создаёт заказ для пользователя
 func (L *LOMS) CreateOrder(ctx context.Context, userId int64, items []models.CartItem) (int64, error) {
-	return L.client.CreateOrder(ctx, userId, items)
+	return L.client.OrderCreate(ctx, userId, items)
 }
 
 // IsItemAvailable проверяет, достаточно ли количество доступного для резервирования товара

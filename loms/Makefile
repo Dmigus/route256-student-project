@@ -1,5 +1,5 @@
 .PHONY: build
-build: .protoc-generate
+build:
 	go build -o ./bin/app ./cmd
 
 .PHONY: coverage

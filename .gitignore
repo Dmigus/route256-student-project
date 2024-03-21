@@ -9,4 +9,3 @@ bin/
 coverage.html
 coverage.out
 vendor-proto/
-*.pb.go
