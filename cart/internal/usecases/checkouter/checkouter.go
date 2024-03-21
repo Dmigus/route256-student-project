@@ -19,7 +19,7 @@ type Checkouter struct {
 	orders orderSystem
 }
 
-func New(repo repository, orders orderSystem) *Checkouter {
+func NewCheckouter(repo repository, orders orderSystem) *Checkouter {
 	return &Checkouter{repo: repo, orders: orders}
 }
 

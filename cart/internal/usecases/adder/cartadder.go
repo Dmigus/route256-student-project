@@ -1,4 +1,4 @@
-package modifier
+package adder
 
 import (
 	"context"
@@ -21,22 +21,22 @@ type stocksChecker interface {
 	IsItemAvailable(ctx context.Context, skuId int64, count uint16) (bool, error)
 }
 
-// CartModifierService предназначен для модификации корзин пользователей
-type CartModifierService struct {
+// CartAdderService предназначен для добавления товаров в корзины пользователей
+type CartAdderService struct {
 	repo           repository
 	productService productService
 	stocks         stocksChecker
 }
 
-func New(repo repository, productService productService, stocks stocksChecker) *CartModifierService {
-	return &CartModifierService{
+func New(repo repository, productService productService, stocks stocksChecker) *CartAdderService {
+	return &CartAdderService{
 		repo:           repo,
 		productService: productService,
 		stocks:         stocks,
 	}
 }
 
-func (cs *CartModifierService) AddItem(ctx context.Context, user int64, skuId int64, count uint16) error {
+func (cs *CartAdderService) AddItem(ctx context.Context, user int64, skuId int64, count uint16) error {
 	exists, err := cs.productService.IsItemPresent(ctx, skuId)
 	if err != nil {
 		return fmt.Errorf("could not check item %d presence: %w", skuId, err)
@@ -56,23 +56,5 @@ func (cs *CartModifierService) AddItem(ctx context.Context, user int64, skuId in
 		return err
 	}
 	cart.Add(ctx, skuId, count)
-	return cs.repo.SaveCart(ctx, user, cart)
-}
-
-func (cs *CartModifierService) DeleteItem(ctx context.Context, user int64, skuId int64) error {
-	cart, err := cs.repo.GetCart(ctx, user)
-	if err != nil {
-		return err
-	}
-	cart.Delete(ctx, skuId)
-	return cs.repo.SaveCart(ctx, user, cart)
-}
-
-func (cs *CartModifierService) ClearCart(ctx context.Context, user int64) error {
-	cart, err := cs.repo.GetCart(ctx, user)
-	if err != nil {
-		return err
-	}
-	cart.Clear(ctx)
 	return cs.repo.SaveCart(ctx, user, cart)
 }

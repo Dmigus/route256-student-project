@@ -23,9 +23,12 @@ import (
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
+	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/usecases/adder"
 	"route256.ozon.ru/project/cart/internal/usecases/checkouter"
+	"route256.ozon.ru/project/cart/internal/usecases/clearer"
+	"route256.ozon.ru/project/cart/internal/usecases/deleter"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
-	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 	"sync/atomic"
 	"time"
 )
@@ -64,19 +67,22 @@ func (a *App) init() {
 		log.Fatal(err)
 	}
 	loms := lomsProviderPkg.NewLOMSProvider(lomsClient)
-	cartModifierService := modifier.New(cartRepo, itPresChecker, loms)
-	cartListerService := lister.New(cartRepo, prodInfoGetter)
-	checkoutService := checkouter.New(cartRepo, loms)
+	cartAdder := adder.New(cartRepo, itPresChecker, loms)
+	cartDeleter := deleter.NewCartDeleter(cartRepo)
+	cartClearer := clearer.NewCartClearer(cartRepo)
+	cartLister := lister.New(cartRepo, prodInfoGetter)
+	checkouterUsecase := checkouter.NewCheckouter(cartRepo, loms)
+	wholeCartService := usecases.NewCartService(cartAdder, cartDeleter, cartClearer, cartLister, checkouterUsecase)
 	mux := http.NewServeMux()
-	addHandler := addPkg.New(cartModifierService)
+	addHandler := addPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
-	clearHandler := clearPkg.New(cartModifierService)
+	clearHandler := clearPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
-	deleteHandler := deletePkg.New(cartModifierService)
+	deleteHandler := deletePkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
-	listHandler := listPkg.New(cartListerService)
+	listHandler := listPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
-	checkoutHandler := checkoutPkg.New(checkoutService)
+	checkoutHandler := checkoutPkg.New(wholeCartService)
 	mux.Handle("POST /cart/checkout", checkoutHandler)
 	probesMux := healthz.CreateMux()
 	mux.Handle("GET /healthz/alive", probesMux)

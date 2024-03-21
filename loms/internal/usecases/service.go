@@ -5,8 +5,6 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-// Я не уверен, что эта структура "сервис" вообще нужна
-
 type ordersCreator interface {
 	Create(ctx context.Context, userId int64, items []models.OrderItem) (int64, error)
 }
