@@ -2,6 +2,7 @@ package ordersgetter
 
 import (
 	"context"
+	"fmt"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
@@ -18,5 +19,9 @@ func NewOrdersGetter(orders ordersStorage) *OrdersGetter {
 }
 
 func (og *OrdersGetter) Get(ctx context.Context, orderId int64) (*models.Order, error) {
-	return og.orders.Load(ctx, orderId)
+	loaded, err := og.orders.Load(ctx, orderId)
+	if err != nil {
+		return nil, fmt.Errorf("could not load order %d: %w", orderId, err)
+	}
+	return loaded, nil
 }

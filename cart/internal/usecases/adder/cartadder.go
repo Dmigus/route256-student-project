@@ -46,15 +46,19 @@ func (cs *CartAdderService) AddItem(ctx context.Context, user int64, skuId int64
 	}
 	isAvailable, err := cs.stocks.IsItemAvailable(ctx, skuId, count)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not check item %d availability: %w", skuId, err)
 	}
 	if !isAvailable {
 		return ErrNotEnoughNumInStocks
 	}
 	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get cart for user %d: %w", user, err)
 	}
 	cart.Add(ctx, skuId, count)
-	return cs.repo.SaveCart(ctx, user, cart)
+	err = cs.repo.SaveCart(ctx, user, cart)
+	if err != nil {
+		return fmt.Errorf("could not save cart for user %d: %w", user, err)
+	}
+	return nil
 }

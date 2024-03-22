@@ -2,6 +2,7 @@ package clearer
 
 import (
 	"context"
+	"fmt"
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
@@ -22,8 +23,12 @@ func NewCartClearer(repo repository) *CartClearer {
 func (c *CartClearer) ClearCart(ctx context.Context, user int64) error {
 	cart, err := c.repo.GetCart(ctx, user)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get cart for user %d: %w", user, err)
 	}
 	cart.Clear(ctx)
-	return c.repo.SaveCart(ctx, user, cart)
+	err = c.repo.SaveCart(ctx, user, cart)
+	if err != nil {
+		return fmt.Errorf("could not save cart for user %d: %w", user, err)
+	}
+	return nil
 }

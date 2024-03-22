@@ -19,17 +19,17 @@ type LomsClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcCreateOrder          func(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error)
-	inspectFuncCreateOrder   func(ctx context.Context, userId int64, items []models.CartItem)
-	afterCreateOrderCounter  uint64
-	beforeCreateOrderCounter uint64
-	CreateOrderMock          mLomsClientMockCreateOrder
-
 	funcGetNumberOfItemInStocks          func(ctx context.Context, skuId int64) (u1 uint64, err error)
 	inspectFuncGetNumberOfItemInStocks   func(ctx context.Context, skuId int64)
 	afterGetNumberOfItemInStocksCounter  uint64
 	beforeGetNumberOfItemInStocksCounter uint64
 	GetNumberOfItemInStocksMock          mLomsClientMockGetNumberOfItemInStocks
+
+	funcOrderCreate          func(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error)
+	inspectFuncOrderCreate   func(ctx context.Context, userId int64, items []models.CartItem)
+	afterOrderCreateCounter  uint64
+	beforeOrderCreateCounter uint64
+	OrderCreateMock          mLomsClientMockOrderCreate
 }
 
 // NewLomsClientMock returns a mock for lomsClient
@@ -40,233 +40,15 @@ func NewLomsClientMock(t minimock.Tester) *LomsClientMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.CreateOrderMock = mLomsClientMockCreateOrder{mock: m}
-	m.CreateOrderMock.callArgs = []*LomsClientMockCreateOrderParams{}
-
 	m.GetNumberOfItemInStocksMock = mLomsClientMockGetNumberOfItemInStocks{mock: m}
 	m.GetNumberOfItemInStocksMock.callArgs = []*LomsClientMockGetNumberOfItemInStocksParams{}
+
+	m.OrderCreateMock = mLomsClientMockOrderCreate{mock: m}
+	m.OrderCreateMock.callArgs = []*LomsClientMockOrderCreateParams{}
 
 	t.Cleanup(m.MinimockFinish)
 
 	return m
-}
-
-type mLomsClientMockCreateOrder struct {
-	mock               *LomsClientMock
-	defaultExpectation *LomsClientMockCreateOrderExpectation
-	expectations       []*LomsClientMockCreateOrderExpectation
-
-	callArgs []*LomsClientMockCreateOrderParams
-	mutex    sync.RWMutex
-}
-
-// LomsClientMockCreateOrderExpectation specifies expectation struct of the lomsClient.CreateOrder
-type LomsClientMockCreateOrderExpectation struct {
-	mock    *LomsClientMock
-	params  *LomsClientMockCreateOrderParams
-	results *LomsClientMockCreateOrderResults
-	Counter uint64
-}
-
-// LomsClientMockCreateOrderParams contains parameters of the lomsClient.CreateOrder
-type LomsClientMockCreateOrderParams struct {
-	ctx    context.Context
-	userId int64
-	items  []models.CartItem
-}
-
-// LomsClientMockCreateOrderResults contains results of the lomsClient.CreateOrder
-type LomsClientMockCreateOrderResults struct {
-	i1  int64
-	err error
-}
-
-// Expect sets up expected params for lomsClient.CreateOrder
-func (mmCreateOrder *mLomsClientMockCreateOrder) Expect(ctx context.Context, userId int64, items []models.CartItem) *mLomsClientMockCreateOrder {
-	if mmCreateOrder.mock.funcCreateOrder != nil {
-		mmCreateOrder.mock.t.Fatalf("LomsClientMock.CreateOrder mock is already set by Set")
-	}
-
-	if mmCreateOrder.defaultExpectation == nil {
-		mmCreateOrder.defaultExpectation = &LomsClientMockCreateOrderExpectation{}
-	}
-
-	mmCreateOrder.defaultExpectation.params = &LomsClientMockCreateOrderParams{ctx, userId, items}
-	for _, e := range mmCreateOrder.expectations {
-		if minimock.Equal(e.params, mmCreateOrder.defaultExpectation.params) {
-			mmCreateOrder.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmCreateOrder.defaultExpectation.params)
-		}
-	}
-
-	return mmCreateOrder
-}
-
-// Inspect accepts an inspector function that has same arguments as the lomsClient.CreateOrder
-func (mmCreateOrder *mLomsClientMockCreateOrder) Inspect(f func(ctx context.Context, userId int64, items []models.CartItem)) *mLomsClientMockCreateOrder {
-	if mmCreateOrder.mock.inspectFuncCreateOrder != nil {
-		mmCreateOrder.mock.t.Fatalf("Inspect function is already set for LomsClientMock.CreateOrder")
-	}
-
-	mmCreateOrder.mock.inspectFuncCreateOrder = f
-
-	return mmCreateOrder
-}
-
-// Return sets up results that will be returned by lomsClient.CreateOrder
-func (mmCreateOrder *mLomsClientMockCreateOrder) Return(i1 int64, err error) *LomsClientMock {
-	if mmCreateOrder.mock.funcCreateOrder != nil {
-		mmCreateOrder.mock.t.Fatalf("LomsClientMock.CreateOrder mock is already set by Set")
-	}
-
-	if mmCreateOrder.defaultExpectation == nil {
-		mmCreateOrder.defaultExpectation = &LomsClientMockCreateOrderExpectation{mock: mmCreateOrder.mock}
-	}
-	mmCreateOrder.defaultExpectation.results = &LomsClientMockCreateOrderResults{i1, err}
-	return mmCreateOrder.mock
-}
-
-// Set uses given function f to mock the lomsClient.CreateOrder method
-func (mmCreateOrder *mLomsClientMockCreateOrder) Set(f func(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error)) *LomsClientMock {
-	if mmCreateOrder.defaultExpectation != nil {
-		mmCreateOrder.mock.t.Fatalf("Default expectation is already set for the lomsClient.CreateOrder method")
-	}
-
-	if len(mmCreateOrder.expectations) > 0 {
-		mmCreateOrder.mock.t.Fatalf("Some expectations are already set for the lomsClient.CreateOrder method")
-	}
-
-	mmCreateOrder.mock.funcCreateOrder = f
-	return mmCreateOrder.mock
-}
-
-// When sets expectation for the lomsClient.CreateOrder which will trigger the result defined by the following
-// Then helper
-func (mmCreateOrder *mLomsClientMockCreateOrder) When(ctx context.Context, userId int64, items []models.CartItem) *LomsClientMockCreateOrderExpectation {
-	if mmCreateOrder.mock.funcCreateOrder != nil {
-		mmCreateOrder.mock.t.Fatalf("LomsClientMock.CreateOrder mock is already set by Set")
-	}
-
-	expectation := &LomsClientMockCreateOrderExpectation{
-		mock:   mmCreateOrder.mock,
-		params: &LomsClientMockCreateOrderParams{ctx, userId, items},
-	}
-	mmCreateOrder.expectations = append(mmCreateOrder.expectations, expectation)
-	return expectation
-}
-
-// Then sets up lomsClient.CreateOrder return parameters for the expectation previously defined by the When method
-func (e *LomsClientMockCreateOrderExpectation) Then(i1 int64, err error) *LomsClientMock {
-	e.results = &LomsClientMockCreateOrderResults{i1, err}
-	return e.mock
-}
-
-// CreateOrder implements lomsClient
-func (mmCreateOrder *LomsClientMock) CreateOrder(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error) {
-	mm_atomic.AddUint64(&mmCreateOrder.beforeCreateOrderCounter, 1)
-	defer mm_atomic.AddUint64(&mmCreateOrder.afterCreateOrderCounter, 1)
-
-	if mmCreateOrder.inspectFuncCreateOrder != nil {
-		mmCreateOrder.inspectFuncCreateOrder(ctx, userId, items)
-	}
-
-	mm_params := LomsClientMockCreateOrderParams{ctx, userId, items}
-
-	// Record call args
-	mmCreateOrder.CreateOrderMock.mutex.Lock()
-	mmCreateOrder.CreateOrderMock.callArgs = append(mmCreateOrder.CreateOrderMock.callArgs, &mm_params)
-	mmCreateOrder.CreateOrderMock.mutex.Unlock()
-
-	for _, e := range mmCreateOrder.CreateOrderMock.expectations {
-		if minimock.Equal(*e.params, mm_params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.i1, e.results.err
-		}
-	}
-
-	if mmCreateOrder.CreateOrderMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmCreateOrder.CreateOrderMock.defaultExpectation.Counter, 1)
-		mm_want := mmCreateOrder.CreateOrderMock.defaultExpectation.params
-		mm_got := LomsClientMockCreateOrderParams{ctx, userId, items}
-		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
-			mmCreateOrder.t.Errorf("LomsClientMock.CreateOrder got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
-		}
-
-		mm_results := mmCreateOrder.CreateOrderMock.defaultExpectation.results
-		if mm_results == nil {
-			mmCreateOrder.t.Fatal("No results are set for the LomsClientMock.CreateOrder")
-		}
-		return (*mm_results).i1, (*mm_results).err
-	}
-	if mmCreateOrder.funcCreateOrder != nil {
-		return mmCreateOrder.funcCreateOrder(ctx, userId, items)
-	}
-	mmCreateOrder.t.Fatalf("Unexpected call to LomsClientMock.CreateOrder. %v %v %v", ctx, userId, items)
-	return
-}
-
-// CreateOrderAfterCounter returns a count of finished LomsClientMock.CreateOrder invocations
-func (mmCreateOrder *LomsClientMock) CreateOrderAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmCreateOrder.afterCreateOrderCounter)
-}
-
-// CreateOrderBeforeCounter returns a count of LomsClientMock.CreateOrder invocations
-func (mmCreateOrder *LomsClientMock) CreateOrderBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmCreateOrder.beforeCreateOrderCounter)
-}
-
-// Calls returns a list of arguments used in each call to LomsClientMock.CreateOrder.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmCreateOrder *mLomsClientMockCreateOrder) Calls() []*LomsClientMockCreateOrderParams {
-	mmCreateOrder.mutex.RLock()
-
-	argCopy := make([]*LomsClientMockCreateOrderParams, len(mmCreateOrder.callArgs))
-	copy(argCopy, mmCreateOrder.callArgs)
-
-	mmCreateOrder.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockCreateOrderDone returns true if the count of the CreateOrder invocations corresponds
-// the number of defined expectations
-func (m *LomsClientMock) MinimockCreateOrderDone() bool {
-	for _, e := range m.CreateOrderMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.CreateOrderMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCreateOrderCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcCreateOrder != nil && mm_atomic.LoadUint64(&m.afterCreateOrderCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockCreateOrderInspect logs each unmet expectation
-func (m *LomsClientMock) MinimockCreateOrderInspect() {
-	for _, e := range m.CreateOrderMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to LomsClientMock.CreateOrder with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.CreateOrderMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCreateOrderCounter) < 1 {
-		if m.CreateOrderMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to LomsClientMock.CreateOrder")
-		} else {
-			m.t.Errorf("Expected call to LomsClientMock.CreateOrder with params: %#v", *m.CreateOrderMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcCreateOrder != nil && mm_atomic.LoadUint64(&m.afterCreateOrderCounter) < 1 {
-		m.t.Error("Expected call to LomsClientMock.CreateOrder")
-	}
 }
 
 type mLomsClientMockGetNumberOfItemInStocks struct {
@@ -486,13 +268,231 @@ func (m *LomsClientMock) MinimockGetNumberOfItemInStocksInspect() {
 	}
 }
 
+type mLomsClientMockOrderCreate struct {
+	mock               *LomsClientMock
+	defaultExpectation *LomsClientMockOrderCreateExpectation
+	expectations       []*LomsClientMockOrderCreateExpectation
+
+	callArgs []*LomsClientMockOrderCreateParams
+	mutex    sync.RWMutex
+}
+
+// LomsClientMockOrderCreateExpectation specifies expectation struct of the lomsClient.OrderCreate
+type LomsClientMockOrderCreateExpectation struct {
+	mock    *LomsClientMock
+	params  *LomsClientMockOrderCreateParams
+	results *LomsClientMockOrderCreateResults
+	Counter uint64
+}
+
+// LomsClientMockOrderCreateParams contains parameters of the lomsClient.OrderCreate
+type LomsClientMockOrderCreateParams struct {
+	ctx    context.Context
+	userId int64
+	items  []models.CartItem
+}
+
+// LomsClientMockOrderCreateResults contains results of the lomsClient.OrderCreate
+type LomsClientMockOrderCreateResults struct {
+	i1  int64
+	err error
+}
+
+// Expect sets up expected params for lomsClient.OrderCreate
+func (mmOrderCreate *mLomsClientMockOrderCreate) Expect(ctx context.Context, userId int64, items []models.CartItem) *mLomsClientMockOrderCreate {
+	if mmOrderCreate.mock.funcOrderCreate != nil {
+		mmOrderCreate.mock.t.Fatalf("LomsClientMock.OrderCreate mock is already set by Set")
+	}
+
+	if mmOrderCreate.defaultExpectation == nil {
+		mmOrderCreate.defaultExpectation = &LomsClientMockOrderCreateExpectation{}
+	}
+
+	mmOrderCreate.defaultExpectation.params = &LomsClientMockOrderCreateParams{ctx, userId, items}
+	for _, e := range mmOrderCreate.expectations {
+		if minimock.Equal(e.params, mmOrderCreate.defaultExpectation.params) {
+			mmOrderCreate.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmOrderCreate.defaultExpectation.params)
+		}
+	}
+
+	return mmOrderCreate
+}
+
+// Inspect accepts an inspector function that has same arguments as the lomsClient.OrderCreate
+func (mmOrderCreate *mLomsClientMockOrderCreate) Inspect(f func(ctx context.Context, userId int64, items []models.CartItem)) *mLomsClientMockOrderCreate {
+	if mmOrderCreate.mock.inspectFuncOrderCreate != nil {
+		mmOrderCreate.mock.t.Fatalf("Inspect function is already set for LomsClientMock.OrderCreate")
+	}
+
+	mmOrderCreate.mock.inspectFuncOrderCreate = f
+
+	return mmOrderCreate
+}
+
+// Return sets up results that will be returned by lomsClient.OrderCreate
+func (mmOrderCreate *mLomsClientMockOrderCreate) Return(i1 int64, err error) *LomsClientMock {
+	if mmOrderCreate.mock.funcOrderCreate != nil {
+		mmOrderCreate.mock.t.Fatalf("LomsClientMock.OrderCreate mock is already set by Set")
+	}
+
+	if mmOrderCreate.defaultExpectation == nil {
+		mmOrderCreate.defaultExpectation = &LomsClientMockOrderCreateExpectation{mock: mmOrderCreate.mock}
+	}
+	mmOrderCreate.defaultExpectation.results = &LomsClientMockOrderCreateResults{i1, err}
+	return mmOrderCreate.mock
+}
+
+// Set uses given function f to mock the lomsClient.OrderCreate method
+func (mmOrderCreate *mLomsClientMockOrderCreate) Set(f func(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error)) *LomsClientMock {
+	if mmOrderCreate.defaultExpectation != nil {
+		mmOrderCreate.mock.t.Fatalf("Default expectation is already set for the lomsClient.OrderCreate method")
+	}
+
+	if len(mmOrderCreate.expectations) > 0 {
+		mmOrderCreate.mock.t.Fatalf("Some expectations are already set for the lomsClient.OrderCreate method")
+	}
+
+	mmOrderCreate.mock.funcOrderCreate = f
+	return mmOrderCreate.mock
+}
+
+// When sets expectation for the lomsClient.OrderCreate which will trigger the result defined by the following
+// Then helper
+func (mmOrderCreate *mLomsClientMockOrderCreate) When(ctx context.Context, userId int64, items []models.CartItem) *LomsClientMockOrderCreateExpectation {
+	if mmOrderCreate.mock.funcOrderCreate != nil {
+		mmOrderCreate.mock.t.Fatalf("LomsClientMock.OrderCreate mock is already set by Set")
+	}
+
+	expectation := &LomsClientMockOrderCreateExpectation{
+		mock:   mmOrderCreate.mock,
+		params: &LomsClientMockOrderCreateParams{ctx, userId, items},
+	}
+	mmOrderCreate.expectations = append(mmOrderCreate.expectations, expectation)
+	return expectation
+}
+
+// Then sets up lomsClient.OrderCreate return parameters for the expectation previously defined by the When method
+func (e *LomsClientMockOrderCreateExpectation) Then(i1 int64, err error) *LomsClientMock {
+	e.results = &LomsClientMockOrderCreateResults{i1, err}
+	return e.mock
+}
+
+// OrderCreate implements lomsClient
+func (mmOrderCreate *LomsClientMock) OrderCreate(ctx context.Context, userId int64, items []models.CartItem) (i1 int64, err error) {
+	mm_atomic.AddUint64(&mmOrderCreate.beforeOrderCreateCounter, 1)
+	defer mm_atomic.AddUint64(&mmOrderCreate.afterOrderCreateCounter, 1)
+
+	if mmOrderCreate.inspectFuncOrderCreate != nil {
+		mmOrderCreate.inspectFuncOrderCreate(ctx, userId, items)
+	}
+
+	mm_params := LomsClientMockOrderCreateParams{ctx, userId, items}
+
+	// Record call args
+	mmOrderCreate.OrderCreateMock.mutex.Lock()
+	mmOrderCreate.OrderCreateMock.callArgs = append(mmOrderCreate.OrderCreateMock.callArgs, &mm_params)
+	mmOrderCreate.OrderCreateMock.mutex.Unlock()
+
+	for _, e := range mmOrderCreate.OrderCreateMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.i1, e.results.err
+		}
+	}
+
+	if mmOrderCreate.OrderCreateMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmOrderCreate.OrderCreateMock.defaultExpectation.Counter, 1)
+		mm_want := mmOrderCreate.OrderCreateMock.defaultExpectation.params
+		mm_got := LomsClientMockOrderCreateParams{ctx, userId, items}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOrderCreate.t.Errorf("LomsClientMock.OrderCreate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmOrderCreate.OrderCreateMock.defaultExpectation.results
+		if mm_results == nil {
+			mmOrderCreate.t.Fatal("No results are set for the LomsClientMock.OrderCreate")
+		}
+		return (*mm_results).i1, (*mm_results).err
+	}
+	if mmOrderCreate.funcOrderCreate != nil {
+		return mmOrderCreate.funcOrderCreate(ctx, userId, items)
+	}
+	mmOrderCreate.t.Fatalf("Unexpected call to LomsClientMock.OrderCreate. %v %v %v", ctx, userId, items)
+	return
+}
+
+// OrderCreateAfterCounter returns a count of finished LomsClientMock.OrderCreate invocations
+func (mmOrderCreate *LomsClientMock) OrderCreateAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmOrderCreate.afterOrderCreateCounter)
+}
+
+// OrderCreateBeforeCounter returns a count of LomsClientMock.OrderCreate invocations
+func (mmOrderCreate *LomsClientMock) OrderCreateBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmOrderCreate.beforeOrderCreateCounter)
+}
+
+// Calls returns a list of arguments used in each call to LomsClientMock.OrderCreate.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmOrderCreate *mLomsClientMockOrderCreate) Calls() []*LomsClientMockOrderCreateParams {
+	mmOrderCreate.mutex.RLock()
+
+	argCopy := make([]*LomsClientMockOrderCreateParams, len(mmOrderCreate.callArgs))
+	copy(argCopy, mmOrderCreate.callArgs)
+
+	mmOrderCreate.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockOrderCreateDone returns true if the count of the OrderCreate invocations corresponds
+// the number of defined expectations
+func (m *LomsClientMock) MinimockOrderCreateDone() bool {
+	for _, e := range m.OrderCreateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.OrderCreateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterOrderCreateCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcOrderCreate != nil && mm_atomic.LoadUint64(&m.afterOrderCreateCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockOrderCreateInspect logs each unmet expectation
+func (m *LomsClientMock) MinimockOrderCreateInspect() {
+	for _, e := range m.OrderCreateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to LomsClientMock.OrderCreate with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.OrderCreateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterOrderCreateCounter) < 1 {
+		if m.OrderCreateMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to LomsClientMock.OrderCreate")
+		} else {
+			m.t.Errorf("Expected call to LomsClientMock.OrderCreate with params: %#v", *m.OrderCreateMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcOrderCreate != nil && mm_atomic.LoadUint64(&m.afterOrderCreateCounter) < 1 {
+		m.t.Error("Expected call to LomsClientMock.OrderCreate")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *LomsClientMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
-			m.MinimockCreateOrderInspect()
-
 			m.MinimockGetNumberOfItemInStocksInspect()
+
+			m.MinimockOrderCreateInspect()
 			m.t.FailNow()
 		}
 	})
@@ -517,6 +517,6 @@ func (m *LomsClientMock) MinimockWait(timeout mm_time.Duration) {
 func (m *LomsClientMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockCreateOrderDone() &&
-		m.MinimockGetNumberOfItemInStocksDone()
+		m.MinimockGetNumberOfItemInStocksDone() &&
+		m.MinimockOrderCreateDone()
 }

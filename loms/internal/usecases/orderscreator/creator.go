@@ -3,6 +3,7 @@ package orderscreator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
@@ -31,14 +32,18 @@ func NewOrdersCreator(orderIdGenerator orderIdGenerator, orders ordersStorage, s
 func (oc *OrdersCreator) Create(ctx context.Context, userId int64, items []models.OrderItem) (int64, error) {
 	newOrder := oc.createOrderInstance(userId)
 	errReserving := oc.stocks.Reserve(ctx, items)
-	if errReserving == nil {
+	if errReserving != nil {
+		errReserving = fmt.Errorf("could not reserve items for user %d: %w", userId, errReserving)
+		newOrder.Status = models.Failed
+	} else {
 		newOrder.Status = models.AwaitingPayment
 		newOrder.IsItemsReserved = true
-	} else {
-		newOrder.Status = models.Failed
 	}
 	newOrder.Items = items
 	errSaving := oc.orders.Save(ctx, newOrder)
+	if errSaving != nil {
+		errSaving = fmt.Errorf("could not save created order for user %d: %w", userId, errSaving)
+	}
 	errs := errors.Join(errSaving, errReserving)
 	if errs != nil {
 		return 0, errs

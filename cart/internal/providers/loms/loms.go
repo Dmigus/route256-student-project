@@ -2,6 +2,7 @@ package loms
 
 import (
 	"context"
+	"fmt"
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
@@ -29,7 +30,7 @@ func (L *LOMS) CreateOrder(ctx context.Context, userId int64, items []models.Car
 func (L *LOMS) IsItemAvailable(ctx context.Context, skuId int64, count uint16) (bool, error) {
 	available, err := L.client.GetNumberOfItemInStocks(ctx, skuId)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("could not get number of items with skuID %d in stocks: %w", skuId, err)
 	}
 	return available >= uint64(count), nil
 }

@@ -2,6 +2,7 @@ package loms
 
 import (
 	"context"
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"route256.ozon.ru/project/cart/internal/clients/loms/converter"
@@ -28,7 +29,7 @@ func (c *Client) OrderCreate(ctx context.Context, userId int64, items []models.C
 	request := converter.ModelsToOrderCreateRequest(userId, items)
 	response, err := c.client.OrderCreate(ctx, request)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error calling OrderCreate for user %d: %w", userId, err)
 	}
 	return converter.OrderIdToId(response), nil
 }
@@ -37,7 +38,7 @@ func (c *Client) GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint
 	req := converter.SkuIdToStocksInfoRequest(skuId)
 	response, err := c.client.StocksInfo(ctx, req)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error calling StocksInfo for item %d: %w", skuId, err)
 	}
 	return converter.StocksInfoResponseToCount(response), nil
 }

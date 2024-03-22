@@ -2,6 +2,7 @@ package orderspayer
 
 import (
 	"context"
+	"fmt"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
@@ -26,19 +27,19 @@ func NewOrdersPayer(orders orderRepo, stocks stockRemover) *OrdersPayer {
 func (or *OrdersPayer) Pay(ctx context.Context, orderId int64) error {
 	order, err := or.orders.Load(ctx, orderId)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load order %d: %w", orderId, err)
 	}
 	if order.Status != models.AwaitingPayment {
 		return models.ErrWrongOrderStatus
 	}
 	err = or.stocks.RemoveReserved(ctx, order.Items)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not remove reserved items for order %d: %w", orderId, err)
 	}
 	order.Status = models.Payed
 	order.IsItemsReserved = false
 	if err = or.orders.Save(ctx, order); err != nil {
-		return err
+		return fmt.Errorf("could not save order %d: %w", orderId, err)
 	}
 	return nil
 }

@@ -1,6 +1,9 @@
 package stocksinfogetter
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type stockRepo interface {
 	GetNumOfAvailable(context.Context, int64) (uint64, error)
@@ -15,5 +18,9 @@ func NewGetter(stocks stockRepo) *StocksInfoGetter {
 }
 
 func (g *StocksInfoGetter) GetNumOfAvailable(ctx context.Context, skuId int64) (uint64, error) {
-	return g.stocks.GetNumOfAvailable(ctx, skuId)
+	num, err := g.stocks.GetNumOfAvailable(ctx, skuId)
+	if err != nil {
+		return 0, fmt.Errorf("could not get number of available points for item %d: %w", skuId, err)
+	}
+	return num, nil
 }
