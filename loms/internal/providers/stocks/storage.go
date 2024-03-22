@@ -27,7 +27,7 @@ func (i *InMemoryStockStorage) SetItemUnits(skuId int64, units *ItemUnits) {
 	i.data[skuId] = units
 }
 
-// Reserve резервирует товары. Если хотя бы один товар зарезервировать не удалось, то эффект такой же, как будто операции не было. Возвращает первую произошедшую ошибку.
+// Reserve резервирует товары. Если хотя бы один товар зарезервировать не удалось, то результат такой же, как будто операции не было. Возвращает первую произошедшую ошибку.
 func (i *InMemoryStockStorage) Reserve(ctx context.Context, items []models.OrderItem) error {
 	succeededItems := make([]models.OrderItem, len(items))
 	failed := false
@@ -45,6 +45,35 @@ func (i *InMemoryStockStorage) Reserve(ctx context.Context, items []models.Order
 	}
 	_ = i.CancelReserved(ctx, succeededItems)
 	return err
+}
+
+// AddItems добавляет незарезервированные позиции к итемам. Если произошла ошибка хотя бы с одним из них(не найден товар), то результат такой же, как будто операции не было.
+func (i *InMemoryStockStorage) AddItems(ctx context.Context, items []models.OrderItem) error {
+	addedReserved := make([]models.OrderItem, 0)
+	failed := false
+	var err error
+	for _, it := range items {
+		err = i.addReserved(it)
+		if err != nil {
+			failed = true
+			err = fmt.Errorf("error returning %d units if item with skuId = %d: %w", it.Count, it.SkuId, err)
+			break
+		}
+	}
+	if !failed {
+		_ = i.CancelReserved(ctx, addedReserved)
+		return nil
+	}
+	_ = i.RemoveReserved(ctx, addedReserved)
+	return err
+}
+
+func (i *InMemoryStockStorage) addReserved(it models.OrderItem) error {
+	itemUni, err := i.getItemOrErr(it.SkuId)
+	if err != nil {
+		return err
+	}
+	return itemUni.reserve(it.Count)
 }
 
 func (i *InMemoryStockStorage) reserveOne(it models.OrderItem) error {

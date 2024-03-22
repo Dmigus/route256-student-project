@@ -84,6 +84,22 @@ func TestOrderCancellerErrors(t *testing.T) {
 			err: errorToThrow,
 		},
 		{
+			name: "error adding payed stocks",
+			mockSetup: func(helper testHelper) {
+				order := models.NewOrder(123, 1234)
+				order.Status = models.Payed
+				items := []models.OrderItem{{12, 6}}
+				order.Items = items
+				helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
+				helper.addItemsMock.Expect(minimock.AnyContext, items).Return(errorToThrow)
+			},
+			args: args{
+				ctx:     context.Background(),
+				orderId: 1234,
+			},
+			err: errorToThrow,
+		},
+		{
 			name: "error saving order",
 			mockSetup: func(helper testHelper) {
 				order := models.NewOrder(123, 1234)

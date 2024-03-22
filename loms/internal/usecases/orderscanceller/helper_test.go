@@ -10,6 +10,7 @@ import (
 
 type testHelper struct {
 	stocksMock        *mStockCancellerMockCancelReserved
+	addItemsMock      *mStockCancellerMockAddItems
 	orderLoadRepoMock *mOrderRepoMockLoad
 	orderSaveRepoMock *mOrderRepoMockSave
 	canceller         *OrderCanceller
@@ -23,6 +24,7 @@ func newTestHelper(t *testing.T) testHelper {
 	helper.orderLoadRepoMock = &(orders.LoadMock)
 	helper.orderSaveRepoMock = &(orders.SaveMock)
 	helper.stocksMock = &(stocks.CancelReservedMock)
+	helper.addItemsMock = &(stocks.AddItemsMock)
 	helper.canceller = NewOrderCanceller(orders, stocks)
 	return helper
 }

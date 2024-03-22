@@ -51,3 +51,10 @@ func (g *ItemUnits) removeReserved(count uint16) {
 	g.reserved -= freeNum
 	g.total -= freeNum
 }
+
+func (g *ItemUnits) addReserved(count uint16) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.reserved += uint64(count)
+	g.total += uint64(count)
+}

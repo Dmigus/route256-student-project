@@ -19,6 +19,12 @@ type StockCancellerMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
+	funcAddItems          func(ctx context.Context, oa1 []models.OrderItem) (err error)
+	inspectFuncAddItems   func(ctx context.Context, oa1 []models.OrderItem)
+	afterAddItemsCounter  uint64
+	beforeAddItemsCounter uint64
+	AddItemsMock          mStockCancellerMockAddItems
+
 	funcCancelReserved          func(ctx context.Context, oa1 []models.OrderItem) (err error)
 	inspectFuncCancelReserved   func(ctx context.Context, oa1 []models.OrderItem)
 	afterCancelReservedCounter  uint64
@@ -34,12 +40,231 @@ func NewStockCancellerMock(t minimock.Tester) *StockCancellerMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddItemsMock = mStockCancellerMockAddItems{mock: m}
+	m.AddItemsMock.callArgs = []*StockCancellerMockAddItemsParams{}
+
 	m.CancelReservedMock = mStockCancellerMockCancelReserved{mock: m}
 	m.CancelReservedMock.callArgs = []*StockCancellerMockCancelReservedParams{}
 
 	t.Cleanup(m.MinimockFinish)
 
 	return m
+}
+
+type mStockCancellerMockAddItems struct {
+	mock               *StockCancellerMock
+	defaultExpectation *StockCancellerMockAddItemsExpectation
+	expectations       []*StockCancellerMockAddItemsExpectation
+
+	callArgs []*StockCancellerMockAddItemsParams
+	mutex    sync.RWMutex
+}
+
+// StockCancellerMockAddItemsExpectation specifies expectation struct of the stockCanceller.AddItems
+type StockCancellerMockAddItemsExpectation struct {
+	mock    *StockCancellerMock
+	params  *StockCancellerMockAddItemsParams
+	results *StockCancellerMockAddItemsResults
+	Counter uint64
+}
+
+// StockCancellerMockAddItemsParams contains parameters of the stockCanceller.AddItems
+type StockCancellerMockAddItemsParams struct {
+	ctx context.Context
+	oa1 []models.OrderItem
+}
+
+// StockCancellerMockAddItemsResults contains results of the stockCanceller.AddItems
+type StockCancellerMockAddItemsResults struct {
+	err error
+}
+
+// Expect sets up expected params for stockCanceller.AddItems
+func (mmAddItems *mStockCancellerMockAddItems) Expect(ctx context.Context, oa1 []models.OrderItem) *mStockCancellerMockAddItems {
+	if mmAddItems.mock.funcAddItems != nil {
+		mmAddItems.mock.t.Fatalf("StockCancellerMock.AddItems mock is already set by Set")
+	}
+
+	if mmAddItems.defaultExpectation == nil {
+		mmAddItems.defaultExpectation = &StockCancellerMockAddItemsExpectation{}
+	}
+
+	mmAddItems.defaultExpectation.params = &StockCancellerMockAddItemsParams{ctx, oa1}
+	for _, e := range mmAddItems.expectations {
+		if minimock.Equal(e.params, mmAddItems.defaultExpectation.params) {
+			mmAddItems.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAddItems.defaultExpectation.params)
+		}
+	}
+
+	return mmAddItems
+}
+
+// Inspect accepts an inspector function that has same arguments as the stockCanceller.AddItems
+func (mmAddItems *mStockCancellerMockAddItems) Inspect(f func(ctx context.Context, oa1 []models.OrderItem)) *mStockCancellerMockAddItems {
+	if mmAddItems.mock.inspectFuncAddItems != nil {
+		mmAddItems.mock.t.Fatalf("Inspect function is already set for StockCancellerMock.AddItems")
+	}
+
+	mmAddItems.mock.inspectFuncAddItems = f
+
+	return mmAddItems
+}
+
+// Return sets up results that will be returned by stockCanceller.AddItems
+func (mmAddItems *mStockCancellerMockAddItems) Return(err error) *StockCancellerMock {
+	if mmAddItems.mock.funcAddItems != nil {
+		mmAddItems.mock.t.Fatalf("StockCancellerMock.AddItems mock is already set by Set")
+	}
+
+	if mmAddItems.defaultExpectation == nil {
+		mmAddItems.defaultExpectation = &StockCancellerMockAddItemsExpectation{mock: mmAddItems.mock}
+	}
+	mmAddItems.defaultExpectation.results = &StockCancellerMockAddItemsResults{err}
+	return mmAddItems.mock
+}
+
+// Set uses given function f to mock the stockCanceller.AddItems method
+func (mmAddItems *mStockCancellerMockAddItems) Set(f func(ctx context.Context, oa1 []models.OrderItem) (err error)) *StockCancellerMock {
+	if mmAddItems.defaultExpectation != nil {
+		mmAddItems.mock.t.Fatalf("Default expectation is already set for the stockCanceller.AddItems method")
+	}
+
+	if len(mmAddItems.expectations) > 0 {
+		mmAddItems.mock.t.Fatalf("Some expectations are already set for the stockCanceller.AddItems method")
+	}
+
+	mmAddItems.mock.funcAddItems = f
+	return mmAddItems.mock
+}
+
+// When sets expectation for the stockCanceller.AddItems which will trigger the result defined by the following
+// Then helper
+func (mmAddItems *mStockCancellerMockAddItems) When(ctx context.Context, oa1 []models.OrderItem) *StockCancellerMockAddItemsExpectation {
+	if mmAddItems.mock.funcAddItems != nil {
+		mmAddItems.mock.t.Fatalf("StockCancellerMock.AddItems mock is already set by Set")
+	}
+
+	expectation := &StockCancellerMockAddItemsExpectation{
+		mock:   mmAddItems.mock,
+		params: &StockCancellerMockAddItemsParams{ctx, oa1},
+	}
+	mmAddItems.expectations = append(mmAddItems.expectations, expectation)
+	return expectation
+}
+
+// Then sets up stockCanceller.AddItems return parameters for the expectation previously defined by the When method
+func (e *StockCancellerMockAddItemsExpectation) Then(err error) *StockCancellerMock {
+	e.results = &StockCancellerMockAddItemsResults{err}
+	return e.mock
+}
+
+// AddItems implements stockCanceller
+func (mmAddItems *StockCancellerMock) AddItems(ctx context.Context, oa1 []models.OrderItem) (err error) {
+	mm_atomic.AddUint64(&mmAddItems.beforeAddItemsCounter, 1)
+	defer mm_atomic.AddUint64(&mmAddItems.afterAddItemsCounter, 1)
+
+	if mmAddItems.inspectFuncAddItems != nil {
+		mmAddItems.inspectFuncAddItems(ctx, oa1)
+	}
+
+	mm_params := StockCancellerMockAddItemsParams{ctx, oa1}
+
+	// Record call args
+	mmAddItems.AddItemsMock.mutex.Lock()
+	mmAddItems.AddItemsMock.callArgs = append(mmAddItems.AddItemsMock.callArgs, &mm_params)
+	mmAddItems.AddItemsMock.mutex.Unlock()
+
+	for _, e := range mmAddItems.AddItemsMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmAddItems.AddItemsMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmAddItems.AddItemsMock.defaultExpectation.Counter, 1)
+		mm_want := mmAddItems.AddItemsMock.defaultExpectation.params
+		mm_got := StockCancellerMockAddItemsParams{ctx, oa1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddItems.t.Errorf("StockCancellerMock.AddItems got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmAddItems.AddItemsMock.defaultExpectation.results
+		if mm_results == nil {
+			mmAddItems.t.Fatal("No results are set for the StockCancellerMock.AddItems")
+		}
+		return (*mm_results).err
+	}
+	if mmAddItems.funcAddItems != nil {
+		return mmAddItems.funcAddItems(ctx, oa1)
+	}
+	mmAddItems.t.Fatalf("Unexpected call to StockCancellerMock.AddItems. %v %v", ctx, oa1)
+	return
+}
+
+// AddItemsAfterCounter returns a count of finished StockCancellerMock.AddItems invocations
+func (mmAddItems *StockCancellerMock) AddItemsAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddItems.afterAddItemsCounter)
+}
+
+// AddItemsBeforeCounter returns a count of StockCancellerMock.AddItems invocations
+func (mmAddItems *StockCancellerMock) AddItemsBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddItems.beforeAddItemsCounter)
+}
+
+// Calls returns a list of arguments used in each call to StockCancellerMock.AddItems.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmAddItems *mStockCancellerMockAddItems) Calls() []*StockCancellerMockAddItemsParams {
+	mmAddItems.mutex.RLock()
+
+	argCopy := make([]*StockCancellerMockAddItemsParams, len(mmAddItems.callArgs))
+	copy(argCopy, mmAddItems.callArgs)
+
+	mmAddItems.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockAddItemsDone returns true if the count of the AddItems invocations corresponds
+// the number of defined expectations
+func (m *StockCancellerMock) MinimockAddItemsDone() bool {
+	for _, e := range m.AddItemsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddItemsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddItemsCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddItems != nil && mm_atomic.LoadUint64(&m.afterAddItemsCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockAddItemsInspect logs each unmet expectation
+func (m *StockCancellerMock) MinimockAddItemsInspect() {
+	for _, e := range m.AddItemsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to StockCancellerMock.AddItems with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddItemsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddItemsCounter) < 1 {
+		if m.AddItemsMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to StockCancellerMock.AddItems")
+		} else {
+			m.t.Errorf("Expected call to StockCancellerMock.AddItems with params: %#v", *m.AddItemsMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddItems != nil && mm_atomic.LoadUint64(&m.afterAddItemsCounter) < 1 {
+		m.t.Error("Expected call to StockCancellerMock.AddItems")
+	}
 }
 
 type mStockCancellerMockCancelReserved struct {
@@ -262,6 +487,8 @@ func (m *StockCancellerMock) MinimockCancelReservedInspect() {
 func (m *StockCancellerMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
+			m.MinimockAddItemsInspect()
+
 			m.MinimockCancelReservedInspect()
 			m.t.FailNow()
 		}
@@ -287,5 +514,6 @@ func (m *StockCancellerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *StockCancellerMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockAddItemsDone() &&
 		m.MinimockCancelReservedDone()
 }
