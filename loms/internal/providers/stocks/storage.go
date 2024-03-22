@@ -59,6 +59,7 @@ func (i *InMemoryStockStorage) AddItems(ctx context.Context, items []models.Orde
 			err = fmt.Errorf("error returning %d units if item with skuId = %d: %w", it.Count, it.SkuId, err)
 			break
 		}
+		addedReserved = append(addedReserved, it)
 	}
 	if !failed {
 		_ = i.CancelReserved(ctx, addedReserved)
@@ -73,7 +74,8 @@ func (i *InMemoryStockStorage) addReserved(it models.OrderItem) error {
 	if err != nil {
 		return err
 	}
-	return itemUni.reserve(it.Count)
+	itemUni.addReserved(it.Count)
+	return nil
 }
 
 func (i *InMemoryStockStorage) reserveOne(it models.OrderItem) error {
