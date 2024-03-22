@@ -3,6 +3,7 @@ module route256.ozon.ru/project/loms
 go 1.22.0
 
 require (
+	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/gojuno/minimock/v3 v3.3.6
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.62.1

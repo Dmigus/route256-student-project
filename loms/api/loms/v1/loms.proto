@@ -3,6 +3,7 @@ syntax = "proto3";
 option go_package = "loms/v1";
 
 import "google/protobuf/empty.proto";
+import "validate/validate.proto";
 
 service LOMService {
   rpc OrderCreate(OrderCreateRequest) returns (OrderId);
@@ -14,12 +15,12 @@ service LOMService {
 
 message OrderCreateRequest {
   int64 user = 1;
-  repeated Item items = 2;
+  repeated Item items = 2  [(validate.rules).repeated.min_items = 1];
 }
 
 message Item {
   uint32 sku = 1;
-  uint32 count = 2;
+  uint32 count = 2 [(validate.rules).uint32.gt = 0];
 }
 
 message OrderId {
@@ -36,7 +37,7 @@ enum OrderStatus {
 }
 
 message OrderInfoResponse {
-  OrderStatus status = 1;
+  OrderStatus status = 1 ;
   int64 user = 2;
   repeated Item items = 3;
 }

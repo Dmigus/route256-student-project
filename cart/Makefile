@@ -32,8 +32,19 @@ vendor-proto/google/protobuf:
 	mv vendor-proto/protobuf/src/google/protobuf vendor-proto/google
 	rm -rf vendor-proto/protobuf
 
+# Устанавливаем proto описания validate
+vendor-proto/validate:
+	git clone -b main --single-branch --depth=2 --filter=tree:0 \
+		https://github.com/bufbuild/protoc-gen-validate vendor-proto/tmp && \
+		cd vendor-proto/tmp && \
+		git sparse-checkout set --no-cone validate &&\
+		git checkout
+		mkdir -p vendor-proto/validate
+		mv vendor-proto/tmp/validate vendor-proto/
+		rm -rf vendor-proto/tmp
+
 # Вендоринг внешних proto файлов
-.vendor-proto: vendor-proto/google/protobuf
+.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate
 
 bin/protoc-gen-go:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
@@ -41,7 +52,10 @@ bin/protoc-gen-go:
 bin/protoc-gen-go-grpc:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
 
-.bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc
+bin/protoc-gen-validate:
+	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v1.0.4
+
+.bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate
 
 LOMS_PROTO_PATH := api/loms
 LOMS_OUT_DIR := internal/clients/loms/protoc
@@ -58,5 +72,7 @@ protoc-generate-loms-client: .bin-deps .vendor-proto
 	--plugin=protoc-gen-go-grpc=$(LOCAL_BIN)/protoc-gen-go-grpc \
 	--go-grpc_out=$(LOMS_OUT_DIR)  \
 	--go-grpc_opt=paths=source_relative \
+	--plugin=protoc-gen-validate=$(LOCAL_BIN)/protoc-gen-validate \
+	--validate_out="lang=go,paths=source_relative:$(LOMS_OUT_DIR)" \
 	$(LOMS_PROTO_PATH)/v*/*.proto
 	go mod tidy

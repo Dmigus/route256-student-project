@@ -90,6 +90,9 @@ func (a *App) Run() {
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			mw.InterpretErrorToCode,
+			mw.LogReqAndResp,
+			mw.RecoverPanic,
+			mw.Validate,
 		),
 	)
 	if !a.server.CompareAndSwap(nil, grpcServer) {
