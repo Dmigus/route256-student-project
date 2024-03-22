@@ -20,13 +20,12 @@ func TestCheckouterPositive(t *testing.T) {
 	cart.Add(ctx, 456, 10)
 	cart.Add(ctx, 789, 5)
 	helper.getCartRepoMock.Expect(minimock.AnyContext, 123).Return(cart, nil)
-	cartItems := cart.ListItems(ctx)
+	cartItems := cart.ListItemsSorted(ctx)
 	helper.createOrderMock.Expect(minimock.AnyContext, 123, cartItems).Return(5, nil)
-	helper.saveCartRepoMock.Expect(minimock.AnyContext, 123, cart).Return(nil)
+	helper.clearCartRepoMock.Expect(minimock.AnyContext, 123).Return()
 	orderId, err := helper.service.Checkout(ctx, 123)
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), orderId)
-	assert.Empty(t, cart.ListItems(ctx))
 }
 
 func TestCheckouterErrors(t *testing.T) {

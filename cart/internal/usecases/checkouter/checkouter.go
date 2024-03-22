@@ -8,7 +8,7 @@ import (
 
 type repository interface {
 	GetCart(ctx context.Context, user int64) (*models.Cart, error)
-	SaveCart(ctx context.Context, user int64, cart *models.Cart) error
+	ClearCartReliable(ctx context.Context, user int64)
 }
 
 type orderSystem interface {
@@ -29,12 +29,11 @@ func (c *Checkouter) Checkout(ctx context.Context, userId int64) (int64, error) 
 	if err != nil {
 		return 0, fmt.Errorf("could not get cart for user %d: %w", userId, err)
 	}
-	items := cart.ListItems(ctx)
+	items := cart.ListItemsSorted(ctx)
 	orderId, err := c.orders.CreateOrder(ctx, userId, items)
 	if err != nil {
 		return 0, fmt.Errorf("could not create order for user %d: %w", userId, err)
 	}
-	cart.Clear(ctx)
-	_ = c.repo.SaveCart(ctx, userId, cart)
+	c.repo.ClearCartReliable(ctx, userId)
 	return orderId, nil
 }

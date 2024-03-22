@@ -9,10 +9,10 @@ import (
 )
 
 type testHelper struct {
-	getCartRepoMock  *mRepositoryMockGetCart
-	saveCartRepoMock *mRepositoryMockSaveCart
-	createOrderMock  *mOrderSystemMockCreateOrder
-	service          *Checkouter
+	getCartRepoMock   *mRepositoryMockGetCart
+	clearCartRepoMock *mRepositoryMockClearCartReliable
+	createOrderMock   *mOrderSystemMockCreateOrder
+	service           *Checkouter
 }
 
 func newTestHelper(t *testing.T) testHelper {
@@ -21,7 +21,7 @@ func newTestHelper(t *testing.T) testHelper {
 	repo := NewRepositoryMock(mc)
 	orders := NewOrderSystemMock(mc)
 	helper.getCartRepoMock = &(repo.GetCartMock)
-	helper.saveCartRepoMock = &(repo.SaveCartMock)
+	helper.clearCartRepoMock = &(repo.ClearCartReliableMock)
 	helper.createOrderMock = &(orders.CreateOrderMock)
 	helper.service = NewCheckouter(repo, orders)
 	return helper

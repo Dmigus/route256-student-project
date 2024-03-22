@@ -19,17 +19,17 @@ type RepositoryMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
+	funcClearCartReliable          func(ctx context.Context, user int64)
+	inspectFuncClearCartReliable   func(ctx context.Context, user int64)
+	afterClearCartReliableCounter  uint64
+	beforeClearCartReliableCounter uint64
+	ClearCartReliableMock          mRepositoryMockClearCartReliable
+
 	funcGetCart          func(ctx context.Context, user int64) (cp1 *models.Cart, err error)
 	inspectFuncGetCart   func(ctx context.Context, user int64)
 	afterGetCartCounter  uint64
 	beforeGetCartCounter uint64
 	GetCartMock          mRepositoryMockGetCart
-
-	funcSaveCart          func(ctx context.Context, user int64, cart *models.Cart) (err error)
-	inspectFuncSaveCart   func(ctx context.Context, user int64, cart *models.Cart)
-	afterSaveCartCounter  uint64
-	beforeSaveCartCounter uint64
-	SaveCartMock          mRepositoryMockSaveCart
 }
 
 // NewRepositoryMock returns a mock for repository
@@ -40,15 +40,203 @@ func NewRepositoryMock(t minimock.Tester) *RepositoryMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ClearCartReliableMock = mRepositoryMockClearCartReliable{mock: m}
+	m.ClearCartReliableMock.callArgs = []*RepositoryMockClearCartReliableParams{}
+
 	m.GetCartMock = mRepositoryMockGetCart{mock: m}
 	m.GetCartMock.callArgs = []*RepositoryMockGetCartParams{}
-
-	m.SaveCartMock = mRepositoryMockSaveCart{mock: m}
-	m.SaveCartMock.callArgs = []*RepositoryMockSaveCartParams{}
 
 	t.Cleanup(m.MinimockFinish)
 
 	return m
+}
+
+type mRepositoryMockClearCartReliable struct {
+	mock               *RepositoryMock
+	defaultExpectation *RepositoryMockClearCartReliableExpectation
+	expectations       []*RepositoryMockClearCartReliableExpectation
+
+	callArgs []*RepositoryMockClearCartReliableParams
+	mutex    sync.RWMutex
+}
+
+// RepositoryMockClearCartReliableExpectation specifies expectation struct of the repository.ClearCartReliable
+type RepositoryMockClearCartReliableExpectation struct {
+	mock   *RepositoryMock
+	params *RepositoryMockClearCartReliableParams
+
+	Counter uint64
+}
+
+// RepositoryMockClearCartReliableParams contains parameters of the repository.ClearCartReliable
+type RepositoryMockClearCartReliableParams struct {
+	ctx  context.Context
+	user int64
+}
+
+// Expect sets up expected params for repository.ClearCartReliable
+func (mmClearCartReliable *mRepositoryMockClearCartReliable) Expect(ctx context.Context, user int64) *mRepositoryMockClearCartReliable {
+	if mmClearCartReliable.mock.funcClearCartReliable != nil {
+		mmClearCartReliable.mock.t.Fatalf("RepositoryMock.ClearCartReliable mock is already set by Set")
+	}
+
+	if mmClearCartReliable.defaultExpectation == nil {
+		mmClearCartReliable.defaultExpectation = &RepositoryMockClearCartReliableExpectation{}
+	}
+
+	mmClearCartReliable.defaultExpectation.params = &RepositoryMockClearCartReliableParams{ctx, user}
+	for _, e := range mmClearCartReliable.expectations {
+		if minimock.Equal(e.params, mmClearCartReliable.defaultExpectation.params) {
+			mmClearCartReliable.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmClearCartReliable.defaultExpectation.params)
+		}
+	}
+
+	return mmClearCartReliable
+}
+
+// Inspect accepts an inspector function that has same arguments as the repository.ClearCartReliable
+func (mmClearCartReliable *mRepositoryMockClearCartReliable) Inspect(f func(ctx context.Context, user int64)) *mRepositoryMockClearCartReliable {
+	if mmClearCartReliable.mock.inspectFuncClearCartReliable != nil {
+		mmClearCartReliable.mock.t.Fatalf("Inspect function is already set for RepositoryMock.ClearCartReliable")
+	}
+
+	mmClearCartReliable.mock.inspectFuncClearCartReliable = f
+
+	return mmClearCartReliable
+}
+
+// Return sets up results that will be returned by repository.ClearCartReliable
+func (mmClearCartReliable *mRepositoryMockClearCartReliable) Return() *RepositoryMock {
+	if mmClearCartReliable.mock.funcClearCartReliable != nil {
+		mmClearCartReliable.mock.t.Fatalf("RepositoryMock.ClearCartReliable mock is already set by Set")
+	}
+
+	if mmClearCartReliable.defaultExpectation == nil {
+		mmClearCartReliable.defaultExpectation = &RepositoryMockClearCartReliableExpectation{mock: mmClearCartReliable.mock}
+	}
+
+	return mmClearCartReliable.mock
+}
+
+// Set uses given function f to mock the repository.ClearCartReliable method
+func (mmClearCartReliable *mRepositoryMockClearCartReliable) Set(f func(ctx context.Context, user int64)) *RepositoryMock {
+	if mmClearCartReliable.defaultExpectation != nil {
+		mmClearCartReliable.mock.t.Fatalf("Default expectation is already set for the repository.ClearCartReliable method")
+	}
+
+	if len(mmClearCartReliable.expectations) > 0 {
+		mmClearCartReliable.mock.t.Fatalf("Some expectations are already set for the repository.ClearCartReliable method")
+	}
+
+	mmClearCartReliable.mock.funcClearCartReliable = f
+	return mmClearCartReliable.mock
+}
+
+// ClearCartReliable implements repository
+func (mmClearCartReliable *RepositoryMock) ClearCartReliable(ctx context.Context, user int64) {
+	mm_atomic.AddUint64(&mmClearCartReliable.beforeClearCartReliableCounter, 1)
+	defer mm_atomic.AddUint64(&mmClearCartReliable.afterClearCartReliableCounter, 1)
+
+	if mmClearCartReliable.inspectFuncClearCartReliable != nil {
+		mmClearCartReliable.inspectFuncClearCartReliable(ctx, user)
+	}
+
+	mm_params := RepositoryMockClearCartReliableParams{ctx, user}
+
+	// Record call args
+	mmClearCartReliable.ClearCartReliableMock.mutex.Lock()
+	mmClearCartReliable.ClearCartReliableMock.callArgs = append(mmClearCartReliable.ClearCartReliableMock.callArgs, &mm_params)
+	mmClearCartReliable.ClearCartReliableMock.mutex.Unlock()
+
+	for _, e := range mmClearCartReliable.ClearCartReliableMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
+	}
+
+	if mmClearCartReliable.ClearCartReliableMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmClearCartReliable.ClearCartReliableMock.defaultExpectation.Counter, 1)
+		mm_want := mmClearCartReliable.ClearCartReliableMock.defaultExpectation.params
+		mm_got := RepositoryMockClearCartReliableParams{ctx, user}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClearCartReliable.t.Errorf("RepositoryMock.ClearCartReliable got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		return
+
+	}
+	if mmClearCartReliable.funcClearCartReliable != nil {
+		mmClearCartReliable.funcClearCartReliable(ctx, user)
+		return
+	}
+	mmClearCartReliable.t.Fatalf("Unexpected call to RepositoryMock.ClearCartReliable. %v %v", ctx, user)
+
+}
+
+// ClearCartReliableAfterCounter returns a count of finished RepositoryMock.ClearCartReliable invocations
+func (mmClearCartReliable *RepositoryMock) ClearCartReliableAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearCartReliable.afterClearCartReliableCounter)
+}
+
+// ClearCartReliableBeforeCounter returns a count of RepositoryMock.ClearCartReliable invocations
+func (mmClearCartReliable *RepositoryMock) ClearCartReliableBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearCartReliable.beforeClearCartReliableCounter)
+}
+
+// Calls returns a list of arguments used in each call to RepositoryMock.ClearCartReliable.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmClearCartReliable *mRepositoryMockClearCartReliable) Calls() []*RepositoryMockClearCartReliableParams {
+	mmClearCartReliable.mutex.RLock()
+
+	argCopy := make([]*RepositoryMockClearCartReliableParams, len(mmClearCartReliable.callArgs))
+	copy(argCopy, mmClearCartReliable.callArgs)
+
+	mmClearCartReliable.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockClearCartReliableDone returns true if the count of the ClearCartReliable invocations corresponds
+// the number of defined expectations
+func (m *RepositoryMock) MinimockClearCartReliableDone() bool {
+	for _, e := range m.ClearCartReliableMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ClearCartReliableMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearCartReliableCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcClearCartReliable != nil && mm_atomic.LoadUint64(&m.afterClearCartReliableCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockClearCartReliableInspect logs each unmet expectation
+func (m *RepositoryMock) MinimockClearCartReliableInspect() {
+	for _, e := range m.ClearCartReliableMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to RepositoryMock.ClearCartReliable with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ClearCartReliableMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearCartReliableCounter) < 1 {
+		if m.ClearCartReliableMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to RepositoryMock.ClearCartReliable")
+		} else {
+			m.t.Errorf("Expected call to RepositoryMock.ClearCartReliable with params: %#v", *m.ClearCartReliableMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcClearCartReliable != nil && mm_atomic.LoadUint64(&m.afterClearCartReliableCounter) < 1 {
+		m.t.Error("Expected call to RepositoryMock.ClearCartReliable")
+	}
 }
 
 type mRepositoryMockGetCart struct {
@@ -268,230 +456,13 @@ func (m *RepositoryMock) MinimockGetCartInspect() {
 	}
 }
 
-type mRepositoryMockSaveCart struct {
-	mock               *RepositoryMock
-	defaultExpectation *RepositoryMockSaveCartExpectation
-	expectations       []*RepositoryMockSaveCartExpectation
-
-	callArgs []*RepositoryMockSaveCartParams
-	mutex    sync.RWMutex
-}
-
-// RepositoryMockSaveCartExpectation specifies expectation struct of the repository.SaveCart
-type RepositoryMockSaveCartExpectation struct {
-	mock    *RepositoryMock
-	params  *RepositoryMockSaveCartParams
-	results *RepositoryMockSaveCartResults
-	Counter uint64
-}
-
-// RepositoryMockSaveCartParams contains parameters of the repository.SaveCart
-type RepositoryMockSaveCartParams struct {
-	ctx  context.Context
-	user int64
-	cart *models.Cart
-}
-
-// RepositoryMockSaveCartResults contains results of the repository.SaveCart
-type RepositoryMockSaveCartResults struct {
-	err error
-}
-
-// Expect sets up expected params for repository.SaveCart
-func (mmSaveCart *mRepositoryMockSaveCart) Expect(ctx context.Context, user int64, cart *models.Cart) *mRepositoryMockSaveCart {
-	if mmSaveCart.mock.funcSaveCart != nil {
-		mmSaveCart.mock.t.Fatalf("RepositoryMock.SaveCart mock is already set by Set")
-	}
-
-	if mmSaveCart.defaultExpectation == nil {
-		mmSaveCart.defaultExpectation = &RepositoryMockSaveCartExpectation{}
-	}
-
-	mmSaveCart.defaultExpectation.params = &RepositoryMockSaveCartParams{ctx, user, cart}
-	for _, e := range mmSaveCart.expectations {
-		if minimock.Equal(e.params, mmSaveCart.defaultExpectation.params) {
-			mmSaveCart.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSaveCart.defaultExpectation.params)
-		}
-	}
-
-	return mmSaveCart
-}
-
-// Inspect accepts an inspector function that has same arguments as the repository.SaveCart
-func (mmSaveCart *mRepositoryMockSaveCart) Inspect(f func(ctx context.Context, user int64, cart *models.Cart)) *mRepositoryMockSaveCart {
-	if mmSaveCart.mock.inspectFuncSaveCart != nil {
-		mmSaveCart.mock.t.Fatalf("Inspect function is already set for RepositoryMock.SaveCart")
-	}
-
-	mmSaveCart.mock.inspectFuncSaveCart = f
-
-	return mmSaveCart
-}
-
-// Return sets up results that will be returned by repository.SaveCart
-func (mmSaveCart *mRepositoryMockSaveCart) Return(err error) *RepositoryMock {
-	if mmSaveCart.mock.funcSaveCart != nil {
-		mmSaveCart.mock.t.Fatalf("RepositoryMock.SaveCart mock is already set by Set")
-	}
-
-	if mmSaveCart.defaultExpectation == nil {
-		mmSaveCart.defaultExpectation = &RepositoryMockSaveCartExpectation{mock: mmSaveCart.mock}
-	}
-	mmSaveCart.defaultExpectation.results = &RepositoryMockSaveCartResults{err}
-	return mmSaveCart.mock
-}
-
-// Set uses given function f to mock the repository.SaveCart method
-func (mmSaveCart *mRepositoryMockSaveCart) Set(f func(ctx context.Context, user int64, cart *models.Cart) (err error)) *RepositoryMock {
-	if mmSaveCart.defaultExpectation != nil {
-		mmSaveCart.mock.t.Fatalf("Default expectation is already set for the repository.SaveCart method")
-	}
-
-	if len(mmSaveCart.expectations) > 0 {
-		mmSaveCart.mock.t.Fatalf("Some expectations are already set for the repository.SaveCart method")
-	}
-
-	mmSaveCart.mock.funcSaveCart = f
-	return mmSaveCart.mock
-}
-
-// When sets expectation for the repository.SaveCart which will trigger the result defined by the following
-// Then helper
-func (mmSaveCart *mRepositoryMockSaveCart) When(ctx context.Context, user int64, cart *models.Cart) *RepositoryMockSaveCartExpectation {
-	if mmSaveCart.mock.funcSaveCart != nil {
-		mmSaveCart.mock.t.Fatalf("RepositoryMock.SaveCart mock is already set by Set")
-	}
-
-	expectation := &RepositoryMockSaveCartExpectation{
-		mock:   mmSaveCart.mock,
-		params: &RepositoryMockSaveCartParams{ctx, user, cart},
-	}
-	mmSaveCart.expectations = append(mmSaveCart.expectations, expectation)
-	return expectation
-}
-
-// Then sets up repository.SaveCart return parameters for the expectation previously defined by the When method
-func (e *RepositoryMockSaveCartExpectation) Then(err error) *RepositoryMock {
-	e.results = &RepositoryMockSaveCartResults{err}
-	return e.mock
-}
-
-// SaveCart implements repository
-func (mmSaveCart *RepositoryMock) SaveCart(ctx context.Context, user int64, cart *models.Cart) (err error) {
-	mm_atomic.AddUint64(&mmSaveCart.beforeSaveCartCounter, 1)
-	defer mm_atomic.AddUint64(&mmSaveCart.afterSaveCartCounter, 1)
-
-	if mmSaveCart.inspectFuncSaveCart != nil {
-		mmSaveCart.inspectFuncSaveCart(ctx, user, cart)
-	}
-
-	mm_params := RepositoryMockSaveCartParams{ctx, user, cart}
-
-	// Record call args
-	mmSaveCart.SaveCartMock.mutex.Lock()
-	mmSaveCart.SaveCartMock.callArgs = append(mmSaveCart.SaveCartMock.callArgs, &mm_params)
-	mmSaveCart.SaveCartMock.mutex.Unlock()
-
-	for _, e := range mmSaveCart.SaveCartMock.expectations {
-		if minimock.Equal(*e.params, mm_params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
-		}
-	}
-
-	if mmSaveCart.SaveCartMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmSaveCart.SaveCartMock.defaultExpectation.Counter, 1)
-		mm_want := mmSaveCart.SaveCartMock.defaultExpectation.params
-		mm_got := RepositoryMockSaveCartParams{ctx, user, cart}
-		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
-			mmSaveCart.t.Errorf("RepositoryMock.SaveCart got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
-		}
-
-		mm_results := mmSaveCart.SaveCartMock.defaultExpectation.results
-		if mm_results == nil {
-			mmSaveCart.t.Fatal("No results are set for the RepositoryMock.SaveCart")
-		}
-		return (*mm_results).err
-	}
-	if mmSaveCart.funcSaveCart != nil {
-		return mmSaveCart.funcSaveCart(ctx, user, cart)
-	}
-	mmSaveCart.t.Fatalf("Unexpected call to RepositoryMock.SaveCart. %v %v %v", ctx, user, cart)
-	return
-}
-
-// SaveCartAfterCounter returns a count of finished RepositoryMock.SaveCart invocations
-func (mmSaveCart *RepositoryMock) SaveCartAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSaveCart.afterSaveCartCounter)
-}
-
-// SaveCartBeforeCounter returns a count of RepositoryMock.SaveCart invocations
-func (mmSaveCart *RepositoryMock) SaveCartBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSaveCart.beforeSaveCartCounter)
-}
-
-// Calls returns a list of arguments used in each call to RepositoryMock.SaveCart.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmSaveCart *mRepositoryMockSaveCart) Calls() []*RepositoryMockSaveCartParams {
-	mmSaveCart.mutex.RLock()
-
-	argCopy := make([]*RepositoryMockSaveCartParams, len(mmSaveCart.callArgs))
-	copy(argCopy, mmSaveCart.callArgs)
-
-	mmSaveCart.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockSaveCartDone returns true if the count of the SaveCart invocations corresponds
-// the number of defined expectations
-func (m *RepositoryMock) MinimockSaveCartDone() bool {
-	for _, e := range m.SaveCartMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SaveCartMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSaveCartCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSaveCart != nil && mm_atomic.LoadUint64(&m.afterSaveCartCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockSaveCartInspect logs each unmet expectation
-func (m *RepositoryMock) MinimockSaveCartInspect() {
-	for _, e := range m.SaveCartMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to RepositoryMock.SaveCart with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SaveCartMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSaveCartCounter) < 1 {
-		if m.SaveCartMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to RepositoryMock.SaveCart")
-		} else {
-			m.t.Errorf("Expected call to RepositoryMock.SaveCart with params: %#v", *m.SaveCartMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSaveCart != nil && mm_atomic.LoadUint64(&m.afterSaveCartCounter) < 1 {
-		m.t.Error("Expected call to RepositoryMock.SaveCart")
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *RepositoryMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
-			m.MinimockGetCartInspect()
+			m.MinimockClearCartReliableInspect()
 
-			m.MinimockSaveCartInspect()
+			m.MinimockGetCartInspect()
 			m.t.FailNow()
 		}
 	})
@@ -516,6 +487,6 @@ func (m *RepositoryMock) MinimockWait(timeout mm_time.Duration) {
 func (m *RepositoryMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockGetCartDone() &&
-		m.MinimockSaveCartDone()
+		m.MinimockClearCartReliableDone() &&
+		m.MinimockGetCartDone()
 }
