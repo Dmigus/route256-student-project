@@ -1,10 +1,6 @@
 package models
 
-import "errors"
-
 type OrderStatus int
-
-var ErrWrongOrderStatus = errors.New("order status is wrong")
 
 const (
 	New OrderStatus = iota + 1

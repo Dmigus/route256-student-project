@@ -3,8 +3,11 @@ package orderspayer
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
 type orderRepo interface {
 	Save(context.Context, *models.Order) error
@@ -30,7 +33,7 @@ func (or *OrdersPayer) Pay(ctx context.Context, orderId int64) error {
 		return fmt.Errorf("could not load order %d: %w", orderId, err)
 	}
 	if order.Status != models.AwaitingPayment {
-		return models.ErrWrongOrderStatus
+		return errWrongOrderStatus
 	}
 	err = or.stocks.RemoveReserved(ctx, order.Items)
 	if err != nil {

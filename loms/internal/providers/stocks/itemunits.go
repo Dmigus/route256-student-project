@@ -1,11 +1,12 @@
 package stocks
 
 import (
-	"errors"
+	"github.com/pkg/errors"
+	"route256.ozon.ru/project/loms/internal/models"
 	"sync"
 )
 
-var ErrNotEnoughItems = errors.New("required number of units is not available")
+var errInsufficientStocks = errors.Wrap(models.ErrFailedPrecondition, "insufficient stocks")
 
 type ItemUnits struct {
 	mu              sync.RWMutex
@@ -31,7 +32,7 @@ func (g *ItemUnits) reserve(count uint16) error {
 	available := g.total - g.reserved
 	required := uint64(count)
 	if available < required {
-		return ErrNotEnoughItems
+		return errInsufficientStocks
 	}
 	g.reserved += required
 	return nil

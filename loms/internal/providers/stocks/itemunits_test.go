@@ -33,5 +33,5 @@ func TestItemUnits_reserve(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), iu.getNumOfAvailable())
 	err = iu.reserve(3)
-	require.ErrorIs(t, err, ErrNotEnoughItems)
+	require.ErrorIs(t, err, errInsufficientStocks)
 }

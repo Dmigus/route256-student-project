@@ -3,8 +3,11 @@ package orderscanceller
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
 type orderRepo interface {
 	Save(context.Context, *models.Order) error
@@ -31,7 +34,7 @@ func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
 		return fmt.Errorf("could not load order %d: %w", orderId, err)
 	}
 	if order.Status == models.Cancelled {
-		return models.ErrWrongOrderStatus
+		return errWrongOrderStatus
 	}
 	if order.IsItemsReserved {
 		if err := oc.cancelReserved(ctx, order); err != nil {

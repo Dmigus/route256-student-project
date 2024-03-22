@@ -65,7 +65,7 @@ func TestOrdersPayerErrors(t *testing.T) {
 				ctx:     context.Background(),
 				orderId: 1234,
 			},
-			err: models.ErrWrongOrderStatus,
+			err: errWrongOrderStatus,
 		},
 		{
 			name: "error removing stocks",

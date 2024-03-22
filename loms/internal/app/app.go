@@ -89,7 +89,7 @@ func (a *App) Run() {
 	}
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			mw.InterpretErrorToCode,
+			mw.SetUpErrorCode,
 			mw.LogReqAndResp,
 			mw.RecoverPanic,
 			mw.Validate,

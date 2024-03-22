@@ -5,7 +5,6 @@ build:
 .PHONY: coverage
 coverage:
 	@go test -tags=unit -coverprofile=coverage.out  ./...
-	@go tool cover -func coverage.out | grep total:
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 

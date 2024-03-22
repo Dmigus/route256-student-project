@@ -2,12 +2,10 @@ package mw
 
 import (
 	"context"
-	"log"
-	"net/http"
-
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"log"
 )
 
 func LogReqAndResp(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -23,13 +21,4 @@ func LogReqAndResp(ctx context.Context, req interface{}, info *grpc.UnaryServerI
 	log.Printf("response: method: %v, resp: %v\n", info.FullMethod, string(rawResp))
 
 	return
-}
-
-func WithHTTPLoggingMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		log.Println(r.Method)
-		next.ServeHTTP(w, r)
-	}
-
-	return http.HandlerFunc(fn)
 }
