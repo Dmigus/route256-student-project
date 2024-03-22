@@ -9,11 +9,11 @@ coverage:
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
+lint:
+	@golangci-lint run
+
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin
-
-.vendor-rm:
-	rm -rf vendor-proto
 
 # Устанавливаем proto описания google/protobuf
 vendor-proto/google/protobuf:
