@@ -16,13 +16,13 @@ func InterpretErrorToCode(ctx context.Context, req any, _ *grpc.UnaryServerInfo,
 	resp, err = handler(ctx, req)
 	if err != nil {
 		if errors.Is(err, orders.ErrOrderNotFound) {
-			return nil, status.Errorf(codes.NotFound, err.Error())
+			return nil, status.Errorf(codes.NotFound, orders.ErrOrderNotFound.Error())
 		} else if errors.Is(err, stocks.ErrItemIsNotExists) {
-			return nil, status.Errorf(codes.NotFound, err.Error())
+			return nil, status.Errorf(codes.NotFound, stocks.ErrItemIsNotExists.Error())
 		} else if errors.Is(err, stocks.ErrNotEnoughItems) {
-			return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+			return nil, status.Errorf(codes.FailedPrecondition, stocks.ErrNotEnoughItems.Error())
 		} else if errors.Is(err, models.ErrWrongOrderStatus) {
-			return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+			return nil, status.Errorf(codes.FailedPrecondition, models.ErrWrongOrderStatus.Error())
 		} else if errors.Is(err, usecases.ErrService) {
 			return nil, status.Errorf(codes.Internal, usecases.ErrService.Error())
 		} else {
