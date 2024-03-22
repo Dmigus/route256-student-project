@@ -2,11 +2,12 @@ package adder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
-var ErrNotEnoughNumInStocks = fmt.Errorf("not enough item number in stocks")
+var ErrNotEnoughNumInStocks = errors.New("not enough item number in stocks")
 
 type repository interface {
 	GetCart(ctx context.Context, user int64) (*models.Cart, error)

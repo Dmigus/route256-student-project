@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 )
 
-var errUnmarshableBody = fmt.Errorf("error unmarshalling response body from Product Service")
+var errUnmarshableBody = errors.New("error unmarshalling response body from Product Service")
 
 type (
 	httpClient interface {

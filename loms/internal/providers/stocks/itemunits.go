@@ -1,11 +1,11 @@
 package stocks
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 )
 
-var ErrNotEnoughItems = fmt.Errorf("required number of units is not available")
+var ErrNotEnoughItems = errors.New("required number of units is not available")
 
 type ItemUnits struct {
 	mu              sync.RWMutex

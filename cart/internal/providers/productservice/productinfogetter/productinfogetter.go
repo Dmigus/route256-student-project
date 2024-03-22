@@ -3,16 +3,15 @@ package productinfogetter
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"route256.ozon.ru/project/cart/internal/models"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 )
 
 var (
-	errInvalidPrice       = fmt.Errorf("returned price is not valid")
-	errInvalidProductName = fmt.Errorf("returned name is not valid")
-	errSkuIdIsNotUInt32   = fmt.Errorf("skuId is not in range UInt32")
+	errInvalidPrice       = errors.New("returned price is not valid")
+	errInvalidProductName = errors.New("returned name is not valid")
+	errSkuIdIsNotUInt32   = errors.New("skuId is not in range UInt32")
 )
 
 type callPerformer interface {
