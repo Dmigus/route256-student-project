@@ -42,8 +42,8 @@ bin/protoc-gen-go-grpc:
 LOMS_PROTO_PATH := api/loms
 OUT_DIR := internal/controllers/protoc
 
-.PHONY: .protoc-generate
-.protoc-generate: .bin-deps .vendor-proto
+.PHONY: protoc-generate-service
+protoc-generate-service: .bin-deps .vendor-proto
 	mkdir -p $(OUT_DIR)
 	protoc \
 	-I $(LOMS_PROTO_PATH) \

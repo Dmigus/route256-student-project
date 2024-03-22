@@ -1,5 +1,5 @@
 .PHONY: build, coverage, lint
-build: 
+build:
 	go build -o ./bin/app ./cmd
 
 coverage:
@@ -46,8 +46,8 @@ bin/protoc-gen-go-grpc:
 LOMS_PROTO_PATH := api/loms
 LOMS_OUT_DIR := internal/clients/loms/protoc
 
-.PHONY: .protoc-generate-loms
-.protoc-generate-loms: .bin-deps .vendor-proto
+.PHONY: protoc-generate-loms-client
+protoc-generate-loms-client: .bin-deps .vendor-proto
 	mkdir -p $(LOMS_OUT_DIR)
 	protoc \
 	-I $(LOMS_PROTO_PATH) \
