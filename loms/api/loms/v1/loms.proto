@@ -18,9 +18,23 @@ service LOMService {
       get: "/v1/order/{orderID}"
     };
   };
-  rpc OrderPay(OrderId) returns (google.protobuf.Empty);
-  rpc OrderCancel(OrderId) returns (google.protobuf.Empty);
-  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse);
+  rpc OrderPay(OrderId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/order/pay"
+      body: "*"
+    };
+  };
+  rpc OrderCancel(OrderId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/order/cancel"
+      body: "*"
+    };
+  };
+  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse) {
+    option (google.api.http) = {
+      get: "/v1/stocks/{sku}"
+    };
+  };
 }
 
 message OrderCreateRequest {

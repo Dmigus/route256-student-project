@@ -5,7 +5,9 @@ import (
 	"errors"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"log"
 	"net/http"
 	v1 "route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
@@ -21,7 +23,7 @@ func NewServer(lomsaddress, addr string) *Server {
 	if err != nil {
 		log.Fatalln("Failed to dial:", err)
 	}
-	gwmux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux(runtime.WithErrorHandler(fixFailedPreconditionCodeMapping))
 	if err = v1.RegisterLOMServiceHandler(context.Background(), gwmux, conn); err != nil {
 		log.Fatalln("Failed to register gateway:", err)
 	}
@@ -34,6 +36,17 @@ func NewServer(lomsaddress, addr string) *Server {
 	}
 }
 
+func fixFailedPreconditionCodeMapping(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, writer http.ResponseWriter, request *http.Request, err error) {
+	gRPCCode := status.Code(err)
+	if gRPCCode == codes.FailedPrecondition {
+		err = &runtime.HTTPStatusError{
+			HTTPStatus: http.StatusPreconditionFailed,
+			Err:        err,
+		}
+	}
+	runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, writer, request, err)
+}
+
 func (s *Server) Serve() {
 	if err := s.serv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
@@ -44,7 +57,8 @@ func (s *Server) Stop(timeout time.Duration) {
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), timeout)
 	defer shutdownRelease()
 	if err := s.serv.Shutdown(shutdownCtx); err != nil {
-		err = errors.Join(err, s.serv.Close())
+		errClose := s.serv.Close()
+		err = errors.Join(err, errClose)
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 }

@@ -42,8 +42,19 @@ vendor-proto/validate:
 		mv vendor-proto/tmp/validate vendor-proto/
 		rm -rf vendor-proto/tmp
 
+# Устанавливаем proto описания google/googleapis
+vendor-proto/google/api:
+	git clone -b master --single-branch -n --depth=1 --filter=tree:0 \
+ 		https://github.com/googleapis/googleapis vendor-proto/googleapis && \
+ 	cd vendor-proto/googleapis && \
+	git sparse-checkout set --no-cone google/api && \
+	git checkout
+	mkdir -p  vendor-proto/google
+	mv vendor-proto/googleapis/google/api vendor-proto/google
+	rm -rf vendor-proto/googleapis
+
 # Вендоринг внешних proto файлов
-.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate
+.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate vendor-proto/google/api
 
 bin/protoc-gen-go:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
