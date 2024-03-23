@@ -49,15 +49,24 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count); err != nil {
-		if errors.Is(err, adder.ErrNotEnoughNumInStocks) {
-			w.WriteHeader(http.StatusPreconditionFailed)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		return
+	err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count)
+	fillHeaderFromError(w, err)
+}
+
+func fillHeaderFromError(w http.ResponseWriter, err error) {
+	if err == nil {
+		w.WriteHeader(http.StatusOK)
 	}
-	w.WriteHeader(http.StatusOK)
+	if errors.Is(err, adder.ErrNotEnoughNumInStocks) {
+		w.WriteHeader(http.StatusPreconditionFailed)
+	} else if errors.Is(err, models.ErrFailedPrecondition) {
+		w.WriteHeader(http.StatusPreconditionFailed)
+	} else if errors.Is(err, models.ErrNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	return
 }
 
 type addItemReq struct {

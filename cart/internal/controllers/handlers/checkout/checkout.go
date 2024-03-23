@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"route256.ozon.ru/project/cart/internal/models"
 )
 
 var (
@@ -41,18 +42,32 @@ func (c *Checkout) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	orderId, err := c.checkouter.Checkout(r.Context(), userId)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		fillHeaderFromError(w, err)
 		return
 	}
 	dto := orderIdToDTO(orderId)
 	marshalled, err := json.Marshal(dto)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		fillHeaderFromError(w, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(marshalled)
+}
+
+func fillHeaderFromError(w http.ResponseWriter, err error) {
+	if err == nil {
+		w.WriteHeader(http.StatusOK)
+	}
+	if errors.Is(err, models.ErrFailedPrecondition) {
+		w.WriteHeader(http.StatusPreconditionFailed)
+	} else if errors.Is(err, models.ErrNotFound) {
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	return
 }
 
 func parseRequest(r *http.Request) (int64, error) {

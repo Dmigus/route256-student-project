@@ -6,6 +6,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/gojuno/minimock/v3 v3.3.6
 	github.com/jasongerard/healthz v1.0.0
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.1
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.32.0

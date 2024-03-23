@@ -316,7 +316,7 @@ func (m *OrderId) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for Id
+	// no validation rules for OrderID
 
 	if len(errors) > 0 {
 		return OrderIdMultiError(errors)

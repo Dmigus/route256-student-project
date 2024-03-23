@@ -24,7 +24,7 @@ message Item {
 }
 
 message OrderId {
-  int64 id = 1;
+  int64 orderID = 1;
 }
 
 enum OrderStatus {

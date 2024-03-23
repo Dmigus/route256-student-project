@@ -14,5 +14,5 @@ func OrderCreateReqToModel(req *v1.OrderCreateRequest) (int64, []models.OrderIte
 }
 
 func IdToOrderCreateResponse(id int64) *v1.OrderId {
-	return &v1.OrderId{Id: id}
+	return &v1.OrderId{OrderID: id}
 }
