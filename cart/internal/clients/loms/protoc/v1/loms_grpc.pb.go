@@ -23,10 +23,15 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LOMServiceClient interface {
+	// Creates a new order for the user from the list of transferred goods with reservation of the required number of stocks
 	OrderCreate(ctx context.Context, in *OrderCreateRequest, opts ...grpc.CallOption) (*OrderId, error)
+	// Shows order information
 	OrderInfo(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*OrderInfoResponse, error)
+	// Marks the order as paid. Reserved items become purchased.
 	OrderPay(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Cancels an order, removes the reserve from all items in the order.
 	OrderCancel(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Returns the number of products that can be purchased.
 	StocksInfo(ctx context.Context, in *StocksInfoRequest, opts ...grpc.CallOption) (*StocksInfoResponse, error)
 }
 
@@ -87,10 +92,15 @@ func (c *lOMServiceClient) StocksInfo(ctx context.Context, in *StocksInfoRequest
 // All implementations must embed UnimplementedLOMServiceServer
 // for forward compatibility
 type LOMServiceServer interface {
+	// Creates a new order for the user from the list of transferred goods with reservation of the required number of stocks
 	OrderCreate(context.Context, *OrderCreateRequest) (*OrderId, error)
+	// Shows order information
 	OrderInfo(context.Context, *OrderId) (*OrderInfoResponse, error)
+	// Marks the order as paid. Reserved items become purchased.
 	OrderPay(context.Context, *OrderId) (*emptypb.Empty, error)
+	// Cancels an order, removes the reserve from all items in the order.
 	OrderCancel(context.Context, *OrderId) (*emptypb.Empty, error)
+	// Returns the number of products that can be purchased.
 	StocksInfo(context.Context, *StocksInfoRequest) (*StocksInfoResponse, error)
 	mustEmbedUnimplementedLOMServiceServer()
 }

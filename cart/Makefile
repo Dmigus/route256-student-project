@@ -53,8 +53,19 @@ vendor-proto/google/api:
 	mv vendor-proto/googleapis/google/api vendor-proto/google
 	rm -rf vendor-proto/googleapis
 
+# Устанавливаем proto описания protoc-gen-openapiv2/options
+vendor-proto/protoc-gen-openapiv2/options:
+	git clone -b main --single-branch -n --depth=1 --filter=tree:0 \
+ 		https://github.com/grpc-ecosystem/grpc-gateway vendor-proto/grpc-ecosystem && \
+ 	cd vendor-proto/grpc-ecosystem && \
+	git sparse-checkout set --no-cone protoc-gen-openapiv2/options && \
+	git checkout
+	mkdir -p vendor-proto/protoc-gen-openapiv2
+	mv vendor-proto/grpc-ecosystem/protoc-gen-openapiv2/options vendor-proto/protoc-gen-openapiv2
+	rm -rf vendor-proto/grpc-ecosystem
+
 # Вендоринг внешних proto файлов
-.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate vendor-proto/google/api
+.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate vendor-proto/google/api vendor-proto/protoc-gen-openapiv2/options
 
 bin/protoc-gen-go:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
@@ -67,7 +78,7 @@ bin/protoc-gen-validate:
 
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate
 
-LOMS_PROTO_PATH := api/loms
+LOMS_PROTO_PATH := ../loms/api/loms
 LOMS_OUT_DIR := internal/clients/loms/protoc
 
 .PHONY: protoc-generate-loms-client
