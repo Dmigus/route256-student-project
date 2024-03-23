@@ -14,11 +14,28 @@ import (
 	"time"
 )
 
+const basePath = "/api/"
+
 type Server struct {
 	serv *http.Server
 }
 
-func NewServer(lomsaddress, addr string) *Server {
+func NewServer(lomsaddress, addr, swaggerPath string) *Server {
+	gwmux := initGateWayMux(lomsaddress)
+	swaggeruimux := swaggerUIHandler(swaggerPath)
+	merged := http.NewServeMux()
+	merged.Handle(basePath, gwmux)
+	merged.Handle(swaggeruiprefix, swaggeruimux)
+	gwServer := &http.Server{
+		Addr:    addr,
+		Handler: merged,
+	}
+	return &Server{
+		serv: gwServer,
+	}
+}
+
+func initGateWayMux(lomsaddress string) *runtime.ServeMux {
 	conn, err := grpc.Dial(lomsaddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalln("Failed to dial:", err)
@@ -27,13 +44,7 @@ func NewServer(lomsaddress, addr string) *Server {
 	if err = v1.RegisterLOMServiceHandler(context.Background(), gwmux, conn); err != nil {
 		log.Fatalln("Failed to register gateway:", err)
 	}
-	gwServer := &http.Server{
-		Addr:    addr,
-		Handler: gwmux,
-	}
-	return &Server{
-		serv: gwServer,
-	}
+	return gwmux
 }
 
 func fixFailedPreconditionCodeMapping(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, writer http.ResponseWriter, request *http.Request, err error) {

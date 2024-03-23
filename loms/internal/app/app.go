@@ -114,7 +114,10 @@ func (a *App) RunGateway() {
 	if a.httpGateway.Load() != nil {
 		return
 	}
-	newGW := httpContoller.NewServer(fmt.Sprintf(":%d", a.config.GRPCServer.Port), fmt.Sprintf(":%d", a.config.HTTPGateway.Port))
+	newGW := httpContoller.NewServer(
+		fmt.Sprintf(":%d", a.config.GRPCServer.Port),
+		fmt.Sprintf(":%d", a.config.HTTPGateway.Port),
+		a.config.Swagger.Path)
 	if !a.httpGateway.CompareAndSwap(nil, newGW) {
 		return
 	}

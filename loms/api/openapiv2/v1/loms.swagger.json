@@ -1,0 +1,396 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Logistics and Order Management System",
+    "description": "A service responsible for accounting for orders and stock of goods",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "LOMService"
+    }
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/order/cancel": {
+      "post": {
+        "summary": "Cancels an order, removes the reserve from all items in the order.",
+        "operationId": "LOMService_OrderCancel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderId"
+            }
+          }
+        ],
+        "tags": [
+          "LOMService"
+        ]
+      }
+    },
+    "/api/v1/order/create": {
+      "post": {
+        "summary": "Creates a new order for the user from the list of transferred goods with reservation of the required number of stocks",
+        "operationId": "LOMService_OrderCreate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OrderId"
+            },
+            "examples": {
+              "application/json": {
+                "orderID": "1"
+              }
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderCreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "LOMService"
+        ]
+      }
+    },
+    "/api/v1/order/pay": {
+      "post": {
+        "summary": "Marks the order as paid. Reserved items become purchased.",
+        "operationId": "LOMService_OrderPay",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OrderId"
+            }
+          }
+        ],
+        "tags": [
+          "LOMService"
+        ]
+      }
+    },
+    "/api/v1/order/{orderID}": {
+      "get": {
+        "summary": "Shows order information",
+        "operationId": "LOMService_OrderInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/OrderInfoResponse"
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orderID",
+            "description": "Order identifier",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "LOMService"
+        ]
+      }
+    },
+    "/api/v1/stocks/{sku}": {
+      "get": {
+        "summary": "Returns the number of products that can be purchased.",
+        "operationId": "LOMService_StocksInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/StocksInfoResponse"
+            },
+            "examples": {
+              "application/json": {
+                "count": "5"
+              }
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sku",
+            "description": "Product identifier",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "LOMService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "Item": {
+      "type": "object",
+      "properties": {
+        "sku": {
+          "type": "integer",
+          "format": "integer",
+          "description": "Product identifier",
+          "title": "skuId"
+        },
+        "count": {
+          "type": "integer",
+          "format": "integer",
+          "description": "Number of product units",
+          "title": "count"
+        }
+      }
+    },
+    "OrderCreateRequest": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string",
+          "format": "integer",
+          "description": "User identifier",
+          "title": "userId"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Item"
+          },
+          "description": "Items to be in order",
+          "title": "items"
+        }
+      }
+    },
+    "OrderId": {
+      "type": "object",
+      "properties": {
+        "orderID": {
+          "type": "string",
+          "format": "integer",
+          "description": "Order identifier",
+          "title": "orderID"
+        }
+      }
+    },
+    "OrderInfoResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/OrderStatus"
+        },
+        "user": {
+          "type": "string",
+          "format": "integer",
+          "description": "User identifier",
+          "title": "userId"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Item"
+          }
+        }
+      }
+    },
+    "OrderStatus": {
+      "type": "string",
+      "enum": [
+        "ORDER_STATUS_UNDEFINED",
+        "ORDER_STATUS_NEW",
+        "ORDER_STATUS_AWAITING_PAYMENT",
+        "ORDER_STATUS_FAILED",
+        "ORDER_STATUS_PAYED",
+        "ORDER_STATUS_CANCELLED"
+      ],
+      "default": "ORDER_STATUS_UNDEFINED",
+      "description": "- ORDER_STATUS_NEW: New\n - ORDER_STATUS_AWAITING_PAYMENT: Awaiting payment\n - ORDER_STATUS_FAILED: Failed\n - ORDER_STATUS_PAYED: Payed\n - ORDER_STATUS_CANCELLED: Cancelled",
+      "title": "Order status"
+    },
+    "StocksInfoResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "string",
+          "format": "uint64",
+          "description": "Number of units",
+          "title": "count"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

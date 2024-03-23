@@ -227,7 +227,7 @@ func RegisterLOMServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderCreate", runtime.WithHTTPPathPattern("/v1/order/create"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderCreate", runtime.WithHTTPPathPattern("/api/v1/order/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -252,7 +252,7 @@ func RegisterLOMServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderInfo", runtime.WithHTTPPathPattern("/v1/order/{orderID}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderInfo", runtime.WithHTTPPathPattern("/api/v1/order/{orderID}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -277,7 +277,7 @@ func RegisterLOMServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderPay", runtime.WithHTTPPathPattern("/v1/order/pay"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderPay", runtime.WithHTTPPathPattern("/api/v1/order/pay"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -302,7 +302,7 @@ func RegisterLOMServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderCancel", runtime.WithHTTPPathPattern("/v1/order/cancel"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/OrderCancel", runtime.WithHTTPPathPattern("/api/v1/order/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -327,7 +327,7 @@ func RegisterLOMServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/StocksInfo", runtime.WithHTTPPathPattern("/v1/stocks/{sku}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/.LOMService/StocksInfo", runtime.WithHTTPPathPattern("/api/v1/stocks/{sku}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -391,7 +391,7 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderCreate", runtime.WithHTTPPathPattern("/v1/order/create"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderCreate", runtime.WithHTTPPathPattern("/api/v1/order/create"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -413,7 +413,7 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderInfo", runtime.WithHTTPPathPattern("/v1/order/{orderID}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderInfo", runtime.WithHTTPPathPattern("/api/v1/order/{orderID}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -435,7 +435,7 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderPay", runtime.WithHTTPPathPattern("/v1/order/pay"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderPay", runtime.WithHTTPPathPattern("/api/v1/order/pay"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -457,7 +457,7 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderCancel", runtime.WithHTTPPathPattern("/v1/order/cancel"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/OrderCancel", runtime.WithHTTPPathPattern("/api/v1/order/cancel"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -479,7 +479,7 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/StocksInfo", runtime.WithHTTPPathPattern("/v1/stocks/{sku}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/.LOMService/StocksInfo", runtime.WithHTTPPathPattern("/api/v1/stocks/{sku}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -499,15 +499,15 @@ func RegisterLOMServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux,
 }
 
 var (
-	pattern_LOMService_OrderCreate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "order", "create"}, ""))
+	pattern_LOMService_OrderCreate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "order", "create"}, ""))
 
-	pattern_LOMService_OrderInfo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "order", "orderID"}, ""))
+	pattern_LOMService_OrderInfo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"api", "v1", "order", "orderID"}, ""))
 
-	pattern_LOMService_OrderPay_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "order", "pay"}, ""))
+	pattern_LOMService_OrderPay_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "order", "pay"}, ""))
 
-	pattern_LOMService_OrderCancel_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "order", "cancel"}, ""))
+	pattern_LOMService_OrderCancel_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "order", "cancel"}, ""))
 
-	pattern_LOMService_StocksInfo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "stocks", "sku"}, ""))
+	pattern_LOMService_StocksInfo_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"api", "v1", "stocks", "sku"}, ""))
 )
 
 var (

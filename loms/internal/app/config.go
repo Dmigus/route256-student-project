@@ -19,6 +19,9 @@ type Config struct {
 		Port                  uint16 `json:"Port"`
 		ShutdownTimoutSeconds uint   `json:"ShutdownTimoutSeconds"`
 	} `json:"HTTPGateway"`
+	Swagger struct {
+		Path string `json:"Path"`
+	} `json:"Swagger"`
 }
 
 func NewConfig(configPath string) (conf Config, err error) {

@@ -14,4 +14,5 @@ services:
     build: ./loms
     ports:
       - "50051:50051"
+      - "8081:8081"
     stop_signal: SIGTERM

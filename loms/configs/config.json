@@ -6,5 +6,8 @@
   "HTTPGateway": {
     "Port": 8081,
     "ShutdownTimoutSeconds": 1
+  },
+  "Swagger": {
+    "Path": "./api/openapiv2/v1/loms.swagger.json"
   }
 }
