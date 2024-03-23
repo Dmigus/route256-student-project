@@ -2,16 +2,16 @@ package app
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
-	"route256.ozon.ru/project/loms/internal/controllers"
-	"route256.ozon.ru/project/loms/internal/controllers/mw"
-	servicepb "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
+	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
+	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
+	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
 	"route256.ozon.ru/project/loms/internal/providers/orderidgenerator"
 	"route256.ozon.ru/project/loms/internal/providers/orders"
 	"route256.ozon.ru/project/loms/internal/providers/stocks"
@@ -27,8 +27,9 @@ import (
 
 type App struct {
 	config         Config
-	grpcController *controllers.Server
-	server         atomic.Pointer[grpc.Server]
+	grpcController *grpcContoller.Server
+	grpcServer     atomic.Pointer[grpc.Server]
+	httpGateway    atomic.Pointer[httpContoller.Server]
 }
 
 func NewApp(config Config) *App {
@@ -60,7 +61,7 @@ func (a *App) init() {
 		getter,
 		canceller,
 	)
-	a.grpcController = controllers.NewServer(wholeService)
+	a.grpcController = grpcContoller.NewServer(wholeService)
 }
 
 func fillStocksFromStockData(stocksRepo *stocks.InMemoryStockStorage) error {
@@ -84,18 +85,18 @@ func fillStocksFromStockData(stocksRepo *stocks.InMemoryStockStorage) error {
 // Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.
 // Если он уже запущен, то функция ничего не делает. Если не удалось запустить, вся программа завершается с ошибкой
 func (a *App) Run() {
-	if a.server.Load() != nil {
+	if a.grpcServer.Load() != nil {
 		return
 	}
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			mw.SetUpErrorCode,
-			mw.LogReqAndResp,
-			mw.RecoverPanic,
-			mw.Validate,
+			mwGRPC.SetUpErrorCode,
+			mwGRPC.LogReqAndResp,
+			mwGRPC.RecoverPanic,
+			mwGRPC.Validate,
 		),
 	)
-	if !a.server.CompareAndSwap(nil, grpcServer) {
+	if !a.grpcServer.CompareAndSwap(nil, grpcServer) {
 		return
 	}
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", a.config.GRPCServer.Port))
@@ -103,16 +104,27 @@ func (a *App) Run() {
 		panic(err)
 	}
 	reflection.Register(grpcServer)
-	servicepb.RegisterLOMServiceServer(grpcServer, a.grpcController)
+	v1.RegisterLOMServiceServer(grpcServer, a.grpcController)
 	if err = grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)
 	}
 }
 
+func (a *App) RunGateway() {
+	if a.httpGateway.Load() != nil {
+		return
+	}
+	newGW := httpContoller.NewServer(fmt.Sprintf(":%d", a.config.GRPCServer.Port), fmt.Sprintf(":%d", a.config.HTTPGateway.Port))
+	if !a.httpGateway.CompareAndSwap(nil, newGW) {
+		return
+	}
+	newGW.Serve()
+}
+
 // Stop останавливает запущенный сервер в течение ShutdownTimoutSeconds секунд. Если не был запущен, функция ничего не делает. Если не удалось
 // остановить в течение таймаута, вся программа завершается с ошибкой. Возврат из функции произойдёт, когда shutdown завершится.
 func (a *App) Stop() {
-	srvToShutdown := a.server.Load()
+	srvToShutdown := a.grpcServer.Load()
 	if srvToShutdown == nil {
 		return
 	}
@@ -128,5 +140,14 @@ func (a *App) Stop() {
 	case <-stopped:
 		timerToForceStop.Stop()
 	}
-	a.server.Store(nil)
+	a.grpcServer.Store(nil)
+}
+
+func (a *App) StopGateway() {
+	gwToStop := a.httpGateway.Load()
+	if gwToStop == nil {
+		return
+	}
+	gwToStop.Stop(time.Duration(a.config.HTTPGateway.ShutdownTimoutSeconds))
+	a.httpGateway.Store(nil)
 }

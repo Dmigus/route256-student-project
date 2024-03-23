@@ -4,10 +4,20 @@ option go_package = "loms/v1";
 
 import "google/protobuf/empty.proto";
 import "validate/validate.proto";
+import "google/api/annotations.proto";
 
 service LOMService {
-  rpc OrderCreate(OrderCreateRequest) returns (OrderId);
-  rpc OrderInfo(OrderId) returns (OrderInfoResponse);
+  rpc OrderCreate(OrderCreateRequest) returns (OrderId) {
+    option (google.api.http) = {
+      post: "/v1/order/create"
+      body: "*"
+    };
+  };
+  rpc OrderInfo(OrderId) returns (OrderInfoResponse) {
+    option (google.api.http) = {
+      get: "/v1/order/{orderID}"
+    };
+  };
   rpc OrderPay(OrderId) returns (google.protobuf.Empty);
   rpc OrderCancel(OrderId) returns (google.protobuf.Empty);
   rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse);

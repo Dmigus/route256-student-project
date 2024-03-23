@@ -1,7 +1,7 @@
 package converter
 
 import (
-	v1 "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
+	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 

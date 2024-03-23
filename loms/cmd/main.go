@@ -20,6 +20,8 @@ func main() {
 	appl := app.NewApp(config)
 	defer appl.Stop()
 	go appl.Run()
+	defer appl.StopGateway()
+	go appl.RunGateway()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

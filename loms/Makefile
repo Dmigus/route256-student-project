@@ -36,9 +36,20 @@ vendor-proto/validate:
 		mv vendor-proto/tmp/validate vendor-proto/
 		rm -rf vendor-proto/tmp
 
+# Устанавливаем proto описания google/googleapis
+vendor-proto/google/api:
+	git clone -b master --single-branch -n --depth=1 --filter=tree:0 \
+ 		https://github.com/googleapis/googleapis vendor-proto/googleapis && \
+ 	cd vendor-proto/googleapis && \
+	git sparse-checkout set --no-cone google/api && \
+	git checkout
+	mkdir -p  vendor-proto/google
+	mv vendor-proto/googleapis/google/api vendor-proto/google
+	rm -rf vendor-proto/googleapis
+
 
 # Вендоринг внешних proto файлов
-.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate
+.vendor-proto: vendor-proto/google/protobuf vendor-proto/validate vendor-proto/google/api
 
 bin/protoc-gen-go:
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
@@ -49,11 +60,14 @@ bin/protoc-gen-go-grpc:
 bin/protoc-gen-validate:
 	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v1.0.4
 
-.bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate
+bin/protoc-gen-grpc-gateway:
+	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.19.1
+
+.bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate bin/protoc-gen-grpc-gateway
 
 
 LOMS_PROTO_PATH := api/loms
-OUT_DIR := internal/controllers/protoc
+OUT_DIR := internal/controllers/grpc/protoc
 
 .PHONY: protoc-generate-service
 protoc-generate-service: .bin-deps .vendor-proto
@@ -69,6 +83,9 @@ protoc-generate-service: .bin-deps .vendor-proto
 	--go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-validate=$(LOCAL_BIN)/protoc-gen-validate \
     --validate_out="lang=go,paths=source_relative:$(OUT_DIR)" \
+    --plugin=protoc-gen-grpc-gateway=$(LOCAL_BIN)/protoc-gen-grpc-gateway \
+	--grpc-gateway_out $(OUT_DIR) \
+	--grpc-gateway_opt logtostderr=true --grpc-gateway_opt paths=source_relative --grpc-gateway_opt generate_unbound_methods=true \
 	$(LOMS_PROTO_PATH)/v*/*.proto
 	go mod tidy
 

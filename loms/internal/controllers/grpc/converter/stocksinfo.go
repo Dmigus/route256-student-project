@@ -1,6 +1,8 @@
 package converter
 
-import v1 "route256.ozon.ru/project/loms/internal/controllers/protoc/v1"
+import (
+	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+)
 
 func ListStocksInfoRequestToSkuId(req *v1.StocksInfoRequest) int64 {
 	return int64(req.Sku)

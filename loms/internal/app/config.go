@@ -15,6 +15,10 @@ type Config struct {
 		Port                  uint16 `json:"Port"`
 		ShutdownTimoutSeconds uint   `json:"ShutdownTimoutSeconds"`
 	} `json:"GRPCServer"`
+	HTTPGateway struct {
+		Port                  uint16 `json:"Port"`
+		ShutdownTimoutSeconds uint   `json:"ShutdownTimoutSeconds"`
+	} `json:"HTTPGateway"`
 }
 
 func NewConfig(configPath string) (conf Config, err error) {

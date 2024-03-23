@@ -2,5 +2,9 @@
   "GRPCServer" :{
     "Port": 50051,
     "ShutdownTimoutSeconds": 1
+  },
+  "HTTPGateway": {
+    "Port": 8081,
+    "ShutdownTimoutSeconds": 1
   }
 }
