@@ -57,17 +57,16 @@ func (c *Checkout) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func fillHeaderFromError(w http.ResponseWriter, err error) {
-	if err == nil {
+	switch {
+	case errors.Is(err, models.ErrFailedPrecondition):
+		w.WriteHeader(http.StatusPreconditionFailed)
+	case errors.Is(err, models.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+	default:
 		w.WriteHeader(http.StatusOK)
 	}
-	if errors.Is(err, models.ErrFailedPrecondition) {
-		w.WriteHeader(http.StatusPreconditionFailed)
-	} else if errors.Is(err, models.ErrNotFound) {
-		w.WriteHeader(http.StatusNotFound)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	return
 }
 
 func parseRequest(r *http.Request) (int64, error) {

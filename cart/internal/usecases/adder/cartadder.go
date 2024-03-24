@@ -2,12 +2,12 @@ package adder
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
-var ErrNotEnoughNumInStocks = errors.New("not enough item number in stocks")
+var errNotEnoughNumInStocks = errors.Wrap(models.ErrFailedPrecondition, "not enough item number in stocks")
 
 type repository interface {
 	GetCart(ctx context.Context, user int64) (*models.Cart, error)
@@ -50,7 +50,7 @@ func (cs *CartAdderService) AddItem(ctx context.Context, user int64, skuId int64
 		return fmt.Errorf("could not check item %d availability: %w", skuId, err)
 	}
 	if !isAvailable {
-		return ErrNotEnoughNumInStocks
+		return errNotEnoughNumInStocks
 	}
 	cart, err := cs.repo.GetCart(ctx, user)
 	if err != nil {

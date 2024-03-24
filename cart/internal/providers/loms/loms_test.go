@@ -81,3 +81,11 @@ func TestLOMS_CreateOrder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), orderId)
 }
+
+func TestLOMS_CreateOrderEmpty(t *testing.T) {
+	t.Parallel()
+	helper := newTestHelper(t)
+	items := []models.CartItem{}
+	_, err := helper.loms.CreateOrder(context.Background(), 123, items)
+	require.ErrorIs(t, err, errEmptyOrder)
+}

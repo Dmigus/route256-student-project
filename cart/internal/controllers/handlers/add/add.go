@@ -9,7 +9,6 @@ import (
 	"math"
 	"net/http"
 	"route256.ozon.ru/project/cart/internal/models"
-	"route256.ozon.ru/project/cart/internal/usecases/adder"
 	"strconv"
 )
 
@@ -54,19 +53,16 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func fillHeaderFromError(w http.ResponseWriter, err error) {
-	if err == nil {
+	switch {
+	case errors.Is(err, models.ErrFailedPrecondition):
+		w.WriteHeader(http.StatusPreconditionFailed)
+	case errors.Is(err, models.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+	default:
 		w.WriteHeader(http.StatusOK)
 	}
-	if errors.Is(err, adder.ErrNotEnoughNumInStocks) {
-		w.WriteHeader(http.StatusPreconditionFailed)
-	} else if errors.Is(err, models.ErrFailedPrecondition) {
-		w.WriteHeader(http.StatusPreconditionFailed)
-	} else if errors.Is(err, models.ErrNotFound) {
-		w.WriteHeader(http.StatusNotFound)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	return
 }
 
 type addItemReq struct {

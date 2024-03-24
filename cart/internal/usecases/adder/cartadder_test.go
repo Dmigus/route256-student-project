@@ -120,7 +120,7 @@ func TestAddItemWithErrs(t *testing.T) {
 				skuId: 123,
 				count: 1,
 			},
-			err: ErrNotEnoughNumInStocks,
+			err: errNotEnoughNumInStocks,
 		},
 		{
 			name: "error getting user cart",
