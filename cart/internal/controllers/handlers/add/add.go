@@ -48,11 +48,21 @@ func (h *Add) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count); err != nil {
+	err = h.adder.AddItem(r.Context(), req.userId, req.skuId, req.count)
+	fillHeaderFromError(w, err)
+}
+
+func fillHeaderFromError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, models.ErrFailedPrecondition):
+		w.WriteHeader(http.StatusPreconditionFailed)
+	case errors.Is(err, models.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	case err != nil:
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+	default:
+		w.WriteHeader(http.StatusOK)
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 type addItemReq struct {

@@ -17,20 +17,29 @@ func New() *InMemoryCartRepository {
 	}
 }
 
-func (c *InMemoryCartRepository) GetCart(_ context.Context, user int64) (*models.Cart, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if cart, exists := c.carts[user]; exists {
+func (i *InMemoryCartRepository) GetCart(_ context.Context, user int64) (*models.Cart, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if cart, exists := i.carts[user]; exists {
 		return cart, nil
 	}
 	newCart := models.NewCart()
-	c.carts[user] = newCart
+	i.carts[user] = newCart
 	return newCart, nil
 }
 
-func (c *InMemoryCartRepository) SaveCart(_ context.Context, user int64, cart *models.Cart) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.carts[user] = cart
+func (i *InMemoryCartRepository) SaveCart(_ context.Context, user int64, cart *models.Cart) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.carts[user] = cart
 	return nil
+}
+
+// ClearCartReliable "надёжно" очищает корзину для пользователя. Сразу после возрата из метода корзина пользователя гарантированно пуста.
+func (i *InMemoryCartRepository) ClearCartReliable(ctx context.Context, user int64) {
+	cart, _ := i.GetCart(ctx, user)
+	cart.Clear(ctx)
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.carts[user] = cart
 }

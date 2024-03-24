@@ -1,0 +1,3 @@
+*_mock_test.go gitlab-generated -diff
+*testhelper_test.go gitlab-generated -diff
+*.pb.go gitlab-generated -diff

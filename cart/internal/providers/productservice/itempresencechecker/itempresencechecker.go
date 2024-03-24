@@ -2,14 +2,14 @@ package itempresencechecker
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"math"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 )
 
 var (
-	errInvalidSkusArray = fmt.Errorf("no list sku in response")
-	errSkuIdIsNotUInt32 = fmt.Errorf("skuId is not in range UInt32")
+	errInvalidSkusArray = errors.New("no list sku in response")
+	errSkuIdIsNotUInt32 = errors.New("skuId is not in range UInt32")
 )
 
 type callPerformer interface {

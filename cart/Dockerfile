@@ -19,4 +19,4 @@ COPY --from=build-stage /app/configs /app/configs/
 
 EXPOSE 8080
 
-CMD ["./bin/app"]
+CMD ["./bin/app", "--config=./configs/docker.json"]

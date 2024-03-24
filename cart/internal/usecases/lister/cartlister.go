@@ -2,6 +2,7 @@ package lister
 
 import (
 	"context"
+	"fmt"
 	"route256.ozon.ru/project/cart/internal/models"
 )
 
@@ -25,13 +26,13 @@ func New(repo repository, productService productService) *CartListerService {
 func (cl *CartListerService) ListCartContent(ctx context.Context, user int64) (*models.CartContent, error) {
 	cart, err := cl.repo.GetCart(ctx, user)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get cart for user %d: %w", user, err)
 	}
 	items := cart.ListItems(ctx)
 	skuIds := extractSkuIds(items)
 	productInfos, err := cl.productService.GetProductsInfo(ctx, skuIds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get inforation about product: %w", err)
 	}
 	return createCartContent(items, productInfos), nil
 }

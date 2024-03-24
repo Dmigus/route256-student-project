@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+option go_package = "loms/v1";
+
+import "google/protobuf/empty.proto";
+import "validate/validate.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Logistics and Order Management System";
+    description: "A service responsible for accounting for orders and stock of goods";
+  };
+  schemes: HTTP;
+  schemes: HTTPS;
+  consumes: "application/json";
+  produces: "application/json";
+  responses: {
+    key: "404";
+    value: {
+      description: "Returned when the resource does not exist.";
+      schema: {
+        json_schema: {type: STRING}
+      }
+    }
+  }
+
+  responses: {
+    key: "412";
+    value: {
+      description: "The system state is unsuitable for this operation.";
+      schema: {
+        json_schema: {type: STRING}
+      }
+    }
+  }
+};
+
+service LOMService {
+
+  // Creates a new order for the user from the list of transferred goods with reservation of the required number of stocks
+  rpc OrderCreate(OrderCreateRequest) returns (OrderId) {
+    option (google.api.http) = {
+      post: "/api/v1/order/create"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {
+          examples: {
+            key: "application/json"
+            value: "{\"orderID\": \"1\"}"
+          }
+        }
+      }
+    };
+  };
+
+  // Shows order information
+  rpc OrderInfo(OrderId) returns (OrderInfoResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/order/{orderID}"
+    };
+  };
+
+  // Marks the order as paid. Reserved items become purchased.
+  rpc OrderPay(OrderId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/order/pay"
+      body: "*"
+    };
+  };
+
+  // Cancels an order, removes the reserve from all items in the order.
+  rpc OrderCancel(OrderId) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/v1/order/cancel"
+      body: "*"
+    };
+  };
+
+  // Returns the number of products that can be purchased.
+  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/stocks/{sku}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "200"
+        value: {
+          examples: {
+            key: "application/json"
+            value: "{\"count\": \"5\"}"
+          }
+        }
+      }
+    };
+  };
+}
+
+message OrderCreateRequest {
+  int64 user = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "userId",
+    description: "User identifier",
+    format: "integer"
+  }];
+  repeated Item items = 2 [(validate.rules).repeated.min_items = 1,
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      title: "items",
+      description: "Items to be in order"
+    }];
+}
+
+message Item {
+  uint32 sku = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "skuId",
+    description: "Product identifier",
+    format: "integer"
+  }];
+  uint32 count = 2 [(validate.rules).uint32.gt = 0,
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      title: "count",
+      description: "Number of product units",
+      format: "integer"
+    }];
+}
+
+message OrderId {
+  int64 orderID = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "orderID",
+    description: "Order identifier",
+    format: "integer"
+  }];
+}
+
+// Order status
+enum OrderStatus {
+  ORDER_STATUS_UNDEFINED = 0;
+  // New
+  ORDER_STATUS_NEW = 1;
+  // Awaiting payment
+  ORDER_STATUS_AWAITING_PAYMENT = 2;
+  // Failed
+  ORDER_STATUS_FAILED = 3;
+  // Payed
+  ORDER_STATUS_PAYED = 4;
+  // Cancelled
+  ORDER_STATUS_CANCELLED = 5;
+}
+
+message OrderInfoResponse {
+  OrderStatus status = 1;
+  int64 user = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "userId",
+    description: "User identifier",
+    format: "integer"
+  }];
+  repeated Item items = 3;
+}
+
+message StocksInfoRequest {
+  uint32 sku = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "skuId",
+    description: "Product identifier"
+  }];
+}
+
+message StocksInfoResponse {
+  uint64 count = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    title: "count",
+    description: "Number of units",
+  }];
+}

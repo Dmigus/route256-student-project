@@ -85,3 +85,17 @@ func BenchmarkSaveNewCarts(b *testing.B) {
 		_ = repo.SaveCart(ctx, randUserId, newCart)
 	}
 }
+
+func TestInMemoryCartRepository_ClearCartReliable(t *testing.T) {
+	t.Parallel()
+	repo := New()
+	newCart := models.NewCart()
+	ctx := context.Background()
+	newCart.Add(ctx, 456, 10)
+	err := repo.SaveCart(ctx, 123, newCart)
+	require.NoError(t, err)
+	repo.ClearCartReliable(ctx, 123)
+	cart, err := repo.GetCart(ctx, 123)
+	require.NoError(t, err)
+	assert.Empty(t, cart.ListItems(ctx))
+}

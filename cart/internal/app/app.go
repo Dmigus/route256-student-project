@@ -9,19 +9,26 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"route256.ozon.ru/project/cart/internal/client"
-	"route256.ozon.ru/project/cart/internal/client/policies"
+	lomsClientPkg "route256.ozon.ru/project/cart/internal/clients/loms"
+	"route256.ozon.ru/project/cart/internal/clients/retriablehttp"
+	"route256.ozon.ru/project/cart/internal/clients/retriablehttp/policies"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
+	checkoutPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/checkout"
 	clearPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/clear"
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
 	"route256.ozon.ru/project/cart/internal/controllers/middleware"
+	lomsProviderPkg "route256.ozon.ru/project/cart/internal/providers/loms"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
+	"route256.ozon.ru/project/cart/internal/usecases"
+	"route256.ozon.ru/project/cart/internal/usecases/adder"
+	"route256.ozon.ru/project/cart/internal/usecases/checkouter"
+	"route256.ozon.ru/project/cart/internal/usecases/clearer"
+	"route256.ozon.ru/project/cart/internal/usecases/deleter"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
-	"route256.ozon.ru/project/cart/internal/usecases/modifier"
 	"sync/atomic"
 	"time"
 )
@@ -49,21 +56,34 @@ func (a *App) init() {
 		log.Fatal(err)
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	clientForProductService := client.NewRetryableClient(retryPolicy)
+	clientForProductService := retriablehttp.NewRetryableClient(retryPolicy)
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
-	cartModifierService := modifier.New(cartRepo, itPresChecker)
-	cartListerService := lister.New(cartRepo, prodInfoGetter)
+
+	lomsConfig := a.config.LOMS
+	lomsClient, err := lomsClientPkg.NewClient(lomsConfig.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
+	loms := lomsProviderPkg.NewLOMSProvider(lomsClient)
+	cartAdder := adder.New(cartRepo, itPresChecker, loms)
+	cartDeleter := deleter.NewCartDeleter(cartRepo)
+	cartClearer := clearer.NewCartClearer(cartRepo)
+	cartLister := lister.New(cartRepo, prodInfoGetter)
+	checkouterUsecase := checkouter.NewCheckouter(cartRepo, loms)
+	wholeCartService := usecases.NewCartService(cartAdder, cartDeleter, cartClearer, cartLister, checkouterUsecase)
 	mux := http.NewServeMux()
-	addHandler := addPkg.New(cartModifierService)
+	addHandler := addPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
-	clearHandler := clearPkg.New(cartModifierService)
+	clearHandler := clearPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
-	deleteHandler := deletePkg.New(cartModifierService)
+	deleteHandler := deletePkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
-	listHandler := listPkg.New(cartListerService)
+	listHandler := listPkg.New(wholeCartService)
 	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
+	checkoutHandler := checkoutPkg.New(wholeCartService)
+	mux.Handle("POST /cart/checkout", checkoutHandler)
 	probesMux := healthz.CreateMux()
 	mux.Handle("GET /healthz/alive", probesMux)
 	a.httpController = middleware.NewLogger(mux)
@@ -105,7 +125,7 @@ func (a *App) Run() {
 // Stop останавливает запущенный сервер в течение ShutdownTimoutSeconds секунд. Если не был запущен, функция ничего не делает. Если не удалось
 // остановить в течение таймаута, вся программа завершается с ошибкой. Возврат из функции произойдёт, когда shutdown завершится.
 func (a *App) Stop() {
-	srvToShutdown := a.server.Swap(nil)
+	srvToShutdown := a.server.Load()
 	if srvToShutdown == nil {
 		return
 	}
@@ -115,6 +135,7 @@ func (a *App) Stop() {
 	if err := srvToShutdown.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
+	a.server.Store(nil)
 }
 
 func (a *App) isRunning() bool {

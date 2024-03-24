@@ -1,4 +1,4 @@
-/bin
+bin/
 /vendor
 /vendor.pb
 /vendor.protogen
@@ -8,3 +8,4 @@
 /.vscode
 coverage.html
 coverage.out
+vendor-proto/
