@@ -16,3 +16,19 @@ services:
       - "50051:50051"
       - "8081:8081"
     stop_signal: SIGTERM
+
+  loms-postgres:
+    image: postgres:16.2-bullseye
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+    secrets:
+      - postgres-passwd
+
+secrets:
+  postgres-passwd:
+    file: ./loms/db_password.txt
+
