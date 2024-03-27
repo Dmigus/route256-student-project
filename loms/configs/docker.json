@@ -1,0 +1,19 @@
+{
+  "GRPCServer" :{
+    "Port": 50051,
+    "ShutdownTimoutSeconds": 1
+  },
+  "HTTPGateway": {
+    "Port": 8081,
+    "ShutdownTimoutSeconds": 1
+  },
+  "Swagger": {
+    "Path": "./api/openapiv2/v1/loms.swagger.json"
+  },
+  "Storage": {
+    "Host": "loms-postgres",
+    "Port": 5432,
+    "Database": "postgres",
+    "User": "postgres"
+  }
+}

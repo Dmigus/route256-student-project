@@ -7,9 +7,9 @@ type SequentialGenerator struct {
 	prevID int64
 }
 
-func NewSequentialGenerator() *SequentialGenerator {
+func NewSequentialGenerator(startVal int64) *SequentialGenerator {
 	return &SequentialGenerator{
-		prevID: 0,
+		prevID: startVal - 1,
 	}
 }
 

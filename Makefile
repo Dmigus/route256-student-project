@@ -5,3 +5,6 @@ build-all:
 run-all: build-all
 	docker-compose build -q
 	docker-compose up --force-recreate
+
+stop-all:
+	docker-compose down

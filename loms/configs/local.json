@@ -9,5 +9,11 @@
   },
   "Swagger": {
     "Path": "./api/openapiv2/v1/loms.swagger.json"
+  },
+  "Storage": {
+    "Host": "127.0.0.1",
+    "Port": 5432,
+    "Database": "postgres",
+    "User": "postgres"
   }
 }

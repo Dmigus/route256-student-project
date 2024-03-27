@@ -1,9 +1,10 @@
 package app
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
@@ -12,9 +13,10 @@ import (
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
+	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders"
+	"route256.ozon.ru/project/loms/internal/providers/inmemory/stocks"
 	"route256.ozon.ru/project/loms/internal/providers/orderidgenerator"
-	"route256.ozon.ru/project/loms/internal/providers/orders"
-	"route256.ozon.ru/project/loms/internal/providers/stocks"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostres"
 	"route256.ozon.ru/project/loms/internal/usecases"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscreator"
@@ -41,15 +43,19 @@ func NewApp(config Config) *App {
 }
 
 func (a *App) init() {
+	if a.config.Storage != nil {
+		a.initWithPostgres()
+		return
+	}
 	ordersRepo := orders.NewInMemoryOrdersStorage()
 	stocksRepo := stocks.NewInMemoryStockStorage()
-	err := fillStocksFromStockData(stocksRepo)
+	err := fillStocksFromStockData(context.Background(), stocksRepo)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
-	idGenerator := orderidgenerator.NewSequentialGenerator()
+	idGenerator := orderidgenerator.NewSequentialGenerator(0)
 	creator := orderscreator.NewOrdersCreator(idGenerator, ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
@@ -64,22 +70,48 @@ func (a *App) init() {
 	a.grpcController = grpcContoller.NewServer(wholeService)
 }
 
-func fillStocksFromStockData(stocksRepo *stocks.InMemoryStockStorage) error {
-	reader := bytes.NewReader(stockdata)
-	jsonParser := json.NewDecoder(reader)
-	var items []struct {
-		Sku        int64  `json:"sku"`
-		TotalCount uint64 `json:"total_count"`
-		Reserved   uint64 `json:"reserved"`
+func (a *App) initWithPostgres() {
+	connStr := a.config.getPostgresDSN()
+	conn, err := pgxpool.New(context.Background(), connStr)
+	if err != nil {
+		log.Fatal(err)
 	}
-	if err := jsonParser.Decode(&items); err != nil {
+	err = conn.Ping(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ordersRepo := &singlepostres.PostgresOrders{}
+	stocksRepo := &singlepostres.PostgresStocks{}
+	ctxToInitStocks := context.Background()
+	err = singlepostres.InTx(conn, ctxToInitStocks, pgx.TxOptions{}, func(ctx context.Context) error {
+		return fillStocksFromStockData(ctx, stocksRepo)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
+	var idGenerator *orderidgenerator.SequentialGenerator
+	err = singlepostres.InTx(conn, context.Background(), pgx.TxOptions{}, func(ctx context.Context) error {
+		idGenerator, err = singlepostres.CreateSequentialGenerator(ctx)
 		return err
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-	for _, it := range items {
-		itemUnits := stocks.NewItemUnits(it.TotalCount, it.Reserved)
-		stocksRepo.SetItemUnits(it.Sku, itemUnits)
-	}
-	return nil
+	creator := orderscreator.NewOrdersCreator(idGenerator, ordersRepo, stocksRepo)
+	getter := ordersgetter.NewOrdersGetter(ordersRepo)
+	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
+	stocksInfoGetter := stocksinfogetter.NewGetter(stocksRepo)
+	lomService := usecases.NewLOMService(
+		creator,
+		payer,
+		stocksInfoGetter,
+		getter,
+		canceller,
+	)
+	service := singlepostres.NewTrWrapper(lomService, conn)
+	a.grpcController = grpcContoller.NewServer(service)
 }
 
 // Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.

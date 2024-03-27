@@ -16,6 +16,10 @@ services:
       - "50051:50051"
       - "8081:8081"
     stop_signal: SIGTERM
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+    secrets:
+      - postgres-passwd
 
   loms-postgres:
     image: postgres:16.2-bullseye

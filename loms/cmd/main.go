@@ -10,10 +10,7 @@ import (
 )
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "./configs/config.json", "path to config file")
-	flag.Parse()
-	config, err := app.NewConfig(configPath)
+	config, err := setupConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,4 +23,35 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
+}
+
+func setupConfig() (app.Config, error) {
+	var configPath string
+	flag.StringVar(&configPath, "config", "./configs/local.json", "path to config file")
+	flag.Parse()
+	config, err := app.NewConfig(configPath)
+	if err != nil {
+		return app.Config{}, err
+	}
+	if config.Storage == nil {
+		return config, nil
+	}
+
+	dbPassFromEnv := os.Getenv("POSTGRES_PASSWORD_FILE")
+	if len(dbPassFromEnv) > 0 {
+		postgresPwd, err := readSecretFromFile(dbPassFromEnv)
+		if err != nil {
+			return app.Config{}, err
+		}
+		config.Storage.Password = postgresPwd
+	}
+	return config, nil
+}
+
+func readSecretFromFile(addr string) (string, error) {
+	dataBytes, err := os.ReadFile(addr)
+	if err != nil {
+		return "", err
+	}
+	return string(dataBytes), nil
 }

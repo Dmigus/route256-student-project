@@ -21,10 +21,12 @@ func NewInMemoryStockStorage() *InMemoryStockStorage {
 	}
 }
 
-func (i *InMemoryStockStorage) SetItemUnits(skuId int64, units *ItemUnits) {
+func (i *InMemoryStockStorage) SetItemUnits(_ context.Context, skuId int64, total, reserved uint64) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+	units := NewItemUnits(total, reserved)
 	i.data[skuId] = units
+	return nil
 }
 
 // Reserve резервирует товары. Если хотя бы один товар зарезервировать не удалось, то результат такой же, как будто операции не было. Возвращает первую произошедшую ошибку.
@@ -98,7 +100,7 @@ func (i *InMemoryStockStorage) RemoveReserved(_ context.Context, items []models.
 	return nil
 }
 
-// GetNumOfAvailable возвращает
+// GetNumOfAvailable возвращает количество незарезервированных единиц для товара
 func (i *InMemoryStockStorage) GetNumOfAvailable(_ context.Context, skuId int64) (uint64, error) {
 	itemUni, err := i.getItemOrErr(skuId)
 	if err != nil {

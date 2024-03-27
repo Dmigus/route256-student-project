@@ -11,7 +11,7 @@ import (
 
 func TestSequentialGenerator(t *testing.T) {
 	t.Parallel()
-	gen := NewSequentialGenerator()
+	gen := NewSequentialGenerator(1)
 	first := gen.NewId()
 	require.Equal(t, int64(1), first)
 	second := gen.NewId()
