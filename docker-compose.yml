@@ -20,6 +20,9 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
     secrets:
       - postgres-passwd
+    depends_on:
+      loms-postgres:
+        condition: service_healthy
 
   loms-postgres:
     image: postgres:16.2-bullseye
@@ -31,6 +34,12 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
     secrets:
       - postgres-passwd
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+
 
 secrets:
   postgres-passwd:

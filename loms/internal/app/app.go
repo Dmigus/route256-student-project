@@ -55,7 +55,7 @@ func (a *App) init() {
 	}
 
 	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
-	idGenerator := orderidgenerator.NewSequentialGenerator(0)
+	idGenerator := orderidgenerator.NewSequentialGenerator(1)
 	creator := orderscreator.NewOrdersCreator(idGenerator, ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)

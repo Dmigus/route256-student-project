@@ -8,11 +8,18 @@ coverage:
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
+.PHONY:tutor-lint
 tutor-lint:
 	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
 
+.PHONY: lint
 lint:
 	@golangci-lint run
+
+POSTGRES_PASSWORD:=$(shell cat ./db_password.txt)
+.PHONY: migrate-postgres
+migrate-postgres:
+	@goose -dir ./migrations postgres "host=127.0.0.1 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
 
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin
