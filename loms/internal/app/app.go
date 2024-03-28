@@ -14,8 +14,8 @@ import (
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
 	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders"
+	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders/orderidgenerator"
 	"route256.ozon.ru/project/loms/internal/providers/inmemory/stocks"
-	"route256.ozon.ru/project/loms/internal/providers/orderidgenerator"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostres"
 	"route256.ozon.ru/project/loms/internal/usecases"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscanceller"
@@ -47,7 +47,9 @@ func (a *App) init() {
 		a.initWithPostgres()
 		return
 	}
-	ordersRepo := orders.NewInMemoryOrdersStorage()
+
+	idGenerator := orderidgenerator.NewSequentialGenerator(1)
+	ordersRepo := orders.NewInMemoryOrdersStorage(idGenerator)
 	stocksRepo := stocks.NewInMemoryStockStorage()
 	err := fillStocksFromStockData(context.Background(), stocksRepo)
 	if err != nil {
@@ -55,8 +57,7 @@ func (a *App) init() {
 	}
 
 	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
-	idGenerator := orderidgenerator.NewSequentialGenerator(1)
-	creator := orderscreator.NewOrdersCreator(idGenerator, ordersRepo, stocksRepo)
+	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
 	stocksInfoGetter := stocksinfogetter.NewGetter(stocksRepo)
@@ -91,15 +92,7 @@ func (a *App) initWithPostgres() {
 		log.Fatal(err)
 	}
 	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
-	var idGenerator *orderidgenerator.SequentialGenerator
-	err = singlepostres.InTx(context.Background(), conn, pgx.TxOptions{}, func(ctx context.Context) error {
-		idGenerator, err = singlepostres.CreateSequentialGenerator(ctx)
-		return err
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	creator := orderscreator.NewOrdersCreator(idGenerator, ordersRepo, stocksRepo)
+	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
 	stocksInfoGetter := stocksinfogetter.NewGetter(stocksRepo)

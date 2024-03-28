@@ -9,15 +9,33 @@ import (
 
 var errOrderNotFound = pkgerrors.Wrap(models.ErrNotFound, "order is not found")
 
-type InMemoryOrdersStorage struct {
-	mu   sync.RWMutex
-	data map[int64]*models.Order
+type orderIDGenerator interface {
+	NewID() int64
 }
 
-func NewInMemoryOrdersStorage() *InMemoryOrdersStorage {
+type InMemoryOrdersStorage struct {
+	mu               sync.RWMutex
+	data             map[int64]*models.Order
+	orderIDGenerator orderIDGenerator
+}
+
+func NewInMemoryOrdersStorage(orderIDGenerator orderIDGenerator) *InMemoryOrdersStorage {
 	return &InMemoryOrdersStorage{
-		data: make(map[int64]*models.Order),
+		data:             make(map[int64]*models.Order),
+		orderIDGenerator: orderIDGenerator,
 	}
+}
+
+// Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
+func (i *InMemoryOrdersStorage) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
+	newOrderId := i.orderIDGenerator.NewID()
+	newOrder := models.NewOrder(userID, newOrderId)
+	newOrder.Items = items
+	err := i.Save(ctx, newOrder)
+	if err != nil {
+		return nil, err
+	}
+	return newOrder, nil
 }
 
 func (i *InMemoryOrdersStorage) Save(_ context.Context, order *models.Order) error {

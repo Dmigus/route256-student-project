@@ -19,6 +19,12 @@ type OrdersStorageMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
+	funcCreate          func(ctx context.Context, i1 int64, oa1 []models.OrderItem) (op1 *models.Order, err error)
+	inspectFuncCreate   func(ctx context.Context, i1 int64, oa1 []models.OrderItem)
+	afterCreateCounter  uint64
+	beforeCreateCounter uint64
+	CreateMock          mOrdersStorageMockCreate
+
 	funcSave          func(ctx context.Context, op1 *models.Order) (err error)
 	inspectFuncSave   func(ctx context.Context, op1 *models.Order)
 	afterSaveCounter  uint64
@@ -34,12 +40,233 @@ func NewOrdersStorageMock(t minimock.Tester) *OrdersStorageMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.CreateMock = mOrdersStorageMockCreate{mock: m}
+	m.CreateMock.callArgs = []*OrdersStorageMockCreateParams{}
+
 	m.SaveMock = mOrdersStorageMockSave{mock: m}
 	m.SaveMock.callArgs = []*OrdersStorageMockSaveParams{}
 
 	t.Cleanup(m.MinimockFinish)
 
 	return m
+}
+
+type mOrdersStorageMockCreate struct {
+	mock               *OrdersStorageMock
+	defaultExpectation *OrdersStorageMockCreateExpectation
+	expectations       []*OrdersStorageMockCreateExpectation
+
+	callArgs []*OrdersStorageMockCreateParams
+	mutex    sync.RWMutex
+}
+
+// OrdersStorageMockCreateExpectation specifies expectation struct of the ordersStorage.Create
+type OrdersStorageMockCreateExpectation struct {
+	mock    *OrdersStorageMock
+	params  *OrdersStorageMockCreateParams
+	results *OrdersStorageMockCreateResults
+	Counter uint64
+}
+
+// OrdersStorageMockCreateParams contains parameters of the ordersStorage.Create
+type OrdersStorageMockCreateParams struct {
+	ctx context.Context
+	i1  int64
+	oa1 []models.OrderItem
+}
+
+// OrdersStorageMockCreateResults contains results of the ordersStorage.Create
+type OrdersStorageMockCreateResults struct {
+	op1 *models.Order
+	err error
+}
+
+// Expect sets up expected params for ordersStorage.Create
+func (mmCreate *mOrdersStorageMockCreate) Expect(ctx context.Context, i1 int64, oa1 []models.OrderItem) *mOrdersStorageMockCreate {
+	if mmCreate.mock.funcCreate != nil {
+		mmCreate.mock.t.Fatalf("OrdersStorageMock.Create mock is already set by Set")
+	}
+
+	if mmCreate.defaultExpectation == nil {
+		mmCreate.defaultExpectation = &OrdersStorageMockCreateExpectation{}
+	}
+
+	mmCreate.defaultExpectation.params = &OrdersStorageMockCreateParams{ctx, i1, oa1}
+	for _, e := range mmCreate.expectations {
+		if minimock.Equal(e.params, mmCreate.defaultExpectation.params) {
+			mmCreate.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmCreate.defaultExpectation.params)
+		}
+	}
+
+	return mmCreate
+}
+
+// Inspect accepts an inspector function that has same arguments as the ordersStorage.Create
+func (mmCreate *mOrdersStorageMockCreate) Inspect(f func(ctx context.Context, i1 int64, oa1 []models.OrderItem)) *mOrdersStorageMockCreate {
+	if mmCreate.mock.inspectFuncCreate != nil {
+		mmCreate.mock.t.Fatalf("Inspect function is already set for OrdersStorageMock.Create")
+	}
+
+	mmCreate.mock.inspectFuncCreate = f
+
+	return mmCreate
+}
+
+// Return sets up results that will be returned by ordersStorage.Create
+func (mmCreate *mOrdersStorageMockCreate) Return(op1 *models.Order, err error) *OrdersStorageMock {
+	if mmCreate.mock.funcCreate != nil {
+		mmCreate.mock.t.Fatalf("OrdersStorageMock.Create mock is already set by Set")
+	}
+
+	if mmCreate.defaultExpectation == nil {
+		mmCreate.defaultExpectation = &OrdersStorageMockCreateExpectation{mock: mmCreate.mock}
+	}
+	mmCreate.defaultExpectation.results = &OrdersStorageMockCreateResults{op1, err}
+	return mmCreate.mock
+}
+
+// Set uses given function f to mock the ordersStorage.Create method
+func (mmCreate *mOrdersStorageMockCreate) Set(f func(ctx context.Context, i1 int64, oa1 []models.OrderItem) (op1 *models.Order, err error)) *OrdersStorageMock {
+	if mmCreate.defaultExpectation != nil {
+		mmCreate.mock.t.Fatalf("Default expectation is already set for the ordersStorage.Create method")
+	}
+
+	if len(mmCreate.expectations) > 0 {
+		mmCreate.mock.t.Fatalf("Some expectations are already set for the ordersStorage.Create method")
+	}
+
+	mmCreate.mock.funcCreate = f
+	return mmCreate.mock
+}
+
+// When sets expectation for the ordersStorage.Create which will trigger the result defined by the following
+// Then helper
+func (mmCreate *mOrdersStorageMockCreate) When(ctx context.Context, i1 int64, oa1 []models.OrderItem) *OrdersStorageMockCreateExpectation {
+	if mmCreate.mock.funcCreate != nil {
+		mmCreate.mock.t.Fatalf("OrdersStorageMock.Create mock is already set by Set")
+	}
+
+	expectation := &OrdersStorageMockCreateExpectation{
+		mock:   mmCreate.mock,
+		params: &OrdersStorageMockCreateParams{ctx, i1, oa1},
+	}
+	mmCreate.expectations = append(mmCreate.expectations, expectation)
+	return expectation
+}
+
+// Then sets up ordersStorage.Create return parameters for the expectation previously defined by the When method
+func (e *OrdersStorageMockCreateExpectation) Then(op1 *models.Order, err error) *OrdersStorageMock {
+	e.results = &OrdersStorageMockCreateResults{op1, err}
+	return e.mock
+}
+
+// Create implements ordersStorage
+func (mmCreate *OrdersStorageMock) Create(ctx context.Context, i1 int64, oa1 []models.OrderItem) (op1 *models.Order, err error) {
+	mm_atomic.AddUint64(&mmCreate.beforeCreateCounter, 1)
+	defer mm_atomic.AddUint64(&mmCreate.afterCreateCounter, 1)
+
+	if mmCreate.inspectFuncCreate != nil {
+		mmCreate.inspectFuncCreate(ctx, i1, oa1)
+	}
+
+	mm_params := OrdersStorageMockCreateParams{ctx, i1, oa1}
+
+	// Record call args
+	mmCreate.CreateMock.mutex.Lock()
+	mmCreate.CreateMock.callArgs = append(mmCreate.CreateMock.callArgs, &mm_params)
+	mmCreate.CreateMock.mutex.Unlock()
+
+	for _, e := range mmCreate.CreateMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.op1, e.results.err
+		}
+	}
+
+	if mmCreate.CreateMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmCreate.CreateMock.defaultExpectation.Counter, 1)
+		mm_want := mmCreate.CreateMock.defaultExpectation.params
+		mm_got := OrdersStorageMockCreateParams{ctx, i1, oa1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCreate.t.Errorf("OrdersStorageMock.Create got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmCreate.CreateMock.defaultExpectation.results
+		if mm_results == nil {
+			mmCreate.t.Fatal("No results are set for the OrdersStorageMock.Create")
+		}
+		return (*mm_results).op1, (*mm_results).err
+	}
+	if mmCreate.funcCreate != nil {
+		return mmCreate.funcCreate(ctx, i1, oa1)
+	}
+	mmCreate.t.Fatalf("Unexpected call to OrdersStorageMock.Create. %v %v %v", ctx, i1, oa1)
+	return
+}
+
+// CreateAfterCounter returns a count of finished OrdersStorageMock.Create invocations
+func (mmCreate *OrdersStorageMock) CreateAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCreate.afterCreateCounter)
+}
+
+// CreateBeforeCounter returns a count of OrdersStorageMock.Create invocations
+func (mmCreate *OrdersStorageMock) CreateBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmCreate.beforeCreateCounter)
+}
+
+// Calls returns a list of arguments used in each call to OrdersStorageMock.Create.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmCreate *mOrdersStorageMockCreate) Calls() []*OrdersStorageMockCreateParams {
+	mmCreate.mutex.RLock()
+
+	argCopy := make([]*OrdersStorageMockCreateParams, len(mmCreate.callArgs))
+	copy(argCopy, mmCreate.callArgs)
+
+	mmCreate.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockCreateDone returns true if the count of the Create invocations corresponds
+// the number of defined expectations
+func (m *OrdersStorageMock) MinimockCreateDone() bool {
+	for _, e := range m.CreateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.CreateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCreateCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcCreate != nil && mm_atomic.LoadUint64(&m.afterCreateCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockCreateInspect logs each unmet expectation
+func (m *OrdersStorageMock) MinimockCreateInspect() {
+	for _, e := range m.CreateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to OrdersStorageMock.Create with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.CreateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCreateCounter) < 1 {
+		if m.CreateMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to OrdersStorageMock.Create")
+		} else {
+			m.t.Errorf("Expected call to OrdersStorageMock.Create with params: %#v", *m.CreateMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcCreate != nil && mm_atomic.LoadUint64(&m.afterCreateCounter) < 1 {
+		m.t.Error("Expected call to OrdersStorageMock.Create")
+	}
 }
 
 type mOrdersStorageMockSave struct {
@@ -262,6 +489,8 @@ func (m *OrdersStorageMock) MinimockSaveInspect() {
 func (m *OrdersStorageMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
+			m.MinimockCreateInspect()
+
 			m.MinimockSaveInspect()
 			m.t.FailNow()
 		}
@@ -287,5 +516,6 @@ func (m *OrdersStorageMock) MinimockWait(timeout mm_time.Duration) {
 func (m *OrdersStorageMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockCreateDone() &&
 		m.MinimockSaveDone()
 }

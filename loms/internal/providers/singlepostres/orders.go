@@ -16,38 +16,36 @@ type PostgresOrders struct {
 
 const (
 	updateOrder      = `UPDATE "order" SET status = $2, are_items_reserved = $3 where id = $1`
-	createOrder      = `INSERT INTO "order"(id, user_id, status, are_items_reserved) VALUES ($1, $2, $3, $4)`
+	createOrder      = `INSERT INTO "order"(user_id, status, are_items_reserved) VALUES ($1, $2, $3) RETURNING id`
 	insertOrderItem  = `INSERT INTO order_item(order_id, sku_id, count) VALUES ($1, $2, $3)`
 	selectOrder      = `SELECT user_id, status, are_items_reserved from "order" where id = $1`
 	selectOrderItems = `SELECT sku_id, count FROM order_item WHERE order_id = $1`
 )
 
+// Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
+func (po *PostgresOrders) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
+	tx := ctx.Value(trKey).(pgx.Tx)
+	var orderId int64
+	row := tx.QueryRow(ctx, createOrder, userID, orderStatusToString(models.New), false)
+	if err := row.Scan(&orderId); err != nil {
+		return nil, err
+	}
+	order := models.NewOrder(userID, orderId)
+	for _, it := range items {
+		_, err := tx.Exec(ctx, insertOrderItem, orderId, it.SkuId, it.Count)
+		if err != nil {
+			return nil, err
+		}
+	}
+	order.Items = items
+	return order, nil
+}
+
 // Save сохраняет заказ в БД в PostgreSQL. Если его не было, то создаётся новый. Если был, то обновляется. Изменение позиций заказа после создания не предусмотрено
 func (po *PostgresOrders) Save(ctx context.Context, order *models.Order) error {
 	tx := ctx.Value(trKey).(pgx.Tx)
-	tag, err := tx.Exec(ctx, updateOrder, order.Id(), orderStatusToString(order.Status), order.IsItemsReserved)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return po.createNewOrder(ctx, order)
-	}
-	return nil
-}
-
-func (po *PostgresOrders) createNewOrder(ctx context.Context, order *models.Order) error {
-	tx := ctx.Value(trKey).(pgx.Tx)
-	_, err := tx.Exec(ctx, createOrder, order.Id(), order.UserId, orderStatusToString(order.Status), order.IsItemsReserved)
-	if err != nil {
-		return err
-	}
-	for _, it := range order.Items {
-		_, err = tx.Exec(ctx, insertOrderItem, order.Id(), it.SkuId, it.Count)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := tx.Exec(ctx, updateOrder, order.Id(), orderStatusToString(order.Status), order.IsItemsReserved)
+	return err
 }
 
 // Load загружает информацию о заказе из БД в PostgreSQL
