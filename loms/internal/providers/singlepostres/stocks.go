@@ -3,15 +3,17 @@ package singlepostres
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
-	"sort"
 )
 
 var errInsufficientStocks = errors.Wrap(models.ErrFailedPrecondition, "insufficient stocks")
 var errItemIsNotFound = errors.Wrap(models.ErrNotFound, "item is not found")
 
+// PostgresStocks это реализация репозитория стоков для использования с БД в PostgreSQL
 type PostgresStocks struct {
 }
 
@@ -23,12 +25,14 @@ const (
 	updateAll            = `UPDATE item_unit SET total = $2, reserved = $3 WHERE sku_id = $1`
 )
 
-func (ps *PostgresStocks) SetItemUnits(ctx context.Context, skuId int64, total, reserved uint64) error {
+// SetItemUnits устанавливает общее и зарезервированное количество товаров в стоках
+func (ps *PostgresStocks) SetItemUnits(ctx context.Context, skuID int64, total, reserved uint64) error {
 	tx := ctx.Value(trKey).(pgx.Tx)
-	_, err := tx.Exec(ctx, insertStock, skuId, total, reserved)
+	_, err := tx.Exec(ctx, insertStock, skuID, total, reserved)
 	return err
 }
 
+// AddItems добавляет незарезервированные позиции к итемам.
 func (ps *PostgresStocks) AddItems(ctx context.Context, items []models.OrderItem) error {
 	sortedItems := getSortedCopyItems(items)
 	tx := ctx.Value(trKey).(pgx.Tx)
@@ -50,6 +54,7 @@ func (ps *PostgresStocks) AddItems(ctx context.Context, items []models.OrderItem
 	return nil
 }
 
+// Reserve резервирует товары. Если хотя бы один товар найти не удалось, то возращается ошибка с обозначением этого товара.
 func (ps *PostgresStocks) Reserve(ctx context.Context, items []models.OrderItem) error {
 	sortedItems := getSortedCopyItems(items)
 	tx := ctx.Value(trKey).(pgx.Tx)
@@ -74,6 +79,7 @@ func (ps *PostgresStocks) Reserve(ctx context.Context, items []models.OrderItem)
 	return nil
 }
 
+// RemoveReserved удаляет элементы из имеющихся и зарезервированных. Если хотя бы один товар найти не удалось, то возращается ошибка с обозначением этого товара.
 func (ps *PostgresStocks) RemoveReserved(ctx context.Context, items []models.OrderItem) error {
 	sortedItems := getSortedCopyItems(items)
 	tx := ctx.Value(trKey).(pgx.Tx)
@@ -96,6 +102,7 @@ func (ps *PostgresStocks) RemoveReserved(ctx context.Context, items []models.Ord
 	return nil
 }
 
+// CancelReserved отменяет резервирование для итемов items. Если хотя бы один товар найти не удалось, то возращается ошибка с обозначением этого товара.
 func (ps *PostgresStocks) CancelReserved(ctx context.Context, items []models.OrderItem) error {
 	sortedItems := getSortedCopyItems(items)
 	tx := ctx.Value(trKey).(pgx.Tx)
@@ -116,10 +123,12 @@ func (ps *PostgresStocks) CancelReserved(ctx context.Context, items []models.Ord
 	}
 	return nil
 }
-func (ps *PostgresStocks) GetNumOfAvailable(ctx context.Context, skuId int64) (uint64, error) {
+
+// GetNumOfAvailable возвращает количество незарезервированных единиц для товара. Если не найден, будет ошибка.
+func (ps *PostgresStocks) GetNumOfAvailable(ctx context.Context, skuID int64) (uint64, error) {
 	tx := ctx.Value(trKey).(pgx.Tx)
 	var totalCnt, reserved uint
-	err := tx.QueryRow(ctx, selectCount, skuId).Scan(&totalCnt, &reserved)
+	err := tx.QueryRow(ctx, selectCount, skuID).Scan(&totalCnt, &reserved)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = errItemIsNotFound

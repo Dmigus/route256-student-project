@@ -21,11 +21,12 @@ func NewInMemoryStockStorage() *InMemoryStockStorage {
 	}
 }
 
-func (i *InMemoryStockStorage) SetItemUnits(_ context.Context, skuId int64, total, reserved uint64) error {
+// SetItemUnits устанавливает общее и зарезервированное количество товаров в стоках
+func (i *InMemoryStockStorage) SetItemUnits(_ context.Context, skuID int64, total, reserved uint64) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	units := NewItemUnits(total, reserved)
-	i.data[skuId] = units
+	i.data[skuID] = units
 	return nil
 }
 

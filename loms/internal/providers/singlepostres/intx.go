@@ -1,7 +1,9 @@
+// Package singlepostres предназначен для реализации репозиториев стоков и заказов на основе одной БД в PostgresSQL.
 package singlepostres
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -15,7 +17,8 @@ type (
 
 const trKey = exclusiveType(0)
 
-func InTx(conn txBeginner, ctx context.Context, txOptions pgx.TxOptions, f wrapableFunc) error {
+// InTx выполняет функцию f в транзакции, созданной из conn с парамерами txOptions. Если f вернула err != nil, то происходит Rollback, иначе Commit
+func InTx(ctx context.Context, conn txBeginner, txOptions pgx.TxOptions, f wrapableFunc) error {
 	tx, err := conn.BeginTx(ctx, txOptions)
 	if err != nil {
 		return err

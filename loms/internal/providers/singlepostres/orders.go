@@ -2,6 +2,7 @@ package singlepostres
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
@@ -9,6 +10,7 @@ import (
 
 var errOrderNotFound = errors.Wrap(models.ErrNotFound, "order is not found")
 
+// PostgresOrders это реализация репозитория заказов для использования с БД в PostgreSQL
 type PostgresOrders struct {
 }
 
@@ -20,7 +22,7 @@ const (
 	selectOrderItems = `SELECT sku_id, count FROM order_item WHERE order_id = $1`
 )
 
-// Save сохраняет заказ. Если его не было, то создаётся новый. Если был, то обновляется. Изменение позиций заказа после создания не предусмотрено
+// Save сохраняет заказ в БД в PostgreSQL. Если его не было, то создаётся новый. Если был, то обновляется. Изменение позиций заказа после создания не предусмотрено
 func (po *PostgresOrders) Save(ctx context.Context, order *models.Order) error {
 	tx := ctx.Value(trKey).(pgx.Tx)
 	tag, err := tx.Exec(ctx, updateOrder, order.Id(), orderStatusToString(order.Status), order.IsItemsReserved)
@@ -48,12 +50,13 @@ func (po *PostgresOrders) createNewOrder(ctx context.Context, order *models.Orde
 	return nil
 }
 
-func (po *PostgresOrders) Load(ctx context.Context, orderId int64) (*models.Order, error) {
-	order, err := loadOrderRowWithoutItems(ctx, orderId)
+// Load загружает информацию о заказе из БД в PostgreSQL
+func (po *PostgresOrders) Load(ctx context.Context, orderID int64) (*models.Order, error) {
+	order, err := loadOrderRowWithoutItems(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
-	orderItems, err := readItemsForOrder(ctx, orderId)
+	orderItems, err := readItemsForOrder(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,28 +98,28 @@ func orderStatusFromString(s string) models.OrderStatus {
 	}
 }
 
-func loadOrderRowWithoutItems(ctx context.Context, orderId int64) (*models.Order, error) {
-	var userId int64
+func loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
+	var userID int64
 	var strStatus string
 	var isItemsReserved bool
 	tx := ctx.Value(trKey).(pgx.Tx)
-	row := tx.QueryRow(ctx, selectOrder, orderId)
-	err := row.Scan(&userId, &strStatus, &isItemsReserved)
+	row := tx.QueryRow(ctx, selectOrder, orderID)
+	err := row.Scan(&userID, &strStatus, &isItemsReserved)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = errOrderNotFound
 		}
 		return nil, err
 	}
-	order := models.NewOrder(userId, orderId)
+	order := models.NewOrder(userID, orderID)
 	order.Status = orderStatusFromString(strStatus)
 	order.IsItemsReserved = isItemsReserved
 	return order, nil
 }
 
-func readItemsForOrder(ctx context.Context, orderId int64) ([]models.OrderItem, error) {
+func readItemsForOrder(ctx context.Context, orderID int64) ([]models.OrderItem, error) {
 	tx := ctx.Value(trKey).(pgx.Tx)
-	rows, err := tx.Query(ctx, selectOrderItems, orderId)
+	rows, err := tx.Query(ctx, selectOrderItems, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,11 +139,11 @@ func readItemsForOrder(ctx context.Context, orderId int64) ([]models.OrderItem, 
 }
 
 func readNextOrderItem(rows pgx.Rows) (models.OrderItem, error) {
-	var skuId int64
+	var skuID int64
 	var cnt uint16
-	err := rows.Scan(&skuId, &cnt)
+	err := rows.Scan(&skuID, &cnt)
 	if err != nil {
 		return models.OrderItem{}, err
 	}
-	return models.OrderItem{SkuId: skuId, Count: cnt}, nil
+	return models.OrderItem{SkuId: skuID, Count: cnt}, nil
 }

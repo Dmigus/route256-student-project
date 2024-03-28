@@ -7,7 +7,7 @@ import (
 )
 
 type stocksRepoToInit interface {
-	SetItemUnits(ctx context.Context, skuId int64, total, reserved uint64) error
+	SetItemUnits(ctx context.Context, skuID int64, total, reserved uint64) error
 }
 
 func fillStocksFromStockData(ctx context.Context, stocksRepo stocksRepoToInit) error {

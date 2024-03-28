@@ -84,7 +84,7 @@ func (a *App) initWithPostgres() {
 	ordersRepo := &singlepostres.PostgresOrders{}
 	stocksRepo := &singlepostres.PostgresStocks{}
 	ctxToInitStocks := context.Background()
-	err = singlepostres.InTx(conn, ctxToInitStocks, pgx.TxOptions{}, func(ctx context.Context) error {
+	err = singlepostres.InTx(ctxToInitStocks, conn, pgx.TxOptions{}, func(ctx context.Context) error {
 		return fillStocksFromStockData(ctx, stocksRepo)
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func (a *App) initWithPostgres() {
 	}
 	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
 	var idGenerator *orderidgenerator.SequentialGenerator
-	err = singlepostres.InTx(conn, context.Background(), pgx.TxOptions{}, func(ctx context.Context) error {
+	err = singlepostres.InTx(context.Background(), conn, pgx.TxOptions{}, func(ctx context.Context) error {
 		idGenerator, err = singlepostres.CreateSequentialGenerator(ctx)
 		return err
 	})

@@ -12,6 +12,10 @@ coverage:
 tutor-lint:
 	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
 
+.PHONY:tutor-lint-fix
+tutor-lint-fix:
+	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master --fix
+
 .PHONY: lint
 lint:
 	@golangci-lint run
