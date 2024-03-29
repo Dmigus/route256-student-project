@@ -1,18 +1,25 @@
-package singlepostres
+package singlepostgres
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-type PostgresOrders2 struct {
-	tx pgx.Tx
+type connect interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error)
 }
 
-func NewPostgresOrders2(tx pgx.Tx) *PostgresOrders2 {
+type PostgresOrders2 struct {
+	tx connect
+}
+
+func NewPostgresOrders2(tx connect) *PostgresOrders2 {
 	return &PostgresOrders2{tx: tx}
 }
 

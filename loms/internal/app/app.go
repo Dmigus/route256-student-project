@@ -13,7 +13,7 @@ import (
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostres"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	"route256.ozon.ru/project/loms/internal/usecases"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscreator"
@@ -78,22 +78,22 @@ func (a *App) initWithPostgres() {
 		log.Fatal(err)
 	}
 
-	ordersRepo := &singlepostres.PostgresOrders{}
-	stocksRepo := &singlepostres.PostgresStocks{}
+	ordersRepo := &singlepostgres.PostgresOrders{}
+	stocksRepo := &singlepostgres.PostgresStocks{}
 	ctxToInitStocks := context.Background()
-	err = singlepostres.InTx(ctxToInitStocks, conn, pgx.TxOptions{}, func(ctx context.Context) error {
+	err = singlepostgres.InTx(ctxToInitStocks, conn, pgx.TxOptions{}, func(ctx context.Context) error {
 		return fillStocksFromStockData(ctx, stocksRepo)
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	uow := singlepostres.NewTxManager(conn,
-		func(conn singlepostres.TxBeginner2) orderscanceller.OrderRepo {
-			return singlepostres.NewPostgresOrders2(conn.(pgx.Tx))
-		}, func(conn singlepostres.TxBeginner2) orderscanceller.StockRepo {
-			return singlepostres.NewPostgresStocks2(conn.(pgx.Tx))
-		})
-	canceller := orderscanceller.NewOrderCanceller(uow)
+
+	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManager(conn,
+		func(connTxBeginner singlepostgres.TxBeginner2) orderscanceller.OrderRepo {
+			return singlepostgres.NewPostgresOrders2(conn)
+		}, func(connTxBeginner singlepostgres.TxBeginner2) orderscanceller.StockRepo {
+			return singlepostgres.NewPostgresStocks2(conn)
+		}))
 	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
@@ -105,7 +105,7 @@ func (a *App) initWithPostgres() {
 		getter,
 		canceller,
 	)
-	service := singlepostres.NewTrWrapper(lomService, conn)
+	service := singlepostgres.NewTrWrapper(lomService, conn)
 	a.grpcController = grpcContoller.NewServer(service)
 }
 

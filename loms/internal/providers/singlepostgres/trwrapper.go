@@ -1,4 +1,4 @@
-package singlepostres
+package singlepostgres
 
 import (
 	"context"

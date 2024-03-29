@@ -1,5 +1,5 @@
 // Package singlepostres предназначен для реализации репозиториев стоков и заказов на основе одной БД в PostgresSQL.
-package singlepostres
+package singlepostgres
 
 import (
 	"context"

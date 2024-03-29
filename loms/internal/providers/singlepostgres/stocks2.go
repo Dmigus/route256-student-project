@@ -1,4 +1,4 @@
-package singlepostres
+package singlepostgres
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 )
 
 type PostgresStocks2 struct {
-	tx pgx.Tx
+	tx connect
 }
 
-func NewPostgresStocks2(tx pgx.Tx) *PostgresStocks2 {
+func NewPostgresStocks2(tx connect) *PostgresStocks2 {
 	return &PostgresStocks2{tx: tx}
 }
 

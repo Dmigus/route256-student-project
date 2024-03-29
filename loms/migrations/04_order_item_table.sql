@@ -2,8 +2,8 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS order_item
 (
-    order_id INTEGER NOT NULL,
-    sku_id INTEGER NOT NULL,
+    order_id BIGINT NOT NULL,
+    sku_id BIGINT NOT NULL,
     count INTEGER NOT NULL,
     PRIMARY KEY (order_id, sku_id)
 );

@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS item_unit
 (
-    sku_id INTEGER PRIMARY KEY,
+    sku_id BIGINT PRIMARY KEY,
     total INTEGER NOT NULL,
     reserved INTEGER NOT NULL,
     CHECK (total >= 0),

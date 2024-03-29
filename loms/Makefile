@@ -20,6 +20,11 @@ tutor-lint-fix:
 lint:
 	@golangci-lint run
 
+.PHONY: sqlc
+sqlc:
+	sqlc generate --file=./sqlc/modify.yaml
+	sqlc generate --file=./sqlc/read.yaml
+
 POSTGRES_PASSWORD:=$(shell cat ./db_password.txt)
 .PHONY: migrate-postgres
 migrate-postgres:
