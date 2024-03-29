@@ -3,7 +3,6 @@ package singlepostgres
 
 import (
 	"context"
-
 	"github.com/jackc/pgx/v5"
 )
 
@@ -15,13 +14,13 @@ type (
 	// TxManager предоставляет обёртку для юзкейсов, позволяющую использовать репозитории в атомарных сценариях
 	TxManager[OrderRepoType, StocksRepoType any] struct {
 		conn          TxBeginner
-		ordersCreator func(TxBeginner) OrderRepoType
-		stocksCreator func(TxBeginner) StocksRepoType
+		ordersCreator func(pgx.Tx) OrderRepoType
+		stocksCreator func(pgx.Tx) StocksRepoType
 	}
 )
 
 // NewTxManager создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. ordersCreator - функция создания экземпляра репозитория заказов, привязанного к новой транзакции. stocksCreator - функция создания экземпляра репозитория стоков, привязанного к новой транзакции.
-func NewTxManager[OrderRepoType, StocksRepoType any](conn TxBeginner, ordersCreator func(conn TxBeginner) OrderRepoType, stocksCreator func(conn TxBeginner) StocksRepoType) *TxManager[OrderRepoType, StocksRepoType] {
+func NewTxManager[OrderRepoType, StocksRepoType any](conn TxBeginner, ordersCreator func(conn pgx.Tx) OrderRepoType, stocksCreator func(conn pgx.Tx) StocksRepoType) *TxManager[OrderRepoType, StocksRepoType] {
 	return &TxManager[OrderRepoType, StocksRepoType]{
 		conn:          conn,
 		ordersCreator: ordersCreator,

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -95,34 +96,34 @@ func (a *App) initServiceWithPostgres() *usecases.LOMService {
 	}
 
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManager(conn,
-		func(singlepostgres.TxBeginner) orderscanceller.OrderRepo {
-			return modifier.NewOrders(conn)
-		}, func(singlepostgres.TxBeginner) orderscanceller.StockRepo {
-			return modifier.NewStocks(conn)
+		func(tx pgx.Tx) orderscanceller.OrderRepo {
+			return modifier.NewOrders(tx)
+		}, func(tx pgx.Tx) orderscanceller.StockRepo {
+			return modifier.NewStocks(tx)
 		}))
 	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManager(conn,
-		func(singlepostgres.TxBeginner) orderscreator.OrderRepo {
-			return modifier.NewOrders(conn)
-		}, func(singlepostgres.TxBeginner) orderscreator.StockRepo {
-			return modifier.NewStocks(conn)
+		func(tx pgx.Tx) orderscreator.OrderRepo {
+			return modifier.NewOrders(tx)
+		}, func(tx pgx.Tx) orderscreator.StockRepo {
+			return modifier.NewStocks(tx)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManager(conn,
-		func(singlepostgres.TxBeginner) ordersgetter.OrderRepo {
-			return reader.NewOrders(conn)
-		}, func(singlepostgres.TxBeginner) any {
+		func(tx pgx.Tx) ordersgetter.OrderRepo {
+			return reader.NewOrders(tx)
+		}, func(pgx.Tx) any {
 			return nil
 		}))
 	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManager(conn,
-		func(singlepostgres.TxBeginner) orderspayer.OrderRepo {
-			return modifier.NewOrders(conn)
-		}, func(singlepostgres.TxBeginner) orderspayer.StockRepo {
-			return modifier.NewStocks(conn)
+		func(tx pgx.Tx) orderspayer.OrderRepo {
+			return modifier.NewOrders(tx)
+		}, func(tx pgx.Tx) orderspayer.StockRepo {
+			return modifier.NewStocks(tx)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManager(conn,
-		func(singlepostgres.TxBeginner) any {
+		func(pgx.Tx) any {
 			return nil
-		}, func(singlepostgres.TxBeginner) stocksinfogetter.StockRepo {
-			return reader.NewStocks(conn)
+		}, func(tx pgx.Tx) stocksinfogetter.StockRepo {
+			return reader.NewStocks(tx)
 		}))
 	return usecases.NewLOMService(
 		creator,
