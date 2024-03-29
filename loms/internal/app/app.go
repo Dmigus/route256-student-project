@@ -13,9 +13,6 @@ import (
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders/orderidgenerator"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/stocks"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostres"
 	"route256.ozon.ru/project/loms/internal/usecases"
 	"route256.ozon.ru/project/loms/internal/usecases/orderscanceller"
@@ -48,27 +45,26 @@ func (a *App) init() {
 		return
 	}
 
-	idGenerator := orderidgenerator.NewSequentialGenerator(1)
-	ordersRepo := orders.NewInMemoryOrdersStorage(idGenerator)
-	stocksRepo := stocks.NewInMemoryStockStorage()
-	err := fillStocksFromStockData(context.Background(), stocksRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
-	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
-	getter := ordersgetter.NewOrdersGetter(ordersRepo)
-	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
-	stocksInfoGetter := stocksinfogetter.NewGetter(stocksRepo)
-	wholeService := usecases.NewLOMService(
-		creator,
-		payer,
-		stocksInfoGetter,
-		getter,
-		canceller,
-	)
-	a.grpcController = grpcContoller.NewServer(wholeService)
+	//idGenerator := orderidgenerator.NewSequentialGenerator(1)
+	//ordersRepo := orders.NewInMemoryOrdersStorage(idGenerator)
+	//stocksRepo := stocks.NewInMemoryStockStorage()
+	//err := fillStocksFromStockData(context.Background(), stocksRepo)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
+	//creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
+	//getter := ordersgetter.NewOrdersGetter(ordersRepo)
+	//payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)
+	//stocksInfoGetter := stocksinfogetter.NewGetter(stocksRepo)
+	//wholeService := usecases.NewLOMService(
+	//	creator,
+	//	payer,
+	//	stocksInfoGetter,
+	//	getter,
+	//	canceller,
+	//)
+	//a.grpcController = grpcContoller.NewServer(wholeService)
 }
 
 func (a *App) initWithPostgres() {
@@ -91,7 +87,8 @@ func (a *App) initWithPostgres() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	canceller := orderscanceller.NewOrderCanceller(ordersRepo, stocksRepo)
+	uow := singlepostres.NewUnitOfWork(conn)
+	canceller := orderscanceller.NewOrderCanceller(uow)
 	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)
 	payer := orderspayer.NewOrdersPayer(ordersRepo, stocksRepo)

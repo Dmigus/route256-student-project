@@ -20,42 +20,49 @@ type stockCanceller interface {
 }
 
 type OrderCanceller struct {
-	orders orderRepo
-	stocks stockCanceller
+	uow unitOfWork
 }
 
-func NewOrderCanceller(orders orderRepo, stocks stockCanceller) *OrderCanceller {
-	return &OrderCanceller{orders: orders, stocks: stocks}
+type unitOfWork interface {
+	Transactional(context.Context, func(ctx context.Context, orders any, stocks any) error) error
+}
+
+func NewOrderCanceller(uow unitOfWork) *OrderCanceller {
+	return &OrderCanceller{uow: uow}
 }
 
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
-	order, err := oc.orders.Load(ctx, orderId)
-	if err != nil {
-		return fmt.Errorf("could not load order %d: %w", orderId, err)
-	}
-	if order.Status == models.Cancelled {
-		return errWrongOrderStatus
-	}
-	if order.IsItemsReserved {
-		if err := oc.cancelReserved(ctx, order); err != nil {
-			return err
+	return oc.uow.Transactional(ctx, func(ctx context.Context, ordersAny any, stocksAny any) error {
+		orders := ordersAny.(orderRepo)
+		stocks := stocksAny.(stockCanceller)
+		order, err := orders.Load(ctx, orderId)
+		if err != nil {
+			return fmt.Errorf("could not load order %d: %w", orderId, err)
 		}
-	} else if order.Status == models.Payed {
-		if err := oc.cancelPayed(ctx, order); err != nil {
-			return err
+		if order.Status == models.Cancelled {
+			return errWrongOrderStatus
 		}
-	} else {
-		order.Status = models.Cancelled
-	}
-	if err = oc.orders.Save(ctx, order); err != nil {
-		return fmt.Errorf("could not save order %d: %w", orderId, err)
-	}
-	return nil
+		if order.IsItemsReserved {
+			if err := cancelReserved(ctx, stocks, order); err != nil {
+				return err
+			}
+		} else if order.Status == models.Payed {
+			if err := cancelPayed(ctx, stocks, order); err != nil {
+				return err
+			}
+		} else {
+			order.Status = models.Cancelled
+		}
+		if err = orders.Save(ctx, order); err != nil {
+			return fmt.Errorf("could not save order %d: %w", orderId, err)
+		}
+		return nil
+	})
 }
 
-func (oc *OrderCanceller) cancelReserved(ctx context.Context, order *models.Order) error {
+func cancelReserved(ctx context.Context, stocks stockCanceller, order *models.Order) error {
 	if order.IsItemsReserved {
-		err := oc.stocks.CancelReserved(ctx, order.Items)
+		err := stocks.CancelReserved(ctx, order.Items)
 		if err != nil {
 			return fmt.Errorf("could not cancel reserved items for order %d: %w", order.Id(), err)
 		}
@@ -65,9 +72,9 @@ func (oc *OrderCanceller) cancelReserved(ctx context.Context, order *models.Orde
 	return nil
 }
 
-func (oc *OrderCanceller) cancelPayed(ctx context.Context, order *models.Order) error {
+func cancelPayed(ctx context.Context, stocks stockCanceller, order *models.Order) error {
 	if order.Status == models.Payed {
-		err := oc.stocks.AddItems(ctx, order.Items)
+		err := stocks.AddItems(ctx, order.Items)
 		if err != nil {
 			return fmt.Errorf("could not return payed items for order %d: %w", order.Id(), err)
 		}
