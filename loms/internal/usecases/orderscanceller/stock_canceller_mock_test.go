@@ -2,7 +2,7 @@
 
 package orderscanceller
 
-//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/orderscanceller.stockCanceller -o stock_canceller_mock_test.go -n StockCancellerMock -p orderscanceller
+//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/orderscanceller.StockRepo -o stock_canceller_mock_test.go -n StockCancellerMock -p orderscanceller
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-// StockCancellerMock implements stockCanceller
+// StockCancellerMock implements StockRepo
 type StockCancellerMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
@@ -32,7 +32,7 @@ type StockCancellerMock struct {
 	CancelReservedMock          mStockCancellerMockCancelReserved
 }
 
-// NewStockCancellerMock returns a mock for stockCanceller
+// NewStockCancellerMock returns a mock for StockRepo
 func NewStockCancellerMock(t minimock.Tester) *StockCancellerMock {
 	m := &StockCancellerMock{t: t}
 
@@ -60,7 +60,7 @@ type mStockCancellerMockAddItems struct {
 	mutex    sync.RWMutex
 }
 
-// StockCancellerMockAddItemsExpectation specifies expectation struct of the stockCanceller.AddItems
+// StockCancellerMockAddItemsExpectation specifies expectation struct of the StockRepo.AddItems
 type StockCancellerMockAddItemsExpectation struct {
 	mock    *StockCancellerMock
 	params  *StockCancellerMockAddItemsParams
@@ -68,18 +68,18 @@ type StockCancellerMockAddItemsExpectation struct {
 	Counter uint64
 }
 
-// StockCancellerMockAddItemsParams contains parameters of the stockCanceller.AddItems
+// StockCancellerMockAddItemsParams contains parameters of the StockRepo.AddItems
 type StockCancellerMockAddItemsParams struct {
 	ctx context.Context
 	oa1 []models.OrderItem
 }
 
-// StockCancellerMockAddItemsResults contains results of the stockCanceller.AddItems
+// StockCancellerMockAddItemsResults contains results of the StockRepo.AddItems
 type StockCancellerMockAddItemsResults struct {
 	err error
 }
 
-// Expect sets up expected params for stockCanceller.AddItems
+// Expect sets up expected params for StockRepo.AddItems
 func (mmAddItems *mStockCancellerMockAddItems) Expect(ctx context.Context, oa1 []models.OrderItem) *mStockCancellerMockAddItems {
 	if mmAddItems.mock.funcAddItems != nil {
 		mmAddItems.mock.t.Fatalf("StockCancellerMock.AddItems mock is already set by Set")
@@ -99,7 +99,7 @@ func (mmAddItems *mStockCancellerMockAddItems) Expect(ctx context.Context, oa1 [
 	return mmAddItems
 }
 
-// Inspect accepts an inspector function that has same arguments as the stockCanceller.AddItems
+// Inspect accepts an inspector function that has same arguments as the StockRepo.AddItems
 func (mmAddItems *mStockCancellerMockAddItems) Inspect(f func(ctx context.Context, oa1 []models.OrderItem)) *mStockCancellerMockAddItems {
 	if mmAddItems.mock.inspectFuncAddItems != nil {
 		mmAddItems.mock.t.Fatalf("Inspect function is already set for StockCancellerMock.AddItems")
@@ -110,7 +110,7 @@ func (mmAddItems *mStockCancellerMockAddItems) Inspect(f func(ctx context.Contex
 	return mmAddItems
 }
 
-// Return sets up results that will be returned by stockCanceller.AddItems
+// Return sets up results that will be returned by StockRepo.AddItems
 func (mmAddItems *mStockCancellerMockAddItems) Return(err error) *StockCancellerMock {
 	if mmAddItems.mock.funcAddItems != nil {
 		mmAddItems.mock.t.Fatalf("StockCancellerMock.AddItems mock is already set by Set")
@@ -123,21 +123,21 @@ func (mmAddItems *mStockCancellerMockAddItems) Return(err error) *StockCanceller
 	return mmAddItems.mock
 }
 
-// Set uses given function f to mock the stockCanceller.AddItems method
+// Set uses given function f to mock the StockRepo.AddItems method
 func (mmAddItems *mStockCancellerMockAddItems) Set(f func(ctx context.Context, oa1 []models.OrderItem) (err error)) *StockCancellerMock {
 	if mmAddItems.defaultExpectation != nil {
-		mmAddItems.mock.t.Fatalf("Default expectation is already set for the stockCanceller.AddItems method")
+		mmAddItems.mock.t.Fatalf("Default expectation is already set for the StockRepo.AddItems method")
 	}
 
 	if len(mmAddItems.expectations) > 0 {
-		mmAddItems.mock.t.Fatalf("Some expectations are already set for the stockCanceller.AddItems method")
+		mmAddItems.mock.t.Fatalf("Some expectations are already set for the StockRepo.AddItems method")
 	}
 
 	mmAddItems.mock.funcAddItems = f
 	return mmAddItems.mock
 }
 
-// When sets expectation for the stockCanceller.AddItems which will trigger the result defined by the following
+// When sets expectation for the StockRepo.AddItems which will trigger the result defined by the following
 // Then helper
 func (mmAddItems *mStockCancellerMockAddItems) When(ctx context.Context, oa1 []models.OrderItem) *StockCancellerMockAddItemsExpectation {
 	if mmAddItems.mock.funcAddItems != nil {
@@ -152,13 +152,13 @@ func (mmAddItems *mStockCancellerMockAddItems) When(ctx context.Context, oa1 []m
 	return expectation
 }
 
-// Then sets up stockCanceller.AddItems return parameters for the expectation previously defined by the When method
+// Then sets up StockRepo.AddItems return parameters for the expectation previously defined by the When method
 func (e *StockCancellerMockAddItemsExpectation) Then(err error) *StockCancellerMock {
 	e.results = &StockCancellerMockAddItemsResults{err}
 	return e.mock
 }
 
-// AddItems implements stockCanceller
+// AddItems implements StockRepo
 func (mmAddItems *StockCancellerMock) AddItems(ctx context.Context, oa1 []models.OrderItem) (err error) {
 	mm_atomic.AddUint64(&mmAddItems.beforeAddItemsCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddItems.afterAddItemsCounter, 1)
@@ -276,7 +276,7 @@ type mStockCancellerMockCancelReserved struct {
 	mutex    sync.RWMutex
 }
 
-// StockCancellerMockCancelReservedExpectation specifies expectation struct of the stockCanceller.CancelReserved
+// StockCancellerMockCancelReservedExpectation specifies expectation struct of the StockRepo.CancelReserved
 type StockCancellerMockCancelReservedExpectation struct {
 	mock    *StockCancellerMock
 	params  *StockCancellerMockCancelReservedParams
@@ -284,18 +284,18 @@ type StockCancellerMockCancelReservedExpectation struct {
 	Counter uint64
 }
 
-// StockCancellerMockCancelReservedParams contains parameters of the stockCanceller.CancelReserved
+// StockCancellerMockCancelReservedParams contains parameters of the StockRepo.CancelReserved
 type StockCancellerMockCancelReservedParams struct {
 	ctx context.Context
 	oa1 []models.OrderItem
 }
 
-// StockCancellerMockCancelReservedResults contains results of the stockCanceller.CancelReserved
+// StockCancellerMockCancelReservedResults contains results of the StockRepo.CancelReserved
 type StockCancellerMockCancelReservedResults struct {
 	err error
 }
 
-// Expect sets up expected params for stockCanceller.CancelReserved
+// Expect sets up expected params for StockRepo.CancelReserved
 func (mmCancelReserved *mStockCancellerMockCancelReserved) Expect(ctx context.Context, oa1 []models.OrderItem) *mStockCancellerMockCancelReserved {
 	if mmCancelReserved.mock.funcCancelReserved != nil {
 		mmCancelReserved.mock.t.Fatalf("StockCancellerMock.CancelReserved mock is already set by Set")
@@ -315,7 +315,7 @@ func (mmCancelReserved *mStockCancellerMockCancelReserved) Expect(ctx context.Co
 	return mmCancelReserved
 }
 
-// Inspect accepts an inspector function that has same arguments as the stockCanceller.CancelReserved
+// Inspect accepts an inspector function that has same arguments as the StockRepo.CancelReserved
 func (mmCancelReserved *mStockCancellerMockCancelReserved) Inspect(f func(ctx context.Context, oa1 []models.OrderItem)) *mStockCancellerMockCancelReserved {
 	if mmCancelReserved.mock.inspectFuncCancelReserved != nil {
 		mmCancelReserved.mock.t.Fatalf("Inspect function is already set for StockCancellerMock.CancelReserved")
@@ -326,7 +326,7 @@ func (mmCancelReserved *mStockCancellerMockCancelReserved) Inspect(f func(ctx co
 	return mmCancelReserved
 }
 
-// Return sets up results that will be returned by stockCanceller.CancelReserved
+// Return sets up results that will be returned by StockRepo.CancelReserved
 func (mmCancelReserved *mStockCancellerMockCancelReserved) Return(err error) *StockCancellerMock {
 	if mmCancelReserved.mock.funcCancelReserved != nil {
 		mmCancelReserved.mock.t.Fatalf("StockCancellerMock.CancelReserved mock is already set by Set")
@@ -339,21 +339,21 @@ func (mmCancelReserved *mStockCancellerMockCancelReserved) Return(err error) *St
 	return mmCancelReserved.mock
 }
 
-// Set uses given function f to mock the stockCanceller.CancelReserved method
+// Set uses given function f to mock the StockRepo.CancelReserved method
 func (mmCancelReserved *mStockCancellerMockCancelReserved) Set(f func(ctx context.Context, oa1 []models.OrderItem) (err error)) *StockCancellerMock {
 	if mmCancelReserved.defaultExpectation != nil {
-		mmCancelReserved.mock.t.Fatalf("Default expectation is already set for the stockCanceller.CancelReserved method")
+		mmCancelReserved.mock.t.Fatalf("Default expectation is already set for the StockRepo.CancelReserved method")
 	}
 
 	if len(mmCancelReserved.expectations) > 0 {
-		mmCancelReserved.mock.t.Fatalf("Some expectations are already set for the stockCanceller.CancelReserved method")
+		mmCancelReserved.mock.t.Fatalf("Some expectations are already set for the StockRepo.CancelReserved method")
 	}
 
 	mmCancelReserved.mock.funcCancelReserved = f
 	return mmCancelReserved.mock
 }
 
-// When sets expectation for the stockCanceller.CancelReserved which will trigger the result defined by the following
+// When sets expectation for the StockRepo.CancelReserved which will trigger the result defined by the following
 // Then helper
 func (mmCancelReserved *mStockCancellerMockCancelReserved) When(ctx context.Context, oa1 []models.OrderItem) *StockCancellerMockCancelReservedExpectation {
 	if mmCancelReserved.mock.funcCancelReserved != nil {
@@ -368,13 +368,13 @@ func (mmCancelReserved *mStockCancellerMockCancelReserved) When(ctx context.Cont
 	return expectation
 }
 
-// Then sets up stockCanceller.CancelReserved return parameters for the expectation previously defined by the When method
+// Then sets up StockRepo.CancelReserved return parameters for the expectation previously defined by the When method
 func (e *StockCancellerMockCancelReservedExpectation) Then(err error) *StockCancellerMock {
 	e.results = &StockCancellerMockCancelReservedResults{err}
 	return e.mock
 }
 
-// CancelReserved implements stockCanceller
+// CancelReserved implements StockRepo
 func (mmCancelReserved *StockCancellerMock) CancelReserved(ctx context.Context, oa1 []models.OrderItem) (err error) {
 	mm_atomic.AddUint64(&mmCancelReserved.beforeCancelReservedCounter, 1)
 	defer mm_atomic.AddUint64(&mmCancelReserved.afterCancelReservedCounter, 1)

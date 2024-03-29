@@ -9,12 +9,12 @@ import (
 
 var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
-type orderRepo interface {
+type OrderRepo interface {
 	Save(context.Context, *models.Order) error
 	Load(context.Context, int64) (*models.Order, error)
 }
 
-type stockCanceller interface {
+type StockRepo interface {
 	CancelReserved(context.Context, []models.OrderItem) error
 	AddItems(context.Context, []models.OrderItem) error
 }
@@ -24,7 +24,7 @@ type OrderCanceller struct {
 }
 
 type unitOfWork interface {
-	Transactional(context.Context, func(ctx context.Context, orders any, stocks any) error) error
+	Transactional(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
 }
 
 func NewOrderCanceller(uow unitOfWork) *OrderCanceller {
@@ -32,9 +32,7 @@ func NewOrderCanceller(uow unitOfWork) *OrderCanceller {
 }
 
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
-	return oc.uow.Transactional(ctx, func(ctx context.Context, ordersAny any, stocksAny any) error {
-		orders := ordersAny.(orderRepo)
-		stocks := stocksAny.(stockCanceller)
+	return oc.uow.Transactional(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
 		order, err := orders.Load(ctx, orderId)
 		if err != nil {
 			return fmt.Errorf("could not load order %d: %w", orderId, err)
@@ -60,7 +58,7 @@ func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
 	})
 }
 
-func cancelReserved(ctx context.Context, stocks stockCanceller, order *models.Order) error {
+func cancelReserved(ctx context.Context, stocks StockRepo, order *models.Order) error {
 	if order.IsItemsReserved {
 		err := stocks.CancelReserved(ctx, order.Items)
 		if err != nil {
@@ -72,7 +70,7 @@ func cancelReserved(ctx context.Context, stocks stockCanceller, order *models.Or
 	return nil
 }
 
-func cancelPayed(ctx context.Context, stocks stockCanceller, order *models.Order) error {
+func cancelPayed(ctx context.Context, stocks StockRepo, order *models.Order) error {
 	if order.Status == models.Payed {
 		err := stocks.AddItems(ctx, order.Items)
 		if err != nil {

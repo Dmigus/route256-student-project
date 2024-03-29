@@ -87,7 +87,7 @@ func (a *App) initWithPostgres() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	uow := singlepostres.NewUnitOfWork(conn)
+	uow := singlepostres.NewUnitOfWork[orderscanceller.OrderRepo, orderscanceller.StockRepo](conn)
 	canceller := orderscanceller.NewOrderCanceller(uow)
 	creator := orderscreator.NewOrdersCreator(ordersRepo, stocksRepo)
 	getter := ordersgetter.NewOrdersGetter(ordersRepo)

@@ -2,7 +2,7 @@
 
 package orderscanceller
 
-//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/orderscanceller.orderRepo -o order_repo_mock_test.go -n OrderRepoMock -p orderscanceller
+//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/orderscanceller.OrderRepo -o order_repo_mock_test.go -n OrderRepoMock -p orderscanceller
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-// OrderRepoMock implements orderRepo
+// OrderRepoMock implements OrderRepo
 type OrderRepoMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
@@ -32,7 +32,7 @@ type OrderRepoMock struct {
 	SaveMock          mOrderRepoMockSave
 }
 
-// NewOrderRepoMock returns a mock for orderRepo
+// NewOrderRepoMock returns a mock for OrderRepo
 func NewOrderRepoMock(t minimock.Tester) *OrderRepoMock {
 	m := &OrderRepoMock{t: t}
 
@@ -60,7 +60,7 @@ type mOrderRepoMockLoad struct {
 	mutex    sync.RWMutex
 }
 
-// OrderRepoMockLoadExpectation specifies expectation struct of the orderRepo.Load
+// OrderRepoMockLoadExpectation specifies expectation struct of the OrderRepo.Load
 type OrderRepoMockLoadExpectation struct {
 	mock    *OrderRepoMock
 	params  *OrderRepoMockLoadParams
@@ -68,19 +68,19 @@ type OrderRepoMockLoadExpectation struct {
 	Counter uint64
 }
 
-// OrderRepoMockLoadParams contains parameters of the orderRepo.Load
+// OrderRepoMockLoadParams contains parameters of the OrderRepo.Load
 type OrderRepoMockLoadParams struct {
 	ctx context.Context
 	i1  int64
 }
 
-// OrderRepoMockLoadResults contains results of the orderRepo.Load
+// OrderRepoMockLoadResults contains results of the OrderRepo.Load
 type OrderRepoMockLoadResults struct {
 	op1 *models.Order
 	err error
 }
 
-// Expect sets up expected params for orderRepo.Load
+// Expect sets up expected params for OrderRepo.Load
 func (mmLoad *mOrderRepoMockLoad) Expect(ctx context.Context, i1 int64) *mOrderRepoMockLoad {
 	if mmLoad.mock.funcLoad != nil {
 		mmLoad.mock.t.Fatalf("OrderRepoMock.Load mock is already set by Set")
@@ -100,7 +100,7 @@ func (mmLoad *mOrderRepoMockLoad) Expect(ctx context.Context, i1 int64) *mOrderR
 	return mmLoad
 }
 
-// Inspect accepts an inspector function that has same arguments as the orderRepo.Load
+// Inspect accepts an inspector function that has same arguments as the OrderRepo.Load
 func (mmLoad *mOrderRepoMockLoad) Inspect(f func(ctx context.Context, i1 int64)) *mOrderRepoMockLoad {
 	if mmLoad.mock.inspectFuncLoad != nil {
 		mmLoad.mock.t.Fatalf("Inspect function is already set for OrderRepoMock.Load")
@@ -111,7 +111,7 @@ func (mmLoad *mOrderRepoMockLoad) Inspect(f func(ctx context.Context, i1 int64))
 	return mmLoad
 }
 
-// Return sets up results that will be returned by orderRepo.Load
+// Return sets up results that will be returned by OrderRepo.Load
 func (mmLoad *mOrderRepoMockLoad) Return(op1 *models.Order, err error) *OrderRepoMock {
 	if mmLoad.mock.funcLoad != nil {
 		mmLoad.mock.t.Fatalf("OrderRepoMock.Load mock is already set by Set")
@@ -124,21 +124,21 @@ func (mmLoad *mOrderRepoMockLoad) Return(op1 *models.Order, err error) *OrderRep
 	return mmLoad.mock
 }
 
-// Set uses given function f to mock the orderRepo.Load method
+// Set uses given function f to mock the OrderRepo.Load method
 func (mmLoad *mOrderRepoMockLoad) Set(f func(ctx context.Context, i1 int64) (op1 *models.Order, err error)) *OrderRepoMock {
 	if mmLoad.defaultExpectation != nil {
-		mmLoad.mock.t.Fatalf("Default expectation is already set for the orderRepo.Load method")
+		mmLoad.mock.t.Fatalf("Default expectation is already set for the OrderRepo.Load method")
 	}
 
 	if len(mmLoad.expectations) > 0 {
-		mmLoad.mock.t.Fatalf("Some expectations are already set for the orderRepo.Load method")
+		mmLoad.mock.t.Fatalf("Some expectations are already set for the OrderRepo.Load method")
 	}
 
 	mmLoad.mock.funcLoad = f
 	return mmLoad.mock
 }
 
-// When sets expectation for the orderRepo.Load which will trigger the result defined by the following
+// When sets expectation for the OrderRepo.Load which will trigger the result defined by the following
 // Then helper
 func (mmLoad *mOrderRepoMockLoad) When(ctx context.Context, i1 int64) *OrderRepoMockLoadExpectation {
 	if mmLoad.mock.funcLoad != nil {
@@ -153,13 +153,13 @@ func (mmLoad *mOrderRepoMockLoad) When(ctx context.Context, i1 int64) *OrderRepo
 	return expectation
 }
 
-// Then sets up orderRepo.Load return parameters for the expectation previously defined by the When method
+// Then sets up OrderRepo.Load return parameters for the expectation previously defined by the When method
 func (e *OrderRepoMockLoadExpectation) Then(op1 *models.Order, err error) *OrderRepoMock {
 	e.results = &OrderRepoMockLoadResults{op1, err}
 	return e.mock
 }
 
-// Load implements orderRepo
+// Load implements OrderRepo
 func (mmLoad *OrderRepoMock) Load(ctx context.Context, i1 int64) (op1 *models.Order, err error) {
 	mm_atomic.AddUint64(&mmLoad.beforeLoadCounter, 1)
 	defer mm_atomic.AddUint64(&mmLoad.afterLoadCounter, 1)
@@ -277,7 +277,7 @@ type mOrderRepoMockSave struct {
 	mutex    sync.RWMutex
 }
 
-// OrderRepoMockSaveExpectation specifies expectation struct of the orderRepo.Save
+// OrderRepoMockSaveExpectation specifies expectation struct of the OrderRepo.Save
 type OrderRepoMockSaveExpectation struct {
 	mock    *OrderRepoMock
 	params  *OrderRepoMockSaveParams
@@ -285,18 +285,18 @@ type OrderRepoMockSaveExpectation struct {
 	Counter uint64
 }
 
-// OrderRepoMockSaveParams contains parameters of the orderRepo.Save
+// OrderRepoMockSaveParams contains parameters of the OrderRepo.Save
 type OrderRepoMockSaveParams struct {
 	ctx context.Context
 	op1 *models.Order
 }
 
-// OrderRepoMockSaveResults contains results of the orderRepo.Save
+// OrderRepoMockSaveResults contains results of the OrderRepo.Save
 type OrderRepoMockSaveResults struct {
 	err error
 }
 
-// Expect sets up expected params for orderRepo.Save
+// Expect sets up expected params for OrderRepo.Save
 func (mmSave *mOrderRepoMockSave) Expect(ctx context.Context, op1 *models.Order) *mOrderRepoMockSave {
 	if mmSave.mock.funcSave != nil {
 		mmSave.mock.t.Fatalf("OrderRepoMock.Save mock is already set by Set")
@@ -316,7 +316,7 @@ func (mmSave *mOrderRepoMockSave) Expect(ctx context.Context, op1 *models.Order)
 	return mmSave
 }
 
-// Inspect accepts an inspector function that has same arguments as the orderRepo.Save
+// Inspect accepts an inspector function that has same arguments as the OrderRepo.Save
 func (mmSave *mOrderRepoMockSave) Inspect(f func(ctx context.Context, op1 *models.Order)) *mOrderRepoMockSave {
 	if mmSave.mock.inspectFuncSave != nil {
 		mmSave.mock.t.Fatalf("Inspect function is already set for OrderRepoMock.Save")
@@ -327,7 +327,7 @@ func (mmSave *mOrderRepoMockSave) Inspect(f func(ctx context.Context, op1 *model
 	return mmSave
 }
 
-// Return sets up results that will be returned by orderRepo.Save
+// Return sets up results that will be returned by OrderRepo.Save
 func (mmSave *mOrderRepoMockSave) Return(err error) *OrderRepoMock {
 	if mmSave.mock.funcSave != nil {
 		mmSave.mock.t.Fatalf("OrderRepoMock.Save mock is already set by Set")
@@ -340,21 +340,21 @@ func (mmSave *mOrderRepoMockSave) Return(err error) *OrderRepoMock {
 	return mmSave.mock
 }
 
-// Set uses given function f to mock the orderRepo.Save method
+// Set uses given function f to mock the OrderRepo.Save method
 func (mmSave *mOrderRepoMockSave) Set(f func(ctx context.Context, op1 *models.Order) (err error)) *OrderRepoMock {
 	if mmSave.defaultExpectation != nil {
-		mmSave.mock.t.Fatalf("Default expectation is already set for the orderRepo.Save method")
+		mmSave.mock.t.Fatalf("Default expectation is already set for the OrderRepo.Save method")
 	}
 
 	if len(mmSave.expectations) > 0 {
-		mmSave.mock.t.Fatalf("Some expectations are already set for the orderRepo.Save method")
+		mmSave.mock.t.Fatalf("Some expectations are already set for the OrderRepo.Save method")
 	}
 
 	mmSave.mock.funcSave = f
 	return mmSave.mock
 }
 
-// When sets expectation for the orderRepo.Save which will trigger the result defined by the following
+// When sets expectation for the OrderRepo.Save which will trigger the result defined by the following
 // Then helper
 func (mmSave *mOrderRepoMockSave) When(ctx context.Context, op1 *models.Order) *OrderRepoMockSaveExpectation {
 	if mmSave.mock.funcSave != nil {
@@ -369,13 +369,13 @@ func (mmSave *mOrderRepoMockSave) When(ctx context.Context, op1 *models.Order) *
 	return expectation
 }
 
-// Then sets up orderRepo.Save return parameters for the expectation previously defined by the When method
+// Then sets up OrderRepo.Save return parameters for the expectation previously defined by the When method
 func (e *OrderRepoMockSaveExpectation) Then(err error) *OrderRepoMock {
 	e.results = &OrderRepoMockSaveResults{err}
 	return e.mock
 }
 
-// Save implements orderRepo
+// Save implements OrderRepo
 func (mmSave *OrderRepoMock) Save(ctx context.Context, op1 *models.Order) (err error) {
 	mm_atomic.AddUint64(&mmSave.beforeSaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmSave.afterSaveCounter, 1)

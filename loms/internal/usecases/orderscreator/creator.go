@@ -38,7 +38,6 @@ func (oc *OrdersCreator) Create(ctx context.Context, userID int64, items []model
 		order.Status = models.AwaitingPayment
 		order.IsItemsReserved = true
 	}
-	order.Items = items
 	errSaving := oc.orders.Save(ctx, order)
 	if errSaving != nil {
 		errSaving = fmt.Errorf("could not save created order for user %d: %w", userID, errSaving)
