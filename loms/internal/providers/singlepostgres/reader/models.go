@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.26.0
 
-package read
+package reader
 
 import (
 	"database/sql/driver"

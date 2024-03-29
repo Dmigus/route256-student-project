@@ -6,17 +6,17 @@ import (
 )
 
 type (
-	TxBeginner2 interface {
+	TxBeginner interface {
 		Begin(ctx context.Context) (pgx.Tx, error)
 	}
 	TxManager[OrderRepoType, StocksRepoType any] struct {
-		conn          TxBeginner2
-		ordersCreator func(conn TxBeginner2) OrderRepoType
-		stocksCreator func(conn TxBeginner2) StocksRepoType
+		conn          TxBeginner
+		ordersCreator func(conn TxBeginner) OrderRepoType
+		stocksCreator func(conn TxBeginner) StocksRepoType
 	}
 )
 
-func NewTxManager[OrderRepoType, StocksRepoType any](conn TxBeginner2, ordersCreator func(conn TxBeginner2) OrderRepoType, stocksCreator func(conn TxBeginner2) StocksRepoType) *TxManager[OrderRepoType, StocksRepoType] {
+func NewTxManager[OrderRepoType, StocksRepoType any](conn TxBeginner, ordersCreator func(conn TxBeginner) OrderRepoType, stocksCreator func(conn TxBeginner) StocksRepoType) *TxManager[OrderRepoType, StocksRepoType] {
 	return &TxManager[OrderRepoType, StocksRepoType]{
 		conn:          conn,
 		ordersCreator: ordersCreator,

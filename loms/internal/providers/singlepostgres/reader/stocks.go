@@ -1,4 +1,4 @@
-package read
+package reader
 
 import (
 	"context"

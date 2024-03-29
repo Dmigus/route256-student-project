@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: copyfrom.go
 
-package modify
+package modifier
 
 import (
 	"context"
