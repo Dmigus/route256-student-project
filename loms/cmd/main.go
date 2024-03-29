@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"route256.ozon.ru/project/loms/internal/app"
 	"syscall"
 )
@@ -49,7 +50,8 @@ func setupConfig() (app.Config, error) {
 }
 
 func readSecretFromFile(addr string) (string, error) {
-	dataBytes, err := os.ReadFile(addr)
+	cleaned := filepath.Clean(addr)
+	dataBytes, err := os.ReadFile(cleaned)
 	if err != nil {
 		return "", err
 	}

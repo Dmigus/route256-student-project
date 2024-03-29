@@ -3,10 +3,11 @@ package modifier
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
-	"sort"
 )
 
 var (
@@ -14,10 +15,12 @@ var (
 	errItemIsNotFound     = errors.Wrap(models.ErrNotFound, "item is not found")
 )
 
+// Stocks представляет репозиторий стоков с методами для модификации данных
 type Stocks struct {
 	queries *Queries
 }
 
+// NewStocks cоздаёт объект репозитория стоков, работающего в рамках транзакции tx
 func NewStocks(db DBTX) *Stocks {
 	return &Stocks{queries: New(db)}
 }

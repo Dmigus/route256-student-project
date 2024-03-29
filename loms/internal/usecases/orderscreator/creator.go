@@ -1,3 +1,4 @@
+// Package orderscreator содержит логику работы юзкейса создания заказа
 package orderscreator
 
 import (
@@ -8,10 +9,11 @@ import (
 )
 
 type (
+	// StockRepo это контракт для использования репозитория стоков OrdersCreator'ом. Используется другими слоями для настройки атомарности
 	StockRepo interface {
 		Reserve(context.Context, []models.OrderItem) error
 	}
-
+	// OrderRepo это контракт для использования репозитория заказов OrdersCreator'ом. Используется другими слоями для настройки атомарности
 	OrderRepo interface {
 		Create(context.Context, int64, []models.OrderItem) (*models.Order, error)
 		Save(context.Context, *models.Order) error
@@ -19,16 +21,18 @@ type (
 	txManager interface {
 		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
 	}
-
+	// OrdersCreator - сущность, которая умеет создавать заказы в системе
 	OrdersCreator struct {
 		tx txManager
 	}
 )
 
+// NewOrdersCreator создаёт OrdersCreator. tx - должен быть объектом, позволяющим исполнять функцию атомарно
 func NewOrdersCreator(tx txManager) *OrdersCreator {
 	return &OrdersCreator{tx: tx}
 }
 
+// Create создаёт заказ дял пользователя userID и товарами items и возращает его id. Атомарность всей операции обеспечивается объектом tx, переданым при создании
 func (oc *OrdersCreator) Create(ctx context.Context, userID int64, items []models.OrderItem) (orderID int64, err error) {
 	err = oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
 		orderID, err = createOrder(ctx, userID, items, orders, stocks)

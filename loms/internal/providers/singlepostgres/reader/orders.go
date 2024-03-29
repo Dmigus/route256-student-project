@@ -1,14 +1,24 @@
+// Package reader содержит реализацию репозиториев для чтения данных из PostgreSQL.
 package reader
 
 import (
 	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+	pkgerrors "github.com/pkg/errors"
+
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
+var errOrderNotFound = pkgerrors.Wrap(models.ErrNotFound, "order is not found")
+
+// Orders представялет реализацию репозитория заказов с методами для чтения данных
 type Orders struct {
 	queries *Queries
 }
 
+// NewOrders создаёт объект репозитория заказов, работающего в рамках транзакции tx
 func NewOrders(tx DBTX) *Orders {
 	return &Orders{queries: New(tx)}
 }
@@ -47,6 +57,9 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
 	row, err := po.queries.selectOrder(ctx, orderID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = errOrderNotFound
+		}
 		return nil, err
 	}
 	order := models.NewOrder(row.UserID, orderID)

@@ -95,33 +95,33 @@ func (a *App) initServiceWithPostgres() *usecases.LOMService {
 	}
 
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManager(conn,
-		func(connTxBeginner singlepostgres.TxBeginner) orderscanceller.OrderRepo {
+		func(singlepostgres.TxBeginner) orderscanceller.OrderRepo {
 			return modifier.NewOrders(conn)
-		}, func(connTxBeginner singlepostgres.TxBeginner) orderscanceller.StockRepo {
+		}, func(singlepostgres.TxBeginner) orderscanceller.StockRepo {
 			return modifier.NewStocks(conn)
 		}))
 	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManager(conn,
-		func(connTxBeginner singlepostgres.TxBeginner) orderscreator.OrderRepo {
+		func(singlepostgres.TxBeginner) orderscreator.OrderRepo {
 			return modifier.NewOrders(conn)
-		}, func(connTxBeginner singlepostgres.TxBeginner) orderscreator.StockRepo {
+		}, func(singlepostgres.TxBeginner) orderscreator.StockRepo {
 			return modifier.NewStocks(conn)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManager(conn,
-		func(connTxBeginner singlepostgres.TxBeginner) ordersgetter.OrderRepo {
+		func(singlepostgres.TxBeginner) ordersgetter.OrderRepo {
 			return reader.NewOrders(conn)
-		}, func(connTxBeginner singlepostgres.TxBeginner) any {
+		}, func(singlepostgres.TxBeginner) any {
 			return nil
 		}))
 	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManager(conn,
-		func(connTxBeginner singlepostgres.TxBeginner) orderspayer.OrderRepo {
+		func(singlepostgres.TxBeginner) orderspayer.OrderRepo {
 			return modifier.NewOrders(conn)
-		}, func(connTxBeginner singlepostgres.TxBeginner) orderspayer.StockRepo {
+		}, func(singlepostgres.TxBeginner) orderspayer.StockRepo {
 			return modifier.NewStocks(conn)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManager(conn,
-		func(connTxBeginner singlepostgres.TxBeginner) any {
+		func(singlepostgres.TxBeginner) any {
 			return nil
-		}, func(connTxBeginner singlepostgres.TxBeginner) stocksinfogetter.StockRepo {
+		}, func(singlepostgres.TxBeginner) stocksinfogetter.StockRepo {
 			return reader.NewStocks(conn)
 		}))
 	return usecases.NewLOMService(

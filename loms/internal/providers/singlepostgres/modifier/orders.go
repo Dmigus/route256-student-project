@@ -1,14 +1,24 @@
+// Package modifier содержит реализацию репозиториев для транзакционной модификации данных в PostgreSQL.
 package modifier
 
 import (
 	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+	pkgerrors "github.com/pkg/errors"
+
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
+var errOrderNotFound = pkgerrors.Wrap(models.ErrNotFound, "order is not found")
+
+// Orders представялет реализацию репозитория заказов с методами для модификации данных
 type Orders struct {
 	queries *Queries
 }
 
+// NewOrders создаёт объект репозитория заказов, работающего в рамках транзакции tx
 func NewOrders(tx DBTX) *Orders {
 	return &Orders{queries: New(tx)}
 }
@@ -16,12 +26,12 @@ func NewOrders(tx DBTX) *Orders {
 // Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
 func (po *Orders) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
 	params := createOrderParams{UserID: userID, Status: OrderStatusNew, AreItemsReserved: false}
-	orderId, err := po.queries.createOrder(ctx, params)
+	orderID, err := po.queries.createOrder(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	order := models.NewOrder(userID, orderId)
-	itemsParams := insertItemParamsFrom(orderId, items)
+	order := models.NewOrder(userID, orderID)
+	itemsParams := insertItemParamsFrom(orderID, items)
 	_, err = po.queries.insertOrderItem(ctx, itemsParams)
 	if err != nil {
 		return nil, err
@@ -100,6 +110,9 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
 	row, err := po.queries.selectOrder(ctx, orderID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = errOrderNotFound
+		}
 		return nil, err
 	}
 	order := models.NewOrder(row.UserID, orderID)

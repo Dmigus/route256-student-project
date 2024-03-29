@@ -1,3 +1,4 @@
+// Package orderidgenerator содержит генератор уникальных id заказов для использования InMemory хранилищем заказов
 package orderidgenerator
 
 import "sync"
@@ -15,11 +16,11 @@ func NewSequentialGenerator(startVal int64) *SequentialGenerator {
 	}
 }
 
-// NewId генерирует и возращет новое значение id
+// NewID генерирует и возращет новое значение id
 func (s *SequentialGenerator) NewID() int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	newId := s.prevID + 1
-	s.prevID = newId
-	return newId
+	newID := s.prevID + 1
+	s.prevID = newID
+	return newID
 }
