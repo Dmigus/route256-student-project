@@ -4,20 +4,25 @@
 package ordersgetter
 
 import (
+	"context"
 	"github.com/gojuno/minimock/v3"
 	"testing"
 )
 
 type testHelper struct {
-	orderLoadRepoMock *mOrdersStorageMockLoad
+	orderLoadRepoMock *mOrderRepoMockLoad
 	getter            *OrdersGetter
 }
 
 func newTestHelper(t *testing.T) testHelper {
 	mc := minimock.NewController(t)
 	helper := testHelper{}
-	orders := NewOrdersStorageMock(mc)
-	helper.orderLoadRepoMock = &(orders.LoadMock)
-	helper.getter = NewOrdersGetter(orders)
+	ordersMock := NewOrderRepoMock(mc)
+	helper.orderLoadRepoMock = &(ordersMock.LoadMock)
+	txM := NewTxManagerMock(mc)
+	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) error {
+		return f1(ctx, ordersMock, nil)
+	})
+	helper.getter = NewOrdersGetter(txM)
 	return helper
 }

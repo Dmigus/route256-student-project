@@ -2,7 +2,7 @@
 
 package stocksinfogetter
 
-//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/stocksinfogetter.stockRepo -o stock_repo_mock_test.go -n StockRepoMock -p stocksinfogetter
+//go:generate minimock -i route256.ozon.ru/project/loms/internal/usecases/stocksinfogetter.StockRepo -o stock_repo_mock_test.go -n StockRepoMock -p stocksinfogetter
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 )
 
-// StockRepoMock implements stockRepo
+// StockRepoMock implements StockRepo
 type StockRepoMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
@@ -25,7 +25,7 @@ type StockRepoMock struct {
 	GetNumOfAvailableMock          mStockRepoMockGetNumOfAvailable
 }
 
-// NewStockRepoMock returns a mock for stockRepo
+// NewStockRepoMock returns a mock for StockRepo
 func NewStockRepoMock(t minimock.Tester) *StockRepoMock {
 	m := &StockRepoMock{t: t}
 
@@ -50,7 +50,7 @@ type mStockRepoMockGetNumOfAvailable struct {
 	mutex    sync.RWMutex
 }
 
-// StockRepoMockGetNumOfAvailableExpectation specifies expectation struct of the stockRepo.GetNumOfAvailable
+// StockRepoMockGetNumOfAvailableExpectation specifies expectation struct of the StockRepo.GetNumOfAvailable
 type StockRepoMockGetNumOfAvailableExpectation struct {
 	mock    *StockRepoMock
 	params  *StockRepoMockGetNumOfAvailableParams
@@ -58,19 +58,19 @@ type StockRepoMockGetNumOfAvailableExpectation struct {
 	Counter uint64
 }
 
-// StockRepoMockGetNumOfAvailableParams contains parameters of the stockRepo.GetNumOfAvailable
+// StockRepoMockGetNumOfAvailableParams contains parameters of the StockRepo.GetNumOfAvailable
 type StockRepoMockGetNumOfAvailableParams struct {
 	ctx context.Context
 	i1  int64
 }
 
-// StockRepoMockGetNumOfAvailableResults contains results of the stockRepo.GetNumOfAvailable
+// StockRepoMockGetNumOfAvailableResults contains results of the StockRepo.GetNumOfAvailable
 type StockRepoMockGetNumOfAvailableResults struct {
 	u1  uint64
 	err error
 }
 
-// Expect sets up expected params for stockRepo.GetNumOfAvailable
+// Expect sets up expected params for StockRepo.GetNumOfAvailable
 func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Expect(ctx context.Context, i1 int64) *mStockRepoMockGetNumOfAvailable {
 	if mmGetNumOfAvailable.mock.funcGetNumOfAvailable != nil {
 		mmGetNumOfAvailable.mock.t.Fatalf("StockRepoMock.GetNumOfAvailable mock is already set by Set")
@@ -90,7 +90,7 @@ func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Expect(ctx context.C
 	return mmGetNumOfAvailable
 }
 
-// Inspect accepts an inspector function that has same arguments as the stockRepo.GetNumOfAvailable
+// Inspect accepts an inspector function that has same arguments as the StockRepo.GetNumOfAvailable
 func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Inspect(f func(ctx context.Context, i1 int64)) *mStockRepoMockGetNumOfAvailable {
 	if mmGetNumOfAvailable.mock.inspectFuncGetNumOfAvailable != nil {
 		mmGetNumOfAvailable.mock.t.Fatalf("Inspect function is already set for StockRepoMock.GetNumOfAvailable")
@@ -101,7 +101,7 @@ func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Inspect(f func(ctx c
 	return mmGetNumOfAvailable
 }
 
-// Return sets up results that will be returned by stockRepo.GetNumOfAvailable
+// Return sets up results that will be returned by StockRepo.GetNumOfAvailable
 func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Return(u1 uint64, err error) *StockRepoMock {
 	if mmGetNumOfAvailable.mock.funcGetNumOfAvailable != nil {
 		mmGetNumOfAvailable.mock.t.Fatalf("StockRepoMock.GetNumOfAvailable mock is already set by Set")
@@ -114,21 +114,21 @@ func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Return(u1 uint64, er
 	return mmGetNumOfAvailable.mock
 }
 
-// Set uses given function f to mock the stockRepo.GetNumOfAvailable method
+// Set uses given function f to mock the StockRepo.GetNumOfAvailable method
 func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) Set(f func(ctx context.Context, i1 int64) (u1 uint64, err error)) *StockRepoMock {
 	if mmGetNumOfAvailable.defaultExpectation != nil {
-		mmGetNumOfAvailable.mock.t.Fatalf("Default expectation is already set for the stockRepo.GetNumOfAvailable method")
+		mmGetNumOfAvailable.mock.t.Fatalf("Default expectation is already set for the StockRepo.GetNumOfAvailable method")
 	}
 
 	if len(mmGetNumOfAvailable.expectations) > 0 {
-		mmGetNumOfAvailable.mock.t.Fatalf("Some expectations are already set for the stockRepo.GetNumOfAvailable method")
+		mmGetNumOfAvailable.mock.t.Fatalf("Some expectations are already set for the StockRepo.GetNumOfAvailable method")
 	}
 
 	mmGetNumOfAvailable.mock.funcGetNumOfAvailable = f
 	return mmGetNumOfAvailable.mock
 }
 
-// When sets expectation for the stockRepo.GetNumOfAvailable which will trigger the result defined by the following
+// When sets expectation for the StockRepo.GetNumOfAvailable which will trigger the result defined by the following
 // Then helper
 func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) When(ctx context.Context, i1 int64) *StockRepoMockGetNumOfAvailableExpectation {
 	if mmGetNumOfAvailable.mock.funcGetNumOfAvailable != nil {
@@ -143,13 +143,13 @@ func (mmGetNumOfAvailable *mStockRepoMockGetNumOfAvailable) When(ctx context.Con
 	return expectation
 }
 
-// Then sets up stockRepo.GetNumOfAvailable return parameters for the expectation previously defined by the When method
+// Then sets up StockRepo.GetNumOfAvailable return parameters for the expectation previously defined by the When method
 func (e *StockRepoMockGetNumOfAvailableExpectation) Then(u1 uint64, err error) *StockRepoMock {
 	e.results = &StockRepoMockGetNumOfAvailableResults{u1, err}
 	return e.mock
 }
 
-// GetNumOfAvailable implements stockRepo
+// GetNumOfAvailable implements StockRepo
 func (mmGetNumOfAvailable *StockRepoMock) GetNumOfAvailable(ctx context.Context, i1 int64) (u1 uint64, err error) {
 	mm_atomic.AddUint64(&mmGetNumOfAvailable.beforeGetNumOfAvailableCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNumOfAvailable.afterGetNumOfAvailableCounter, 1)

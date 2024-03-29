@@ -26,7 +26,7 @@ func newTestHelper(t *testing.T) testHelper {
 	helper.orderSaveRepoMock = &(orders.SaveMock)
 	helper.stocksMock = &(stocks.CancelReservedMock)
 	helper.addItemsMock = &(stocks.AddItemsMock)
-	trM := NewTrManagerMock(t)
+	trM := NewTxManagerMock(mc)
 	trM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) (err error) {
 		return f1(ctx, orders, stocks)
 	})

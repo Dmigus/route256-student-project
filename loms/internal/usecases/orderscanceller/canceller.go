@@ -18,20 +18,20 @@ type (
 		CancelReserved(context.Context, []models.OrderItem) error
 		AddItems(context.Context, []models.OrderItem) error
 	}
-	trManager interface {
+	txManager interface {
 		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
 	}
 	OrderCanceller struct {
-		tr trManager
+		tx txManager
 	}
 )
 
-func NewOrderCanceller(uow trManager) *OrderCanceller {
-	return &OrderCanceller{tr: uow}
+func NewOrderCanceller(tx txManager) *OrderCanceller {
+	return &OrderCanceller{tx: tx}
 }
 
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
-	return oc.tr.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
+	return oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
 		order, err := orders.Load(ctx, orderId)
 		if err != nil {
 			return fmt.Errorf("could not load order %d: %w", orderId, err)
