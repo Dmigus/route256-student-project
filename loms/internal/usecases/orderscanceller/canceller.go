@@ -9,30 +9,29 @@ import (
 
 var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
-type OrderRepo interface {
-	Save(context.Context, *models.Order) error
-	Load(context.Context, int64) (*models.Order, error)
-}
+type (
+	OrderRepo interface {
+		Save(context.Context, *models.Order) error
+		Load(context.Context, int64) (*models.Order, error)
+	}
+	StockRepo interface {
+		CancelReserved(context.Context, []models.OrderItem) error
+		AddItems(context.Context, []models.OrderItem) error
+	}
+	trManager interface {
+		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
+	}
+	OrderCanceller struct {
+		tr trManager
+	}
+)
 
-type StockRepo interface {
-	CancelReserved(context.Context, []models.OrderItem) error
-	AddItems(context.Context, []models.OrderItem) error
-}
-
-type OrderCanceller struct {
-	uow unitOfWork
-}
-
-type unitOfWork interface {
-	Transactional(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
-}
-
-func NewOrderCanceller(uow unitOfWork) *OrderCanceller {
-	return &OrderCanceller{uow: uow}
+func NewOrderCanceller(uow trManager) *OrderCanceller {
+	return &OrderCanceller{tr: uow}
 }
 
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
-	return oc.uow.Transactional(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
+	return oc.tr.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
 		order, err := orders.Load(ctx, orderId)
 		if err != nil {
 			return fmt.Errorf("could not load order %d: %w", orderId, err)
