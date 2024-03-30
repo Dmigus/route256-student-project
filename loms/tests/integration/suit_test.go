@@ -11,9 +11,11 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"route256.ozon.ru/project/loms/internal/app"
-	grpcController "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	"strconv"
 	"time"
 )
 
@@ -24,9 +26,10 @@ const (
 
 type Suite struct {
 	suite.Suite
-	Pg         *postgres.PostgresContainer
-	Controller *grpcController.Server
-	ConnToDB   *sql.DB
+	Pg       *postgres.PostgresContainer
+	app      *app.App
+	ConnToDB *sql.DB
+	client   v1.LOMServiceClient
 }
 
 func (s *Suite) SetupSuite() {
@@ -62,8 +65,12 @@ func (s *Suite) SetupSuite() {
 	port := exposedTcpPort.Int()
 	config.Storage.Master.Port = uint16(port)
 	config.Storage.Replica.Port = uint16(port)
-	a := app.NewApp(config)
-	s.Controller = a.GRPCController()
+	s.app = app.NewApp(config)
+	go s.app.Run()
+	conn, err := grpc.Dial(":"+strconv.Itoa(int(config.GRPCServer.Port)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	s.Require().NoError(err)
+	conn.Connect()
+	s.client = v1.NewLOMServiceClient(conn)
 }
 
 func migrateUp(ctx context.Context, conn *sql.DB) error {
@@ -80,6 +87,7 @@ func (s *Suite) TearDownSuite() {
 	s.Assert().NoError(err)
 	err = s.ConnToDB.Close()
 	s.Assert().NoError(err)
+	s.app.Stop()
 	err = s.Pg.Terminate(ctx)
 	s.Assert().NoError(err)
 }
@@ -100,7 +108,7 @@ func (s *Suite) TestOrderCreate() {
 
 	items := []*v1.Item{{Sku: 773297411, Count: 50}}
 	req := &v1.OrderCreateRequest{User: 123, Items: items}
-	ordId, err := s.Controller.OrderCreate(ctx, req)
+	ordId, err := s.client.OrderCreate(ctx, req)
 	s.Require().NoError(err)
 	s.Assert().Equal(int64(1), ordId.OrderID)
 
@@ -129,7 +137,7 @@ func (s *Suite) TestOrderGet() {
 	s.Require().NoError(err)
 
 	req := &v1.OrderId{OrderID: 123}
-	order, err := s.Controller.OrderInfo(ctx, req)
+	order, err := s.client.OrderInfo(ctx, req)
 	s.Require().NoError(err)
 	s.Assert().Equal(int64(456), order.User)
 	s.Require().Len(order.Items, 1)
@@ -148,7 +156,7 @@ func (s *Suite) TestOrderPay() {
 	s.Require().NoError(err)
 
 	req := &v1.OrderId{OrderID: 123}
-	_, err = s.Controller.OrderPay(ctx, req)
+	_, err = s.client.OrderPay(ctx, req)
 	s.Require().NoError(err)
 
 	orderRow := s.ConnToDB.QueryRowContext(ctx, "SELECT status FROM \"order\" WHERE id = $1;", 123)
@@ -177,7 +185,7 @@ func (s *Suite) TestOrderCancel() {
 	s.Require().NoError(err)
 
 	req := &v1.OrderId{OrderID: 123}
-	_, err = s.Controller.OrderCancel(ctx, req)
+	_, err = s.client.OrderCancel(ctx, req)
 	s.Require().NoError(err)
 
 	orderRow := s.ConnToDB.QueryRowContext(ctx, "SELECT status FROM \"order\" WHERE id = $1;", 123)
@@ -199,7 +207,7 @@ func (s *Suite) TestStockGet() {
 	s.Require().NoError(err)
 
 	req := &v1.StocksInfoRequest{Sku: 1005}
-	resp, err := s.Controller.StocksInfo(ctx, req)
+	resp, err := s.client.StocksInfo(ctx, req)
 	s.Require().NoError(err)
 	s.Assert().Equal(uint64(25), resp.Count)
 }

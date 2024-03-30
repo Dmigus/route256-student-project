@@ -1,4 +1,8 @@
 {
+  "GRPCServer" :{
+  "Port": 50051,
+  "ShutdownTimoutSeconds": 1
+  },
   "Storage": {
     "Master" : {
       "Database": "postgres",
