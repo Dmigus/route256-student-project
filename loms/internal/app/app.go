@@ -208,3 +208,8 @@ func (a *App) StopGateway() {
 	gwToStop.Stop(time.Duration(a.config.HTTPGateway.ShutdownTimoutSeconds))
 	a.httpGateway.Store(nil)
 }
+
+// GRPCController это геттер, возвращающий grpc контроллер приложения
+func (a *App) GRPCController() *grpcContoller.Server {
+	return a.grpcController
+}

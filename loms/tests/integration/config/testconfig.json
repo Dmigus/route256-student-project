@@ -1,0 +1,18 @@
+{
+  "Storage": {
+    "Master" : {
+      "Host": "127.0.0.1",
+      "Port": 5432,
+      "Database": "postgres",
+      "User": "postgres",
+      "Password": "password"
+    },
+    "Replica" : {
+      "Host": "127.0.0.1",
+      "Port": 5432,
+      "Database": "postgres",
+      "User": "postgres",
+      "Password": "password"
+    }
+  }
+}

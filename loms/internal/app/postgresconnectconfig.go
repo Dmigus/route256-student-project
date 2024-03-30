@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// PostgresConnectConfig это конфиг для подключения к PostgreSQL
 type PostgresConnectConfig struct {
 	User     string `json:"User"`
 	Host     string `json:"Host"`
