@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS item_unit
     sku_id BIGINT PRIMARY KEY,
     total INTEGER NOT NULL,
     reserved INTEGER NOT NULL,
-    CHECK (total >= 0),
-    CHECK (reserved >= 0),
     CHECK (total >= reserved)
 );
 -- +goose StatementEnd
