@@ -19,7 +19,7 @@ func NewTxManager[OrderRepoType, StocksRepoType any](orders OrderRepoType, stock
 	}
 }
 
-// WithinTransaction исполняет функцию f с контекстом ctx и объектами репозяитория, переданными ему в конструкторе
+// WithinTransaction исполняет функцию f с контекстом ctx и объектами репозитория, переданными ему в конструкторе
 func (u *TxManager[OrderRepoType, StocksRepoType]) WithinTransaction(ctx context.Context, f func(ctx context.Context, orders OrderRepoType, stocks StocksRepoType) error) error {
 	return f(ctx, u.orders, u.stocks)
 }

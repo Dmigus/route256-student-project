@@ -21,10 +21,12 @@ services:
     secrets:
       - postgres-passwd
     depends_on:
-      loms-postgres:
+      loms-postgres-master:
+        condition: service_healthy
+      loms-postgres-replica:
         condition: service_healthy
 
-  loms-postgres:
+  loms-postgres-master:
     image: postgres:16.2-bullseye
     ports:
       - "5432:5432"
@@ -39,6 +41,27 @@ services:
       interval: 1s
       timeout: 1s
       retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+
+  loms-postgres-replica:
+    image: postgres:16.2-bullseye
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+    secrets:
+      - postgres-passwd
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+
 
 
 secrets:

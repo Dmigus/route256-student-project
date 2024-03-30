@@ -44,7 +44,8 @@ func setupConfig() (app.Config, error) {
 		if err != nil {
 			return app.Config{}, err
 		}
-		config.Storage.Password = postgresPwd
+		config.Storage.Master.Password = postgresPwd
+		config.Storage.Replica.Password = postgresPwd
 	}
 	return config, nil
 }
