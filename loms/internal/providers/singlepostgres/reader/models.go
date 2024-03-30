@@ -4,57 +4,6 @@
 
 package reader
 
-import (
-	"database/sql/driver"
-	"fmt"
-)
-
-type OrderStatus string
-
-const (
-	OrderStatusUndefined       OrderStatus = "Undefined"
-	OrderStatusNew             OrderStatus = "New"
-	OrderStatusAwaitingPayment OrderStatus = "AwaitingPayment"
-	OrderStatusFailed          OrderStatus = "Failed"
-	OrderStatusPayed           OrderStatus = "Payed"
-	OrderStatusCancelled       OrderStatus = "Cancelled"
-)
-
-func (e *OrderStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = OrderStatus(s)
-	case string:
-		*e = OrderStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for OrderStatus: %T", src)
-	}
-	return nil
-}
-
-type NullOrderStatus struct {
-	OrderStatus OrderStatus
-	Valid       bool // Valid is true if OrderStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrderStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.OrderStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.OrderStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrderStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.OrderStatus), nil
-}
-
 type ItemUnit struct {
 	SkuID    int64
 	Total    int32
@@ -64,7 +13,7 @@ type ItemUnit struct {
 type Order struct {
 	ID               int64
 	UserID           int64
-	Status           OrderStatus
+	Status           string
 	AreItemsReserved bool
 }
 

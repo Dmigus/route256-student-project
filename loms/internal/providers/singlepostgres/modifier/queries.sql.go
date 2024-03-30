@@ -17,7 +17,7 @@ RETURNING id
 
 type createOrderParams struct {
 	UserID           int64
-	Status           OrderStatus
+	Status           string
 	AreItemsReserved bool
 }
 
@@ -80,7 +80,7 @@ FOR UPDATE
 
 type selectOrderRow struct {
 	UserID           int64
-	Status           OrderStatus
+	Status           string
 	AreItemsReserved bool
 }
 
@@ -130,7 +130,7 @@ where id = $1
 
 type updateOrderParams struct {
 	ID               int64
-	Status           OrderStatus
+	Status           string
 	AreItemsReserved bool
 }
 

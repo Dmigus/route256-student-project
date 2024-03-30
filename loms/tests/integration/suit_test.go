@@ -93,10 +93,6 @@ func (s *Suite) SetupTest() {
 	s.Assert().NoError(err)
 }
 
-//func (s *Suite) TearDownTest() {
-//
-//}
-
 func (s *Suite) TestOrderCreate() {
 	ctx := context.Background()
 	_, err := s.ConnToDB.ExecContext(ctx, "INSERT INTO item_unit(sku_id, total, reserved) VALUES ($1, $2, $3)", 773297411, 150, 10)

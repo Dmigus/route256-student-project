@@ -35,7 +35,7 @@ WHERE id = $1
 
 type selectOrderRow struct {
 	UserID           int64
-	Status           OrderStatus
+	Status           string
 	AreItemsReserved bool
 }
 

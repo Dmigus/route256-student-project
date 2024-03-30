@@ -23,17 +23,17 @@ func NewOrders(tx DBTX) *Orders {
 	return &Orders{queries: New(tx)}
 }
 
-func orderStatusFromDTO(s OrderStatus) models.OrderStatus {
+func orderStatusFromString(s string) models.OrderStatus {
 	switch s {
-	case OrderStatusNew:
+	case "New":
 		return models.New
-	case OrderStatusAwaitingPayment:
+	case "AwaitingPayment":
 		return models.AwaitingPayment
-	case OrderStatusFailed:
+	case "Failed":
 		return models.Failed
-	case OrderStatusPayed:
+	case "Payed":
 		return models.Payed
-	case OrderStatusCancelled:
+	case "Cancelled":
 		return models.Cancelled
 	default:
 		return models.OrderStatus(0)
@@ -63,7 +63,7 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 		return nil, err
 	}
 	order := models.NewOrder(row.UserID, orderID)
-	order.Status = orderStatusFromDTO(row.Status)
+	order.Status = orderStatusFromString(row.Status)
 	order.IsItemsReserved = row.AreItemsReserved
 	return order, nil
 }

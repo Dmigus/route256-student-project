@@ -25,7 +25,7 @@ func NewOrders(tx DBTX) *Orders {
 
 // Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
 func (po *Orders) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
-	params := createOrderParams{UserID: userID, Status: OrderStatusNew, AreItemsReserved: false}
+	params := createOrderParams{UserID: userID, Status: orderStatusToString(models.New), AreItemsReserved: false}
 	orderID, err := po.queries.createOrder(ctx, params)
 	if err != nil {
 		return nil, err
@@ -53,40 +53,40 @@ func insertItemParamsFrom(orderID int64, items []models.OrderItem) []insertOrder
 func (po *Orders) Save(ctx context.Context, order *models.Order) error {
 	params := updateOrderParams{
 		ID:               order.Id(),
-		Status:           orderStatusToDTO(order.Status),
+		Status:           orderStatusToString(order.Status),
 		AreItemsReserved: order.IsItemsReserved,
 	}
 	return po.queries.updateOrder(ctx, params)
 }
 
-func orderStatusToDTO(os models.OrderStatus) OrderStatus {
+func orderStatusToString(os models.OrderStatus) string {
 	switch os {
 	case models.New:
-		return OrderStatusNew
+		return "New"
 	case models.AwaitingPayment:
-		return OrderStatusAwaitingPayment
+		return "AwaitingPayment"
 	case models.Failed:
-		return OrderStatusFailed
+		return "Failed"
 	case models.Payed:
-		return OrderStatusPayed
+		return "Payed"
 	case models.Cancelled:
-		return OrderStatusCancelled
+		return "Cancelled"
 	default:
-		return OrderStatusUndefined
+		return "Undefined"
 	}
 }
 
-func orderStatusFromDTO(s OrderStatus) models.OrderStatus {
+func orderStatusFromString(s string) models.OrderStatus {
 	switch s {
-	case OrderStatusNew:
+	case "New":
 		return models.New
-	case OrderStatusAwaitingPayment:
+	case "AwaitingPayment":
 		return models.AwaitingPayment
-	case OrderStatusFailed:
+	case "Failed":
 		return models.Failed
-	case OrderStatusPayed:
+	case "Payed":
 		return models.Payed
-	case OrderStatusCancelled:
+	case "Cancelled":
 		return models.Cancelled
 	default:
 		return models.OrderStatus(0)
@@ -116,7 +116,7 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 		return nil, err
 	}
 	order := models.NewOrder(row.UserID, orderID)
-	order.Status = orderStatusFromDTO(row.Status)
+	order.Status = orderStatusFromString(row.Status)
 	order.IsItemsReserved = row.AreItemsReserved
 	return order, nil
 }
