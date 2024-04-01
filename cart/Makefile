@@ -15,10 +15,9 @@ lint:
 
 .PHONY: run-e2e
 run-e2e:
-	docker-compose build -q
-	docker-compose up --force-recreate --detach
+	cd .. && make run-all
 	-go test -count=1 -tags=e2e ./...
-	docker-compose down
+	cd .. && make stop-all
 
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin

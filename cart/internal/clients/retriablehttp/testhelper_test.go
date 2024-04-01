@@ -11,7 +11,7 @@ import (
 type testHelper struct {
 	policyMock *mRetryPolicyMockShouldBeRetried
 	nextRTMock *mHttpRoundTripperRoundTrip
-	rTripper   *retryRoundTripper
+	rTripper   *RetryRoundTripper
 }
 
 func newTestHelper(t *testing.T) testHelper {
@@ -22,6 +22,6 @@ func newTestHelper(t *testing.T) testHelper {
 
 	helper.policyMock = &(policy.ShouldBeRetriedMock)
 	helper.nextRTMock = &(nextRT.RoundTripMock)
-	helper.rTripper = &retryRoundTripper{next: nextRT, policy: policy}
+	helper.rTripper = &RetryRoundTripper{next: nextRT, policy: policy}
 	return helper
 }

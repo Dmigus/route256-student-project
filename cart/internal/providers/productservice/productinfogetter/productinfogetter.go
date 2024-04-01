@@ -31,13 +31,20 @@ func NewProductInfoGetter(rcPerformer callPerformer) *ProductInfoGetter {
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
 func (pig *ProductInfoGetter) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
-	prodInfos := make([]models.ProductInfo, 0, len(skuIds))
-	for _, skuId := range skuIds {
-		prodInfo, err := pig.getProductInfo(ctx, skuId)
-		if err != nil {
-			return nil, err
-		}
-		prodInfos = append(prodInfos, prodInfo)
+	prodInfos := make([]models.ProductInfo, len(skuIds))
+	errGr, groupCtx := NewErrorGroup(ctx)
+	for ind, skuId := range skuIds {
+		errGr.Go(func() error {
+			prodInfo, err := pig.getProductInfo(groupCtx, skuId)
+			if err != nil {
+				return err
+			}
+			prodInfos[ind] = prodInfo
+			return nil
+		})
+	}
+	if err := errGr.Wait(); err != nil {
+		return nil, err
 	}
 	return prodInfos, nil
 }

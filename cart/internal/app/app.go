@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"net/url"
 	lomsClientPkg "route256.ozon.ru/project/cart/internal/clients/loms"
+	"route256.ozon.ru/project/cart/internal/clients/ratelimiterhttp"
 	"route256.ozon.ru/project/cart/internal/clients/retriablehttp"
 	"route256.ozon.ru/project/cart/internal/clients/retriablehttp/policies"
 	addPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/add"
@@ -56,7 +57,8 @@ func (a *App) init() {
 		log.Fatal(err)
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	clientForProductService := retriablehttp.NewRetryableClient(retryPolicy)
+	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(prodServConfig.RPS, http.DefaultTransport)
+	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
