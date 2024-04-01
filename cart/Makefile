@@ -3,7 +3,7 @@ build:
 	go build -o ./bin/app ./cmd
 
 coverage:
-	@go test -tags=unit -coverprofile=coverage.out  ./...
+	@go test -tags=unit -coverprofile=coverage.out -race ./...
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
