@@ -22,4 +22,4 @@ COPY --from=build-stage /app/third_party/swagger-ui /app/third_party/swagger-ui
 EXPOSE 50051
 EXPOSE 8081
 
-CMD ["./bin/app"]
+CMD ["./bin/app", "--config=./configs/docker.json"]

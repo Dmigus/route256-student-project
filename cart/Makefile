@@ -7,6 +7,9 @@ coverage:
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
+tutor-lint:
+	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
+
 lint:
 	@golangci-lint run
 

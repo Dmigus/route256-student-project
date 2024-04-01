@@ -22,6 +22,10 @@ type Config struct {
 	Swagger struct {
 		Path string `json:"Path"`
 	} `json:"Swagger"`
+	Storage *struct {
+		Master  PostgresConnectConfig `json:"Master"`
+		Replica PostgresConnectConfig `json:"Replica"`
+	} `json:"Storage"`
 }
 
 func NewConfig(configPath string) (conf Config, err error) {

@@ -4,12 +4,39 @@ build:
 
 .PHONY: coverage
 coverage:
-	@go test -tags=unit -coverprofile=coverage.out  ./...
+	@go test -tags=unit,integration -coverprofile=coverage.out  ./...
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
 
+.PHONY:tutor-lint
+tutor-lint:
+	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
+
+.PHONY:tutor-lint-fix
+tutor-lint-fix:
+	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master --fix
+
+.PHONY: lint
 lint:
 	@golangci-lint run
+
+.PHONY: sqlc
+sqlc:
+	sqlc generate --file=./sqlc/modifier.yaml
+	sqlc generate --file=./sqlc/reader.yaml
+
+POSTGRES_PASSWORD:=$(shell cat ./db_password.txt)
+.PHONY: migrate-postgres
+migrate-postgres:
+	@goose -dir ./migrations postgres "host=127.0.0.1 port=5432 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
+	@goose -dir ./migrations postgres "host=127.0.0.1 port=5433 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
+
+.PHONY: .setup-replication
+.setup-replication:
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-master) psql -U postgres -c "CREATE PUBLICATION alltables FOR ALL TABLES;"  > /dev/null
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica) psql -U postgres -c "CREATE SUBSCRIPTION mysub CONNECTION 'host=loms-postgres-master port=5432 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres' PUBLICATION alltables WITH (synchronous_commit='on');" > /dev/null
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica) psql -U postgres -c "ALTER DATABASE postgres SET default_transaction_read_only to ON;"  > /dev/null
+
 
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin

@@ -1,3 +1,4 @@
+// Package usecases представляет из себя реализацию сервисног слоя приложения
 package usecases
 
 import (
@@ -25,6 +26,7 @@ type ordersCanceller interface {
 	Cancel(ctx context.Context, orderId int64) error
 }
 
+// LOMService представляет из себя объединение всех вариантов использования данного сервиса
 type LOMService struct {
 	ordersCreator    ordersCreator
 	ordersPayer      ordersPayer
@@ -33,6 +35,7 @@ type LOMService struct {
 	ordersCanceller  ordersCanceller
 }
 
+// NewLOMService создаёт новый экземпляр LOMService
 func NewLOMService(
 	ordersCreator ordersCreator,
 	ordersPayer ordersPayer,

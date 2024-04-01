@@ -15,13 +15,17 @@ import (
 func TestOrdersCreatorPositive(t *testing.T) {
 	t.Parallel()
 	h := newTestHelper(t)
-	h.generatorMock.Expect().Return(1)
 	items := []models.OrderItem{{123, 5}}
+	order := models.NewOrder(123, 1)
+	order.Items = items
+	h.orderCreateRepoMock.Expect(minimock.AnyContext, 123, items).Return(order, nil)
 	h.stocksMock.Expect(minimock.AnyContext, items).Return(nil)
 	h.orderSaveRepoMock.Return(nil)
 	orderId, err := h.creator.Create(context.Background(), 123, items)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), orderId)
+	assert.True(t, order.IsItemsReserved)
+	assert.Equal(t, models.AwaitingPayment, order.Status)
 }
 
 func TestOrdersCreatorErrors(t *testing.T) {
@@ -39,10 +43,25 @@ func TestOrdersCreatorErrors(t *testing.T) {
 		err       error
 	}{
 		{
+			name: "error creating order",
+			mockSetup: func(helper testHelper) {
+				items := []models.OrderItem{{123, 5}}
+				helper.orderCreateRepoMock.Expect(minimock.AnyContext, 123, items).Return(nil, errorToThrow)
+			},
+			args: args{
+				ctx:    context.Background(),
+				userId: 123,
+				items:  []models.OrderItem{{123, 5}},
+			},
+			err: errorToThrow,
+		},
+		{
 			name: "error reserving items",
 			mockSetup: func(helper testHelper) {
 				items := []models.OrderItem{{123, 5}}
-				helper.generatorMock.Expect().Return(1)
+				order := models.NewOrder(123, 1)
+				order.Items = items
+				helper.orderCreateRepoMock.Expect(minimock.AnyContext, 123, items).Return(order, nil)
 				helper.stocksMock.Expect(minimock.AnyContext, items).Return(errorToThrow)
 				helper.orderSaveRepoMock.Return(nil)
 			},
@@ -57,7 +76,9 @@ func TestOrdersCreatorErrors(t *testing.T) {
 			name: "error saving order",
 			mockSetup: func(helper testHelper) {
 				items := []models.OrderItem{{123, 5}}
-				helper.generatorMock.Expect().Return(1)
+				order := models.NewOrder(123, 1)
+				order.Items = items
+				helper.orderCreateRepoMock.Expect(minimock.AnyContext, 123, items).Return(order, nil)
 				helper.stocksMock.Expect(minimock.AnyContext, items).Return(nil)
 				helper.orderSaveRepoMock.Return(errorToThrow)
 			},
@@ -79,13 +100,4 @@ func TestOrdersCreatorErrors(t *testing.T) {
 			assert.ErrorIs(t, err, tt.err)
 		})
 	}
-}
-
-func TestOrdersCreator_createOrderInstance(t *testing.T) {
-	t.Parallel()
-	h := newTestHelper(t)
-	h.generatorMock.Expect().Return(15)
-	newOrder := h.creator.createOrderInstance(1234)
-	assert.Equal(t, int64(15), newOrder.Id())
-	assert.Equal(t, models.New, newOrder.Status)
 }
