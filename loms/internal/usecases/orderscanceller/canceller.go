@@ -1,3 +1,4 @@
+// Package orderscanceller содержит логику работы юзкейса отмены заказа
 package orderscanceller
 
 import (
@@ -9,53 +10,62 @@ import (
 
 var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
-type orderRepo interface {
-	Save(context.Context, *models.Order) error
-	Load(context.Context, int64) (*models.Order, error)
-}
-
-type stockCanceller interface {
-	CancelReserved(context.Context, []models.OrderItem) error
-	AddItems(context.Context, []models.OrderItem) error
-}
-
-type OrderCanceller struct {
-	orders orderRepo
-	stocks stockCanceller
-}
-
-func NewOrderCanceller(orders orderRepo, stocks stockCanceller) *OrderCanceller {
-	return &OrderCanceller{orders: orders, stocks: stocks}
-}
-
-func (oc *OrderCanceller) Cancel(ctx context.Context, orderId int64) error {
-	order, err := oc.orders.Load(ctx, orderId)
-	if err != nil {
-		return fmt.Errorf("could not load order %d: %w", orderId, err)
+type (
+	// OrderRepo это контракт для использования репозитория заказов OrderCanceller'ом. Используется другими слоями для настройки атомарности
+	OrderRepo interface {
+		Save(context.Context, *models.Order) error
+		Load(context.Context, int64) (*models.Order, error)
 	}
-	if order.Status == models.Cancelled {
-		return errWrongOrderStatus
+	// StockRepo это контракт для использования репозитория стоков OrderCanceller'ом. Используется другими слоями для настройки атомарности
+	StockRepo interface {
+		CancelReserved(context.Context, []models.OrderItem) error
+		AddItems(context.Context, []models.OrderItem) error
 	}
-	if order.IsItemsReserved {
-		if err := oc.cancelReserved(ctx, order); err != nil {
-			return err
+	txManager interface {
+		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
+	}
+	// OrderCanceller - сущность, которая умеет отменять заказы
+	OrderCanceller struct {
+		tx txManager
+	}
+)
+
+// NewOrderCanceller создаёт OrderCanceller. tx - должен быть объектом, позволяющим исполнять функцию атомарно
+func NewOrderCanceller(tx txManager) *OrderCanceller {
+	return &OrderCanceller{tx: tx}
+}
+
+// Cancel отменяет заказ с id = orderId. Атомарность всей операции обеспечивается объектом tx, переданым при создании
+func (oc *OrderCanceller) Cancel(ctx context.Context, orderID int64) error {
+	return oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
+		order, err := orders.Load(ctx, orderID)
+		if err != nil {
+			return fmt.Errorf("could not load order %d: %w", orderID, err)
 		}
-	} else if order.Status == models.Payed {
-		if err := oc.cancelPayed(ctx, order); err != nil {
-			return err
+		if order.Status == models.Cancelled {
+			return errWrongOrderStatus
 		}
-	} else {
-		order.Status = models.Cancelled
-	}
-	if err = oc.orders.Save(ctx, order); err != nil {
-		return fmt.Errorf("could not save order %d: %w", orderId, err)
-	}
-	return nil
+		if order.IsItemsReserved {
+			if err := cancelReserved(ctx, stocks, order); err != nil {
+				return err
+			}
+		} else if order.Status == models.Payed {
+			if err := cancelPayed(ctx, stocks, order); err != nil {
+				return err
+			}
+		} else {
+			order.Status = models.Cancelled
+		}
+		if err = orders.Save(ctx, order); err != nil {
+			return fmt.Errorf("could not save order %d: %w", orderID, err)
+		}
+		return nil
+	})
 }
 
-func (oc *OrderCanceller) cancelReserved(ctx context.Context, order *models.Order) error {
+func cancelReserved(ctx context.Context, stocks StockRepo, order *models.Order) error {
 	if order.IsItemsReserved {
-		err := oc.stocks.CancelReserved(ctx, order.Items)
+		err := stocks.CancelReserved(ctx, order.Items)
 		if err != nil {
 			return fmt.Errorf("could not cancel reserved items for order %d: %w", order.Id(), err)
 		}
@@ -65,9 +75,9 @@ func (oc *OrderCanceller) cancelReserved(ctx context.Context, order *models.Orde
 	return nil
 }
 
-func (oc *OrderCanceller) cancelPayed(ctx context.Context, order *models.Order) error {
+func cancelPayed(ctx context.Context, stocks StockRepo, order *models.Order) error {
 	if order.Status == models.Payed {
-		err := oc.stocks.AddItems(ctx, order.Items)
+		err := stocks.AddItems(ctx, order.Items)
 		if err != nil {
 			return fmt.Errorf("could not return payed items for order %d: %w", order.Id(), err)
 		}

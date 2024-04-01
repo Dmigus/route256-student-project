@@ -4,6 +4,7 @@
 package stocksinfogetter
 
 import (
+	"context"
 	"github.com/gojuno/minimock/v3"
 	"testing"
 )
@@ -18,6 +19,10 @@ func newTestHelper(t *testing.T) testHelper {
 	helper := testHelper{}
 	stocks := NewStockRepoMock(mc)
 	helper.stockRepoMock = &(stocks.GetNumOfAvailableMock)
-	helper.getter = NewGetter(stocks)
+	txM := NewTxManagerMock(mc)
+	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, anyVal any, stocks StockRepo) error) error {
+		return f1(ctx, nil, stocks)
+	})
+	helper.getter = NewGetter(txM)
 	return helper
 }

@@ -11,10 +11,10 @@ import (
 
 func TestSequentialGenerator(t *testing.T) {
 	t.Parallel()
-	gen := NewSequentialGenerator()
-	first := gen.NewId()
+	gen := NewSequentialGenerator(1)
+	first := gen.NewID()
 	require.Equal(t, int64(1), first)
-	second := gen.NewId()
+	second := gen.NewID()
 	require.Equal(t, int64(2), second)
 	assert.Equal(t, int64(2), gen.prevID)
 }
