@@ -14,7 +14,7 @@ type RateLimitedTripper struct {
 // NewRateLimitedTripper создаёт новый экземпляр RateLimitedTripper
 func NewRateLimitedTripper(rps int, next http.RoundTripper) *RateLimitedTripper {
 	return &RateLimitedTripper{
-		rl:   ratelimit.New(rps),
+		rl:   ratelimit.New(rps, ratelimit.WithSlack(0)),
 		next: next,
 	}
 }
