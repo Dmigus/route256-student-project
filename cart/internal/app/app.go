@@ -57,7 +57,8 @@ func (a *App) init() {
 		log.Fatal(err)
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(prodServConfig.RPS, http.DefaultTransport)
+	rateLimiter := ratelimiterhttp.NewTokenBucket(context.Background(), prodServConfig.RPS)
+	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, http.DefaultTransport)
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
