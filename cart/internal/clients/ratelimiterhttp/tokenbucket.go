@@ -5,26 +5,27 @@ import (
 	"time"
 )
 
-// TokenBucket это структура, которая позволяет ограничивать количество используемых ресурсов в единицу времени
-type TokenBucket struct {
-	available chan struct{}
+// RateLimiter это структура, которая позволяет ограничивать количество используемых ресурсов в единицу времени
+type RateLimiter struct {
+	available    chan struct{}
+	fillInterval time.Duration
 }
 
-// NewTokenBucket возвращает новый *TokenBucket, настроенный таким образом, что ресурс будет пополняться с частотой rps в секунду. Сразу после инициализации количество ресурсов полное.
-func NewTokenBucket(ctx context.Context, rps int) *TokenBucket {
+// NewRateLimiter возвращает новый *RateLimiter, готовый к запуску.
+// Сразу после инициализации количество ресурсов полное, то есть первые rps запросов Acquire будут удовлетворены без блокировки.
+// После запуска ресурс будет пополняться с частотой rps в секунду.
+func NewRateLimiter(rps int) *RateLimiter {
 	avail := make(chan struct{}, rps)
 	for i := 0; i < rps; i++ {
 		avail <- struct{}{}
 	}
-	lb := &TokenBucket{available: avail}
 	fillInterval := time.Second / time.Duration(rps)
-	lb.runFiller(ctx, fillInterval)
-	return lb
+	return &RateLimiter{available: avail, fillInterval: fillInterval}
 }
 
-func (lb *TokenBucket) runFiller(ctx context.Context, fillInterval time.Duration) {
+func (lb *RateLimiter) Run(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(fillInterval)
+		ticker := time.NewTicker(lb.fillInterval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -37,7 +38,7 @@ func (lb *TokenBucket) runFiller(ctx context.Context, fillInterval time.Duration
 	}()
 }
 
-func (lb *TokenBucket) addItemFree() {
+func (lb *RateLimiter) addItemFree() {
 	select {
 	case lb.available <- struct{}{}:
 	default:
@@ -47,7 +48,7 @@ func (lb *TokenBucket) addItemFree() {
 // Acquire это блокирующий вызов, который завершается в случаях:
 // 1) если получилось использовать ресурс. В таком случае возращаемое значение nil
 // 2) если завершился переданный контекст. В таком  случае возвращается прчина завершения контекста
-func (lb *TokenBucket) Acquire(ctx context.Context) error {
+func (lb *RateLimiter) Acquire(ctx context.Context) error {
 	select {
 	case <-lb.available:
 		return nil

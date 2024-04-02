@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"os"
 	"os/signal"
 	"route256.ozon.ru/project/cart/internal/app"
 	"syscall"
@@ -17,11 +17,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	appl := app.NewApp(config)
-	defer appl.Stop()
-	go appl.Run()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
+	appLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	appl, err := app.NewApp(config)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	appl.Run(appLiveContext)
 }

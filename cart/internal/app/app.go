@@ -30,34 +30,36 @@ import (
 	"route256.ozon.ru/project/cart/internal/usecases/clearer"
 	"route256.ozon.ru/project/cart/internal/usecases/deleter"
 	"route256.ozon.ru/project/cart/internal/usecases/lister"
-	"sync/atomic"
 	"time"
 )
 
 type App struct {
 	config         Config
 	httpController http.Handler
-	server         atomic.Pointer[http.Server]
+	rateLimiter    *ratelimiterhttp.RateLimiter
 }
 
-// NewApp возращает App, готовый к запуску
-func NewApp(config Config) *App {
+// NewApp возращает App, готовый к запуску, либо ошибку
+func NewApp(config Config) (*App, error) {
 	app := &App{
 		config: config,
 	}
-	app.init()
-	return app
+	if err := app.init(); err != nil {
+		return nil, err
+	}
+	return app, nil
 }
 
-func (a *App) init() {
+func (a *App) init() error {
 	cartRepo := repository.New()
 	prodServConfig := a.config.ProductService
 	baseUrl, err := url.Parse(prodServConfig.BaseURL)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	rateLimiter := ratelimiterhttp.NewTokenBucket(context.Background(), prodServConfig.RPS)
+	rateLimiter := ratelimiterhttp.NewRateLimiter(prodServConfig.RPS)
+	a.rateLimiter = rateLimiter
 	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, http.DefaultTransport)
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
@@ -67,7 +69,7 @@ func (a *App) init() {
 	lomsConfig := a.config.LOMS
 	lomsClient, err := lomsClientPkg.NewClient(lomsConfig.Address)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	loms := lomsProviderPkg.NewLOMSProvider(lomsClient)
 	cartAdder := adder.New(cartRepo, itPresChecker, loms)
@@ -90,6 +92,7 @@ func (a *App) init() {
 	probesMux := healthz.CreateMux()
 	mux.Handle("GET /healthz/alive", probesMux)
 	a.httpController = middleware.NewLogger(mux)
+	return nil
 }
 
 func (a *App) GetAddrFromConfig() (string, error) {
@@ -104,43 +107,33 @@ func (a *App) GetAddrFromConfig() (string, error) {
 }
 
 // Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.
-// Если он уже запущен, то функция ничего не делает. Если не удалось запустить, вся программа завершается с ошибкой
-func (a *App) Run() {
-	if a.isRunning() {
-		return
-	}
+func (a *App) Run(ctx context.Context) {
+	a.rateLimiter.Run(ctx)
 	addr, err := a.GetAddrFromConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	newServer := &http.Server{
+	server := &http.Server{
 		Addr:    addr,
 		Handler: a.httpController,
 	}
-	if !a.server.CompareAndSwap(nil, newServer) {
-		return
-	}
-	if err = newServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+	go func() {
+		<-ctx.Done()
+		a.stop(server)
+	}()
+	if err = server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		log.Println(err)
 	}
 }
 
-// Stop останавливает запущенный сервер в течение ShutdownTimoutSeconds секунд. Если не был запущен, функция ничего не делает. Если не удалось
-// остановить в течение таймаута, вся программа завершается с ошибкой. Возврат из функции произойдёт, когда shutdown завершится.
-func (a *App) Stop() {
-	srvToShutdown := a.server.Load()
-	if srvToShutdown == nil {
-		return
-	}
+// stop пытается произвести graceful shotdown server в течение ShutdownTimoutSeconds секунд. Если не удалось
+// остановить в течение таймаута, то сервер заверщается немедленнло.
+func (a *App) stop(server *http.Server) {
 	timeout := time.Duration(a.config.Server.ShutdownTimoutSeconds) * time.Second
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), timeout)
 	defer shutdownRelease()
-	if err := srvToShutdown.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("http shutdown error: %v", err)
+		_ = server.Close()
 	}
-	a.server.Store(nil)
-}
-
-func (a *App) isRunning() bool {
-	return a.server.Load() != nil
 }

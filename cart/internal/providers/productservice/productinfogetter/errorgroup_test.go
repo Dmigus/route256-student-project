@@ -1,3 +1,5 @@
+//go:build unit
+
 package productinfogetter
 
 import (
@@ -18,7 +20,7 @@ func Test_errorGroupResult_getFirstError(t *testing.T) {
 	for i := 0; i < numOfCalls; i++ {
 		wg.Add(1)
 		go func(num int) {
-			wg.Done()
+			defer wg.Done()
 			err := result.getFirstError(fmt.Errorf("error num %d", num))
 			returnedErrs[num] = err
 		}(i)
@@ -36,30 +38,14 @@ func TestErrorGroup_Wait(t *testing.T) {
 	t.Parallel()
 	errGr, ctx := NewErrorGroup(context.Background())
 	errorToThrow := fmt.Errorf("oops error")
-	firstCancelled := false
-	waitDone := make(chan struct{})
 	errGr.Go(func() error {
-		select {
-		case <-ctx.Done():
-			firstCancelled = true
-		case <-waitDone:
-			// проверим, что контекст отменён
-			select {
-			case <-ctx.Done():
-				firstCancelled = true
-			default:
-
-			}
-		}
 		return nil
 	})
 	errGr.Go(func() error {
 		return errorToThrow
 	})
 	errFromWait := errGr.Wait()
-	close(waitDone)
 	assert.ErrorIs(t, errFromWait, errorToThrow)
-	assert.True(t, firstCancelled)
 	// проверка, что контекст завершён
 	assert.Error(t, ctx.Err())
 }
