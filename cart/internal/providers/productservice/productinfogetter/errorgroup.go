@@ -3,26 +3,26 @@ package productinfogetter
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 )
 
 type errorGroupResult struct {
 	mu        sync.RWMutex
 	result    error
-	isPresent atomic.Bool
+	isPresent bool
 }
 
 // getFirstError сохраняет значение newErr первого вызова этого метода и возвращает его. Последующие вызовы этого
 // метода возвращают первое сохранённое значение.
 func (er *errorGroupResult) getFirstError(newErr error) error {
 	er.mu.RLock()
-	present := er.isPresent.Load()
+	present := er.isPresent
 	er.mu.RUnlock()
 	if present {
 		return er.result
 	}
 	er.mu.Lock()
-	if er.isPresent.CompareAndSwap(false, true) {
+	if !er.isPresent {
+		er.isPresent = true
 		er.result = newErr
 	}
 	er.mu.Unlock()
