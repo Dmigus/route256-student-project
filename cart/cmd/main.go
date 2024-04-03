@@ -22,8 +22,12 @@ func main() {
 	defer stop()
 	appl, err := app.NewApp(config)
 	if err != nil {
+		log.Printf("err initializing app: %v\n", err)
+		return
+	}
+	err = appl.Run(appLiveContext)
+	if err != nil {
 		log.Printf("%v\n", err)
 		return
 	}
-	appl.Run(appLiveContext)
 }

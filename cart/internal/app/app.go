@@ -107,7 +107,9 @@ func (a *App) GetAddrFromConfig() (string, error) {
 }
 
 // Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.
-func (a *App) Run(ctx context.Context) {
+// Возвращает критические ошибки, произошедшие при работе http сервера и его остановке.
+// Сервер начнёт прекращение своей работы, когда переданный контекст ctx будет отменён
+func (a *App) Run(ctx context.Context) error {
 	a.rateLimiter.Run(ctx)
 	addr, err := a.GetAddrFromConfig()
 	if err != nil {
@@ -117,23 +119,29 @@ func (a *App) Run(ctx context.Context) {
 		Addr:    addr,
 		Handler: a.httpController,
 	}
+	errStopping := make(chan error, 1)
 	go func() {
 		<-ctx.Done()
-		a.stop(server)
+		errStopping <- a.stop(server)
+		close(errStopping)
 	}()
-	if err = server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Println(err)
+	errServing := server.ListenAndServe()
+	if errors.Is(errServing, http.ErrServerClosed) {
+		errServing = nil
 	}
+	return errors.Join(errServing, <-errStopping)
 }
 
 // stop пытается произвести graceful shotdown server в течение ShutdownTimoutSeconds секунд. Если не удалось
 // остановить в течение таймаута, то сервер заверщается немедленнло.
-func (a *App) stop(server *http.Server) {
+func (a *App) stop(server *http.Server) error {
 	timeout := time.Duration(a.config.Server.ShutdownTimoutSeconds) * time.Second
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), timeout)
 	defer shutdownRelease()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("http shutdown error: %v", err)
-		_ = server.Close()
+	err := server.Shutdown(shutdownCtx)
+	if err != nil {
+		errClosing := server.Close()
+		err = errors.Join(err, errClosing)
 	}
+	return err
 }
