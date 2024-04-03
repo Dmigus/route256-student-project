@@ -33,9 +33,9 @@ func NewProductInfoGetter(rcPerformer callPerformer) *ProductInfoGetter {
 func (pig *ProductInfoGetter) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
 	prodInfos := make([]models.ProductInfo, len(skuIds))
 	errGr, groupCtx := NewErrorGroup(ctx)
-	for ind, skuId := range skuIds {
+	for ind, skuID := range skuIds {
 		errGr.Go(func() error {
-			prodInfo, err := pig.getProductInfo(groupCtx, skuId)
+			prodInfo, err := pig.getProductInfo(groupCtx, skuID)
 			if err != nil {
 				return err
 			}

@@ -1,3 +1,4 @@
+// Package retriablehttp содержит round tripper с политикой повтора неуспешных запросов
 package retriablehttp
 
 import (
@@ -9,13 +10,14 @@ type (
 	retryPolicy interface {
 		ShouldBeRetried(attempts int, req *http.Request, resp *http.Response, respErr error) bool
 	}
-
+	// RetryRoundTripper это структура, которая позволяет выполнять RoundTrip раунд трипера next с политикой ретрая запроса
 	RetryRoundTripper struct {
 		next   http.RoundTripper
 		policy retryPolicy
 	}
 )
 
+// NewRetryRoundTripper создаёт новый экземпляр *RetryRoundTripper
 func NewRetryRoundTripper(next http.RoundTripper, policy retryPolicy) *RetryRoundTripper {
 	return &RetryRoundTripper{
 		next:   next,
@@ -23,6 +25,7 @@ func NewRetryRoundTripper(next http.RoundTripper, policy retryPolicy) *RetryRoun
 	}
 }
 
+// RoundTrip это обёртка над RoundTrip вложенного раунд трипера с проверкой ответа и повтором запроса, если это необходимо
 func (rr RetryRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	var response *http.Response
 	var err error

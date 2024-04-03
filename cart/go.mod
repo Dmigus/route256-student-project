@@ -8,15 +8,13 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/jasongerard/healthz v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.7.1
-	go.uber.org/ratelimit v0.3.1
+	github.com/stretchr/testify v1.8.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 )
 
 require (
-	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

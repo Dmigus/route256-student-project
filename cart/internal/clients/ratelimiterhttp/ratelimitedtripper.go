@@ -1,3 +1,4 @@
+// Package ratelimiterhttp содержит round tripper с ограничением частоты запросов рейт лимитером
 package ratelimiterhttp
 
 import (

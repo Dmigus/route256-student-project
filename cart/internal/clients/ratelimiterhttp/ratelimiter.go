@@ -23,6 +23,7 @@ func NewRateLimiter(rps int) *RateLimiter {
 	return &RateLimiter{available: avail, fillInterval: fillInterval}
 }
 
+// Run это запуск заполнения доступного ресурса. Неблокирующий.
 func (lb *RateLimiter) Run(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(lb.fillInterval)

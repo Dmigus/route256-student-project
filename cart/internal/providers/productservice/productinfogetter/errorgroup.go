@@ -58,8 +58,10 @@ func (e *ErrorGroup) Go(f func() error) {
 			return
 		}
 		select {
+		// запись ошибки, если это возможно
 		case e.errs <- err:
 			e.cancel()
+		// если канал заполнен, значит это не первая ошибка и можно игнорировать
 		default:
 		}
 	}()
@@ -67,13 +69,14 @@ func (e *ErrorGroup) Go(f func() error) {
 
 // Wait дожидается, пока вернётся первое ненулевое значение функций f, переданных в метод Go и возращает его. Если все f отработали без ошибки, то будет возвращать nil
 func (e *ErrorGroup) Wait() error {
+	// отмена контекста либо по завершению функции Wait, либо по окончанию всех горутин
 	defer e.cancel()
 	go func() {
 		defer e.cancel()
 		e.wg.Wait()
 	}()
 	var receivedErr error
-	// ожидание завершения всех ошибок, либо первой ошибики
+	// ожидание завершения всех горутин, либо возвращения ошибики
 	select {
 	case <-e.ctx.Done():
 		select {
@@ -82,6 +85,7 @@ func (e *ErrorGroup) Wait() error {
 		}
 	case receivedErr = <-e.errs:
 	}
+	// возврат первого receivedErr
 	return e.result.getFirstError(receivedErr)
 }
 
