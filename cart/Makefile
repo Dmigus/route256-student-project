@@ -3,9 +3,12 @@ build:
 	go build -o ./bin/app ./cmd
 
 coverage:
-	@go test -tags=unit -coverprofile=coverage.out -parallel=10 -race ./...
+	@go test -tags=unit -coverprofile=coverage.out -parallel=10 ./...
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
+
+race-detect:
+	@go test -tags=unit -parallel=10 -race ./...
 
 tutor-lint:
 	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
