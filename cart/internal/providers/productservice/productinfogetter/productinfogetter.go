@@ -14,6 +14,8 @@ var (
 	errSkuIdIsNotUInt32   = errors.New("skuId is not in range UInt32")
 )
 
+const remoteMethodName = "get_product"
+
 type callPerformer interface {
 	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) error
 }
@@ -57,7 +59,7 @@ func (pig *ProductInfoGetter) getProductInfo(ctx context.Context, skuId int64) (
 		Sku: uint32(skuId),
 	}
 	var respDTO getProductResponse
-	err := pig.rcPerformer.Perform(ctx, "get_product", &reqBody, &respDTO)
+	err := pig.rcPerformer.Perform(ctx, remoteMethodName, &reqBody, &respDTO)
 	if err != nil {
 		return models.ProductInfo{}, err
 	}

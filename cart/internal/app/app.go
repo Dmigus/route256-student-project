@@ -58,7 +58,8 @@ func (a *App) init() error {
 		return err
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	rateLimiter := ratelimiterhttp.NewRateLimiter(prodServConfig.RPS)
+	ticker := ratelimiterhttp.NewSystemTimeTicker(int64(prodServConfig.RPS))
+	rateLimiter := ratelimiterhttp.NewRateLimiter(uint64(prodServConfig.RPS), ticker)
 	a.rateLimiter = rateLimiter
 	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, http.DefaultTransport)
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
@@ -110,7 +111,6 @@ func (a *App) GetAddrFromConfig() (string, error) {
 // Возвращает критические ошибки, произошедшие при работе http сервера и его остановке.
 // Сервер начнёт прекращение своей работы, когда переданный контекст ctx будет отменён
 func (a *App) Run(ctx context.Context) error {
-	a.rateLimiter.Run(ctx)
 	addr, err := a.GetAddrFromConfig()
 	if err != nil {
 		log.Fatal(err)

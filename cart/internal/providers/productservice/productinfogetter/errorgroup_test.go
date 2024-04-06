@@ -63,5 +63,6 @@ func TestErrorGroup_WaitNil(t *testing.T) {
 	errGr.Go(func() error {
 		return errorToThrow
 	})
+	errFromWait = errGr.Wait()
 	assert.Nil(t, errFromWait)
 }
