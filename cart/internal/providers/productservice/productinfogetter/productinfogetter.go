@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"route256.ozon.ru/project/cart/internal/models"
+	"route256.ozon.ru/project/cart/internal/pkg/errorgroup"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 )
 
@@ -34,7 +35,7 @@ func NewProductInfoGetter(rcPerformer callPerformer) *ProductInfoGetter {
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
 func (pig *ProductInfoGetter) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
 	prodInfos := make([]models.ProductInfo, len(skuIds))
-	errGr, groupCtx := NewErrorGroup(ctx)
+	errGr, groupCtx := errorgroup.NewErrorGroup(ctx)
 	for ind, skuID := range skuIds {
 		errGr.Go(func() error {
 			prodInfo, err := pig.getProductInfo(groupCtx, skuID)

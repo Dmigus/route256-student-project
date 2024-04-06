@@ -1,4 +1,4 @@
-package ratelimiterhttp
+package ratelimiter
 
 import (
 	"context"
@@ -28,7 +28,7 @@ type RateLimiter struct {
 // Сразу после инициализации количество ресурсов полное, то есть первые capacity запросов Acquire будут удовлетворены без блокировки.
 // После запуска ресурс будет пополняться переданным тикером.
 func NewRateLimiter(capacity uint64, ticker ticker) *RateLimiter {
-	rl := &RateLimiter{availableInt: capacity, capacity: capacity, ticker: ticker}
+	rl := &RateLimiter{availableInt: capacity, capacity: capacity, ticker: ticker, waiting: make(chan struct{})}
 	return rl
 }
 

@@ -1,6 +1,6 @@
 //go:build unit
 
-package productinfogetter
+package errorgroup
 
 import (
 	"context"

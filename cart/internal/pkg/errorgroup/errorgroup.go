@@ -1,4 +1,4 @@
-package productinfogetter
+package errorgroup
 
 import (
 	"context"

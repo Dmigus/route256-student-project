@@ -9,7 +9,7 @@ coverage:
 	@rm coverage.out
 
 race-detect:
-	@go test -tags=unit,integration -parallel=10 -race ./...
+	@go test -tags=unit,integration -count=1 -parallel=10 -race ./...
 
 .PHONY:tutor-lint
 tutor-lint:

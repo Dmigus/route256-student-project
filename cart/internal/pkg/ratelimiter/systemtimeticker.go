@@ -1,4 +1,4 @@
-package ratelimiterhttp
+package ratelimiter
 
 import "time"
 

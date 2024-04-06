@@ -19,6 +19,7 @@ import (
 	deletePkg "route256.ozon.ru/project/cart/internal/controllers/handlers/delete"
 	listPkg "route256.ozon.ru/project/cart/internal/controllers/handlers/list"
 	"route256.ozon.ru/project/cart/internal/controllers/middleware"
+	"route256.ozon.ru/project/cart/internal/pkg/ratelimiter"
 	lomsProviderPkg "route256.ozon.ru/project/cart/internal/providers/loms"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
@@ -36,7 +37,6 @@ import (
 type App struct {
 	config         Config
 	httpController http.Handler
-	rateLimiter    *ratelimiterhttp.RateLimiter
 }
 
 // NewApp возращает App, готовый к запуску, либо ошибку
@@ -58,9 +58,8 @@ func (a *App) init() error {
 		return err
 	}
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
-	ticker := ratelimiterhttp.NewSystemTimeTicker(int64(prodServConfig.RPS))
-	rateLimiter := ratelimiterhttp.NewRateLimiter(uint64(prodServConfig.RPS), ticker)
-	a.rateLimiter = rateLimiter
+	ticker := ratelimiter.NewSystemTimeTicker(int64(prodServConfig.RPS))
+	rateLimiter := ratelimiter.NewRateLimiter(prodServConfig.RPS, ticker)
 	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, http.DefaultTransport)
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)

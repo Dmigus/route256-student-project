@@ -8,7 +8,7 @@ coverage:
 	@rm coverage.out
 
 race-detect:
-	@go test -tags=unit -parallel=10 -race ./...
+	@go test -tags=unit -count=1 -parallel=10 -race ./...
 
 tutor-lint:
 	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
