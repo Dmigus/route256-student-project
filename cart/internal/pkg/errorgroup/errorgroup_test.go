@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+	"time"
 )
 
 func Test_errorGroupResult_getFirstError(t *testing.T) {
@@ -44,7 +45,16 @@ func TestErrorGroup_Wait(t *testing.T) {
 	errGr.Go(func() error {
 		return errorToThrow
 	})
+	longGoro := 10 * time.Second
+	errGr.Go(func() error {
+		time.Sleep(longGoro)
+		return nil
+	})
+	startTime := time.Now()
 	errFromWait := errGr.Wait()
+	endTime := time.Now()
+	waitDuration := endTime.Sub(startTime)
+	assert.Less(t, waitDuration, longGoro)
 	assert.ErrorIs(t, errFromWait, errorToThrow)
 	// проверка, что контекст завершён
 	assert.Error(t, ctx.Err())
