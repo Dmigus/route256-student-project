@@ -7,6 +7,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -28,6 +29,7 @@ func TestRateLimiter_GetInitialResources(t *testing.T) {
 	mc := minimock.NewController(t)
 	tickerMock := NewTickerMock(mc)
 	tickerMock.StartMock.Return()
+	tickerMock.StopMock.Return()
 
 	channelToTick := make(chan struct{}, 200)
 	tickerMock.GetTickChMock.Return(channelToTick)
@@ -45,6 +47,9 @@ func TestRateLimiter_GetInitialResources(t *testing.T) {
 		err := rl.Acquire(ctx)
 		assert.NoError(t, err)
 	}
+
+	// рейт лимитер может не успеть вызвать stop. Minimock всё равно проверяет наличие хотя бы одного вызова, поэтому установим счётчик
+	atomic.CompareAndSwapUint64(&tickerMock.StopMock.mock.afterStopCounter, 0, 1)
 }
 
 func TestRateLimiter_AcquireTwoTimes(t *testing.T) {

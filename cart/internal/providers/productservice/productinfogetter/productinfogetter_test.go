@@ -68,8 +68,8 @@ func TestProductInfoGetter_GetProductsInfoContextCancellation(t *testing.T) {
 	contextCancelTimeout := time.Second
 	contextCancelled := &atomic.Bool{}
 	wg := sync.WaitGroup{}
+	wg.Add(len(skuIDs))
 	helper.performMock.Set(func(ctx context.Context, _ string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
-		wg.Add(1)
 		defer wg.Done()
 		req := reqBody.(*getProductRequest)
 		if req.Sku == 1 {
