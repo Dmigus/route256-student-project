@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"route256.ozon.ru/project/cart/internal/models"
+	"route256.ozon.ru/project/cart/internal/pkg/errorgroup"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 )
 
@@ -13,6 +14,8 @@ var (
 	errInvalidProductName = errors.New("returned name is not valid")
 	errSkuIdIsNotUInt32   = errors.New("skuId is not in range UInt32")
 )
+
+const remoteMethodName = "get_product"
 
 type callPerformer interface {
 	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) error
@@ -31,13 +34,20 @@ func NewProductInfoGetter(rcPerformer callPerformer) *ProductInfoGetter {
 
 // GetProductsInfo принимает ИД товаров и возвращет их название и цену в том же порядке, как было в skuIds.
 func (pig *ProductInfoGetter) GetProductsInfo(ctx context.Context, skuIds []int64) ([]models.ProductInfo, error) {
-	prodInfos := make([]models.ProductInfo, 0, len(skuIds))
-	for _, skuId := range skuIds {
-		prodInfo, err := pig.getProductInfo(ctx, skuId)
-		if err != nil {
-			return nil, err
-		}
-		prodInfos = append(prodInfos, prodInfo)
+	prodInfos := make([]models.ProductInfo, len(skuIds))
+	errGr, groupCtx := errorgroup.NewErrorGroup(ctx)
+	for ind, skuID := range skuIds {
+		errGr.Go(func() error {
+			prodInfo, err := pig.getProductInfo(groupCtx, skuID)
+			if err != nil {
+				return err
+			}
+			prodInfos[ind] = prodInfo
+			return nil
+		})
+	}
+	if err := errGr.Wait(); err != nil {
+		return nil, err
 	}
 	return prodInfos, nil
 }
@@ -50,7 +60,7 @@ func (pig *ProductInfoGetter) getProductInfo(ctx context.Context, skuId int64) (
 		Sku: uint32(skuId),
 	}
 	var respDTO getProductResponse
-	err := pig.rcPerformer.Perform(ctx, "get_product", &reqBody, &respDTO)
+	err := pig.rcPerformer.Perform(ctx, remoteMethodName, &reqBody, &respDTO)
 	if err != nil {
 		return models.ProductInfo{}, err
 	}

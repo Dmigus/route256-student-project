@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"route256.ozon.ru/project/cart/internal/models"
+	"sync"
 	"testing"
 )
 
@@ -31,6 +32,23 @@ func TestInMemoryCartRepository_GetExistingCart(t *testing.T) {
 	assert.Equal(t, expectedItems, returnedItems)
 }
 
+func TestInMemoryCartRepository_GetNewCartsConcurrent(t *testing.T) {
+	t.Parallel()
+	repo := New()
+	ctx := context.Background()
+	wg := sync.WaitGroup{}
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			randUserId := rand.Int63()
+			_, err := repo.GetCart(ctx, randUserId)
+			assert.Nil(t, err)
+		}()
+	}
+	wg.Wait()
+}
+
 func TestInMemoryCartRepository_SaveAndGet(t *testing.T) {
 	t.Parallel()
 	repo := New()
@@ -49,6 +67,31 @@ func TestInMemoryCartRepository_SaveAndGet(t *testing.T) {
 	returnedOtherCard, err := repo.GetCart(context.Background(), otherUserId)
 	require.NoError(t, err, "getting cart failed with error")
 	assert.NotEqual(t, newCart.ListItemsSorted(ctx), returnedOtherCard.ListItemsSorted(ctx), "the same cart returned for different users")
+}
+
+func TestInMemoryCartRepository_SaveAndGetConcurrent(t *testing.T) {
+	t.Parallel()
+	repo := New()
+	ctx := context.Background()
+	newCart := models.NewCart()
+	newCart.Add(ctx, 456, 10)
+	newCart.Add(ctx, 789, 15)
+	userId := int64(123)
+	repo.carts[userId] = newCart
+	wg := sync.WaitGroup{}
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			randUserId := rand.Int63()
+			err := repo.SaveCart(ctx, randUserId, newCart)
+			assert.Nil(t, err)
+			recCart, err := repo.GetCart(ctx, randUserId)
+			assert.Nil(t, err)
+			assert.Equal(t, recCart, newCart)
+		}()
+	}
+	wg.Wait()
 }
 
 func BenchmarkGetNewCarts(b *testing.B) {
@@ -98,4 +141,20 @@ func TestInMemoryCartRepository_ClearCartReliable(t *testing.T) {
 	cart, err := repo.GetCart(ctx, 123)
 	require.NoError(t, err)
 	assert.Empty(t, cart.ListItems(ctx))
+}
+
+func TestInMemoryCartRepository_ClearCartReliableConcurrent(t *testing.T) {
+	t.Parallel()
+	repo := New()
+	ctx := context.Background()
+	wg := sync.WaitGroup{}
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			randUserId := rand.Int63()
+			repo.ClearCartReliable(ctx, randUserId)
+		}()
+	}
+	wg.Wait()
 }

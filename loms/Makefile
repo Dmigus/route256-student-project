@@ -4,9 +4,12 @@ build:
 
 .PHONY: coverage
 coverage:
-	@go test -tags=unit,integration -coverprofile=coverage.out  ./...
+	@go test -tags=unit,integration -coverprofile=coverage.out -parallel=10 ./...
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
+
+race-detect:
+	@go test -tags=unit,integration -count=1 -parallel=10 -race ./...
 
 .PHONY:tutor-lint
 tutor-lint:

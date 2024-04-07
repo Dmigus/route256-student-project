@@ -10,7 +10,8 @@
     "RetryPolicy": {
       "RetryStatusCodes": [420, 429],
       "MaxRetries": 3
-    }
+    },
+    "RPS": 10
   },
   "LOMS": {
     "Address": ":50051"

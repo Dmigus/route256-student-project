@@ -19,6 +19,7 @@ type Config struct {
 			RetryStatusCodes []int `json:"RetryStatusCodes"`
 			MaxRetries       int   `json:"MaxRetries"`
 		} `json:"RetryPolicy"`
+		RPS uint64 `json:"RPS"`
 	} `json:"ProductService"`
 	LOMS struct {
 		Address string `json:"Address"`

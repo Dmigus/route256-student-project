@@ -3,9 +3,12 @@ build:
 	go build -o ./bin/app ./cmd
 
 coverage:
-	@go test -tags=unit -coverprofile=coverage.out  ./...
+	@go test -tags=unit -coverprofile=coverage.out -parallel=10 ./...
 	@go tool cover -html coverage.out -o coverage.html
 	@rm coverage.out
+
+race-detect:
+	@go test -tags=unit -count=1 -parallel=10 -race ./...
 
 tutor-lint:
 	golangci-lint run --config=.golangci_tutor.yaml --new-from-rev=origin/master
@@ -15,10 +18,9 @@ lint:
 
 .PHONY: run-e2e
 run-e2e:
-	docker-compose build -q
-	docker-compose up --force-recreate --detach
+	cd .. && make run-all
 	-go test -count=1 -tags=e2e ./...
-	docker-compose down
+	cd .. && make stop-all
 
 # Используем bin в текущей директории для установки плагинов protoc
 LOCAL_BIN:=$(CURDIR)/bin
