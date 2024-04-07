@@ -1,3 +1,4 @@
+// Package ratelimiter содержит рейт-лимитер для огрничения по rps
 package ratelimiter
 
 import (
@@ -6,6 +7,7 @@ import (
 	"sync/atomic"
 )
 
+// Тикер для генерации "тиков" в течение времени.
 type ticker interface {
 	Stop()
 	Start()
@@ -43,7 +45,6 @@ func (lb *RateLimiter) addItemLocked() {
 	if lb.availableInt < lb.capacity {
 		lb.availableInt++
 	}
-	return
 }
 
 // Acquire это блокирующий вызов, который завершается в случаях:
@@ -86,20 +87,17 @@ func (lb *RateLimiter) startTickerIfStoppedLocked() {
 }
 
 func (lb *RateLimiter) ticking() {
-	for {
-		select {
-		case <-lb.ticker.GetTickCh():
-			lb.mu.Lock()
-			lb.addItemLocked()
-			// если полностью заполнен capacity и нет ожидающих, то останавливаем тикер
-			if lb.couldTickerBeStoppedLocked() {
-				lb.tickerRunning = false
-				lb.ticker.Stop()
-				lb.mu.Unlock()
-				return
-			}
+	for range lb.ticker.GetTickCh() {
+		lb.mu.Lock()
+		lb.addItemLocked()
+		// если полностью заполнен capacity и нет ожидающих, то останавливаем тикер
+		if lb.couldTickerBeStoppedLocked() {
+			lb.tickerRunning = false
+			lb.ticker.Stop()
 			lb.mu.Unlock()
+			return
 		}
+		lb.mu.Unlock()
 	}
 }
 

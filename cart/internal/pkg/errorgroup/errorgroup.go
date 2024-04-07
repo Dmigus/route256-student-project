@@ -1,3 +1,4 @@
+// Package errorgroup содержит собственную реализацию errorgroup
 package errorgroup
 
 import (
