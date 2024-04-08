@@ -11,7 +11,8 @@ run-postgres:
 
 run-all: build-all run-postgres
 	docker-compose build -q
-	docker-compose up -d --force-recreate cart loms
+	docker-compose up -d --force-recreate cart loms kafka0 kafka-init-topics kafka-ui
+
 
 stop-all:
 	docker-compose down
