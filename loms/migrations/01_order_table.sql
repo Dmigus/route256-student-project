@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "order"
 (
     id BIGSERIAL NOT NULL primary key,
     user_id BIGINT NOT NULL,
-    status varchar NOT NULL ,
+    status varchar NOT NULL,
     are_items_reserved BOOLEAN NOT NULL
 );
 -- +goose StatementEnd
