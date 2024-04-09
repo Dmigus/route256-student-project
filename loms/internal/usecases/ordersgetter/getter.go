@@ -13,7 +13,7 @@ type (
 		Load(context.Context, int64) (*models.Order, error)
 	}
 	txManager interface {
-		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, _ any) error) error
+		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo) error) error
 	}
 	// OrdersGetter - сущность, которая умеет возращать информацию о заказах в системе
 	OrdersGetter struct {
@@ -28,7 +28,7 @@ func NewOrdersGetter(tx txManager) *OrdersGetter {
 
 // Get возвращает информацию о заказе с id = orderID
 func (og *OrdersGetter) Get(ctx context.Context, orderID int64) (order *models.Order, err error) {
-	err = og.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, _ any) error {
+	err = og.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo) error {
 		order, err = orders.Load(ctx, orderID)
 		if err != nil {
 			return fmt.Errorf("could not load order %d: %w", orderID, err)

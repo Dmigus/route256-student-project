@@ -63,11 +63,11 @@ func (a *App) initServiceWithInMemory() *usecases.LOMService {
 	if err != nil {
 		log.Fatal(err)
 	}
-	canceller := orderscanceller.NewOrderCanceller(inmemory.NewTxManager[orderscanceller.OrderRepo, orderscanceller.StockRepo](ordersRepo, stocksRepo))
-	creator := orderscreator.NewOrdersCreator(inmemory.NewTxManager[orderscreator.OrderRepo, orderscreator.StockRepo](ordersRepo, stocksRepo))
-	getter := ordersgetter.NewOrdersGetter(inmemory.NewTxManager[ordersgetter.OrderRepo, any](ordersRepo, stocksRepo))
-	payer := orderspayer.NewOrdersPayer(inmemory.NewTxManager[orderspayer.OrderRepo, orderspayer.StockRepo](ordersRepo, stocksRepo))
-	stocksInfoGetter := stocksinfogetter.NewGetter(inmemory.NewTxManager[any, stocksinfogetter.StockRepo](ordersRepo, stocksRepo))
+	canceller := orderscanceller.NewOrderCanceller(inmemory.NewTxManagerTwo[orderscanceller.OrderRepo, orderscanceller.StockRepo](ordersRepo, stocksRepo))
+	creator := orderscreator.NewOrdersCreator(inmemory.NewTxManagerTwo[orderscreator.OrderRepo, orderscreator.StockRepo](ordersRepo, stocksRepo))
+	getter := ordersgetter.NewOrdersGetter(inmemory.NewTxManagerOne[ordersgetter.OrderRepo](ordersRepo))
+	payer := orderspayer.NewOrdersPayer(inmemory.NewTxManagerTwo[orderspayer.OrderRepo, orderspayer.StockRepo](ordersRepo, stocksRepo))
+	stocksInfoGetter := stocksinfogetter.NewGetter(inmemory.NewTxManagerOne[stocksinfogetter.StockRepo](stocksRepo))
 	return usecases.NewLOMService(
 		creator,
 		payer,
@@ -97,34 +97,30 @@ func (a *App) initServiceWithPostgres() *usecases.LOMService {
 
 	connReplica := createConnToPostgres(a.config.Storage.Replica.getPostgresDSN())
 
-	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManager(connMaster,
+	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerTwo(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
 			return modifier.NewStocks(tx)
 		}))
-	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManager(connMaster,
+	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerTwo(connMaster,
 		func(tx pgx.Tx) orderscreator.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
 			return modifier.NewStocks(tx)
 		}))
-	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManager(connReplica,
+	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
 			return reader.NewOrders(tx)
-		}, func(pgx.Tx) any {
-			return nil
 		}))
-	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManager(connMaster,
+	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerTwo(connMaster,
 		func(tx pgx.Tx) orderspayer.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
 			return modifier.NewStocks(tx)
 		}))
-	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManager(connReplica,
-		func(pgx.Tx) any {
-			return nil
-		}, func(tx pgx.Tx) stocksinfogetter.StockRepo {
+	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
+		func(tx pgx.Tx) stocksinfogetter.StockRepo {
 			return reader.NewStocks(tx)
 		}))
 	return usecases.NewLOMService(
