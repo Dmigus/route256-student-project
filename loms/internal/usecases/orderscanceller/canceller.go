@@ -21,8 +21,12 @@ type (
 		CancelReserved(context.Context, []models.OrderItem) error
 		AddItems(context.Context, []models.OrderItem) error
 	}
+	// EventSender это контракт для использования отправителя уведомлений о изменении статуса заказа
+	EventSender interface {
+		OrderStatusChanged(context.Context, *models.Order) error
+	}
 	txManager interface {
-		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error) error
+		WithinTransaction(context.Context, func(ctx context.Context, orders OrderRepo, stocks StockRepo, evSender EventSender) bool) error
 	}
 	// OrderCanceller - сущность, которая умеет отменять заказы
 	OrderCanceller struct {
@@ -37,30 +41,51 @@ func NewOrderCanceller(tx txManager) *OrderCanceller {
 
 // Cancel отменяет заказ с id = orderId. Атомарность всей операции обеспечивается объектом tx, переданым при создании
 func (oc *OrderCanceller) Cancel(ctx context.Context, orderID int64) error {
-	return oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo) error {
-		order, err := orders.Load(ctx, orderID)
-		if err != nil {
-			return fmt.Errorf("could not load order %d: %w", orderID, err)
+	var businessErr error
+	trErr := oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo, evSender EventSender) bool {
+		businessErr = cancelOrder(ctx, orderID, orders, stocks, evSender)
+		if businessErr != nil {
+			return false
 		}
-		if order.Status == models.Cancelled {
-			return errWrongOrderStatus
-		}
-		if order.IsItemsReserved {
-			if err := cancelReserved(ctx, stocks, order); err != nil {
-				return err
-			}
-		} else if order.Status == models.Payed {
-			if err := cancelPayed(ctx, stocks, order); err != nil {
-				return err
-			}
-		} else {
-			order.Status = models.Cancelled
-		}
-		if err = orders.Save(ctx, order); err != nil {
-			return fmt.Errorf("could not save order %d: %w", orderID, err)
-		}
-		return nil
+		return true
 	})
+	if businessErr != nil {
+		return businessErr
+	}
+	return trErr
+}
+
+func cancelOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks StockRepo, evSender EventSender) error {
+	order, err := orders.Load(ctx, orderID)
+	if err != nil {
+		err = fmt.Errorf("could not load order %d: %w", orderID, err)
+		return err
+	}
+	if err = cancelAnyOrder(ctx, stocks, order); err != nil {
+		return err
+	}
+	if err = saveFinalOrderState(ctx, order, orders, evSender); err != nil {
+		return err
+	}
+	return nil
+}
+
+func cancelAnyOrder(ctx context.Context, stocks StockRepo, order *models.Order) error {
+	if order.Status == models.Cancelled {
+		return errWrongOrderStatus
+	}
+	if order.IsItemsReserved {
+		if err := cancelReserved(ctx, stocks, order); err != nil {
+			return err
+		}
+	} else if order.Status == models.Payed {
+		if err := cancelPayed(ctx, stocks, order); err != nil {
+			return err
+		}
+	} else {
+		order.Status = models.Cancelled
+	}
+	return nil
 }
 
 func cancelReserved(ctx context.Context, stocks StockRepo, order *models.Order) error {
@@ -82,6 +107,16 @@ func cancelPayed(ctx context.Context, stocks StockRepo, order *models.Order) err
 			return fmt.Errorf("could not return payed items for order %d: %w", order.Id(), err)
 		}
 		order.Status = models.Cancelled
+	}
+	return nil
+}
+
+func saveFinalOrderState(ctx context.Context, order *models.Order, orders OrderRepo, evSender EventSender) error {
+	if err := orders.Save(ctx, order); err != nil {
+		return fmt.Errorf("could not save order with id = %d: %w", order.Id(), err)
+	}
+	if err := evSender.OrderStatusChanged(ctx, order); err != nil {
+		return fmt.Errorf("could not send order changing status with id = %d: %w", order.Id(), err)
 	}
 	return nil
 }

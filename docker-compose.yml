@@ -25,8 +25,8 @@ services:
         condition: service_healthy
       loms-postgres-replica:
         condition: service_healthy
-      kafka0:
-        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
 
   loms-postgres-master:
     image: postgres:16.2-bullseye

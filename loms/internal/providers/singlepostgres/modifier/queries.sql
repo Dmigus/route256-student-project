@@ -45,3 +45,8 @@ WHERE sku_id = $1;
 UPDATE item_unit
 SET total = $2, reserved = $3
 WHERE sku_id = $1;
+
+-- name: insertEvent :exec
+INSERT INTO event_outbox(order_id, message, at)
+VALUES ($1, $2, NOW());
+

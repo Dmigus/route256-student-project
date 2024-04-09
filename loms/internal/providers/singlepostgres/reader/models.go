@@ -4,6 +4,16 @@
 
 package reader
 
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type EventOutbox struct {
+	OrderID int64
+	Message string
+	At      pgtype.Timestamp
+}
+
 type ItemUnit struct {
 	SkuID    int64
 	Total    int32

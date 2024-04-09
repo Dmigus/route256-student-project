@@ -20,8 +20,11 @@ func newTestHelper(t *testing.T) testHelper {
 	ordersMock := NewOrderRepoMock(mc)
 	helper.orderLoadRepoMock = &(ordersMock.LoadMock)
 	txM := NewTxManagerMock(mc)
-	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) error {
-		return f1(ctx, ordersMock, nil)
+	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) error {
+		// выполнение функции
+		f1(ctx, ordersMock)
+		// ошибки фиксации транзакции тестировать пока не будем
+		return nil
 	})
 	helper.getter = NewOrdersGetter(txM)
 	return helper

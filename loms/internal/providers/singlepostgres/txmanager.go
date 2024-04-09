@@ -23,6 +23,13 @@ type (
 		creator1 func(pgx.Tx) T1
 		creator2 func(pgx.Tx) T2
 	}
+	// TxManagerThree предоставляет обёртку для юзкейсов, позволяющую использовать три провайдера в атомарных сценариях
+	TxManagerThree[T1, T2, T3 any] struct {
+		conn     TxBeginner
+		creator1 func(pgx.Tx) T1
+		creator2 func(pgx.Tx) T2
+		creator3 func(pgx.Tx) T3
+	}
 )
 
 // NewTxManagerOne создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator - функция создания экземпляра провайдера, привязанного к новой транзакции
@@ -33,7 +40,7 @@ func NewTxManagerOne[T any](conn TxBeginner, creator func(conn pgx.Tx) T) *TxMan
 	}
 }
 
-// NewTxManagerTwo создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator1 - функция создания экземпляра репозитория заказов, привязанного к новой транзакции. creator2 - функция создания экземпляра репозитория стоков, привязанного к новой транзакции.
+// NewTxManagerTwo создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator'ы - функции создания экземпляра провайдера, привязанного к новой транзакции.
 func NewTxManagerTwo[T1, T2 any](conn TxBeginner, creator1 func(conn pgx.Tx) T1, creator2 func(conn pgx.Tx) T2) *TxManagerTwo[T1, T2] {
 	return &TxManagerTwo[T1, T2]{
 		conn:     conn,
@@ -42,30 +49,51 @@ func NewTxManagerTwo[T1, T2 any](conn TxBeginner, creator1 func(conn pgx.Tx) T1,
 	}
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими репозиториями. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
-func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) error) error {
-	tx, err := u.conn.Begin(ctx)
-	if err != nil {
-		return err
+// NewTxManagerThree создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator'ы - функции создания экземпляра провайдера, привязанного к новой транзакции.
+func NewTxManagerThree[T1, T2, T3 any](conn TxBeginner, creator1 func(conn pgx.Tx) T1, creator2 func(conn pgx.Tx) T2, creator3 func(conn pgx.Tx) T3) *TxManagerThree[T1, T2, T3] {
+	return &TxManagerThree[T1, T2, T3]{
+		conn:     conn,
+		creator1: creator1,
+		creator2: creator2,
+		creator3: creator3,
 	}
-	defer tx.Rollback(ctx)
-	err = f(ctx, u.creator(tx))
-	if err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими репозиториями. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
-func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) error) error {
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) bool) error {
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	err = f(ctx, u.creator1(tx), u.creator2(tx))
+	if f(ctx, u.creator(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
+}
+
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с двумя провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) bool) error {
+	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	defer tx.Rollback(ctx)
+	if f(ctx, u.creator1(tx), u.creator2(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
+}
+
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с тремя провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerThree[T1, T2, T3]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2, provider3 T3) bool) error {
+	tx, err := u.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if f(ctx, u.creator1(tx), u.creator2(tx), u.creator3(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
 }

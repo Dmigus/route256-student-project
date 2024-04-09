@@ -20,8 +20,11 @@ func newTestHelper(t *testing.T) testHelper {
 	stocks := NewStockRepoMock(mc)
 	helper.stockRepoMock = &(stocks.GetNumOfAvailableMock)
 	txM := NewTxManagerMock(mc)
-	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, anyVal any, stocks StockRepo) error) error {
-		return f1(ctx, nil, stocks)
+	txM.WithinTransactionMock.Set(func(ctx context.Context, f1 func(ctx context.Context, stocks StockRepo) bool) error {
+		// выполнение функции
+		f1(ctx, stocks)
+		// ошибки фиксации транзакции тестировать пока не будем
+		return nil
 	})
 	helper.getter = NewGetter(txM)
 	return helper

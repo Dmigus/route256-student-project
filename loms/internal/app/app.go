@@ -13,10 +13,6 @@ import (
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/orders/orderidgenerator"
-	"route256.ozon.ru/project/loms/internal/providers/inmemory/stocks"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/reader"
@@ -47,34 +43,8 @@ func NewApp(config Config) *App {
 
 func (a *App) init() {
 	var service *usecases.LOMService
-	if a.config.Storage == nil {
-		service = a.initServiceWithInMemory()
-	} else {
-		service = a.initServiceWithPostgres()
-	}
+	service = a.initServiceWithPostgres()
 	a.grpcController = grpcContoller.NewServer(service)
-}
-
-func (a *App) initServiceWithInMemory() *usecases.LOMService {
-	idGenerator := orderidgenerator.NewSequentialGenerator(1)
-	ordersRepo := orders.NewInMemoryOrdersStorage(idGenerator)
-	stocksRepo := stocks.NewInMemoryStockStorage()
-	err := fillStocksFromStockData(context.Background(), stocksRepo)
-	if err != nil {
-		log.Fatal(err)
-	}
-	canceller := orderscanceller.NewOrderCanceller(inmemory.NewTxManagerTwo[orderscanceller.OrderRepo, orderscanceller.StockRepo](ordersRepo, stocksRepo))
-	creator := orderscreator.NewOrdersCreator(inmemory.NewTxManagerTwo[orderscreator.OrderRepo, orderscreator.StockRepo](ordersRepo, stocksRepo))
-	getter := ordersgetter.NewOrdersGetter(inmemory.NewTxManagerOne[ordersgetter.OrderRepo](ordersRepo))
-	payer := orderspayer.NewOrdersPayer(inmemory.NewTxManagerTwo[orderspayer.OrderRepo, orderspayer.StockRepo](ordersRepo, stocksRepo))
-	stocksInfoGetter := stocksinfogetter.NewGetter(inmemory.NewTxManagerOne[stocksinfogetter.StockRepo](stocksRepo))
-	return usecases.NewLOMService(
-		creator,
-		payer,
-		stocksInfoGetter,
-		getter,
-		canceller,
-	)
 }
 
 func createConnToPostgres(dsn string) *pgxpool.Pool {
@@ -96,28 +66,33 @@ func (a *App) initServiceWithPostgres() *usecases.LOMService {
 	}
 
 	connReplica := createConnToPostgres(a.config.Storage.Replica.getPostgresDSN())
-
-	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerTwo(connMaster,
+	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
 			return modifier.NewStocks(tx)
+		}, func(tx pgx.Tx) orderscanceller.EventSender {
+			return modifier.NewEvents(tx)
 		}))
-	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerTwo(connMaster,
+	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscreator.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
 			return modifier.NewStocks(tx)
+		}, func(tx pgx.Tx) orderscreator.EventSender {
+			return modifier.NewEvents(tx)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
 			return reader.NewOrders(tx)
 		}))
-	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerTwo(connMaster,
+	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderspayer.OrderRepo {
 			return modifier.NewOrders(tx)
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
 			return modifier.NewStocks(tx)
+		}, func(tx pgx.Tx) orderspayer.EventSender {
+			return modifier.NewEvents(tx)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {

@@ -12,7 +12,7 @@ type (
 		GetNumOfAvailable(context.Context, int64) (uint64, error)
 	}
 	txManager interface {
-		WithinTransaction(context.Context, func(ctx context.Context, stocks StockRepo) error) error
+		WithinTransaction(context.Context, func(ctx context.Context, stocks StockRepo) bool) error
 	}
 	// StocksInfoGetter - сущность, которая умеет извлекать данные об остатках
 	StocksInfoGetter struct {
@@ -27,15 +27,20 @@ func NewGetter(tx txManager) *StocksInfoGetter {
 
 // GetNumOfAvailable возвращает информацию об остатках товара с id = skuID
 func (g *StocksInfoGetter) GetNumOfAvailable(ctx context.Context, skuID int64) (cnt uint64, err error) {
-	err = g.tx.WithinTransaction(ctx, func(ctx context.Context, stocks StockRepo) error {
-		cnt, err = stocks.GetNumOfAvailable(ctx, skuID)
-		if err != nil {
-			return fmt.Errorf("could not get number of available points for item %d: %w", skuID, err)
+	var businessErr error
+	trErr := g.tx.WithinTransaction(ctx, func(ctx context.Context, stocks StockRepo) bool {
+		cnt, businessErr = stocks.GetNumOfAvailable(ctx, skuID)
+		if businessErr != nil {
+			businessErr = fmt.Errorf("could not get number of available points for item %d: %w", skuID, businessErr)
+			return false
 		}
-		return nil
+		return true
 	})
-	if err != nil {
-		return 0, err
+	if businessErr != nil {
+		return 0, businessErr
+	}
+	if trErr != nil {
+		return 0, trErr
 	}
 	return cnt, nil
 }

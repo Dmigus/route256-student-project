@@ -3,6 +3,7 @@ package modifier
 import (
 	"context"
 	"fmt"
+	"route256.ozon.ru/project/loms/internal/usecases/orderscreator"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -10,10 +11,7 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-var (
-	errInsufficientStocks = errors.Wrap(models.ErrFailedPrecondition, "insufficient stocks")
-	errItemIsNotFound     = errors.Wrap(models.ErrNotFound, "item is not found")
-)
+var errItemIsNotFound = errors.Wrap(models.ErrNotFound, "item is not found")
 
 // Stocks представляет репозиторий стоков с методами для модификации данных
 type Stocks struct {
@@ -65,7 +63,7 @@ func (ps *Stocks) Reserve(ctx context.Context, items []models.OrderItem) error {
 		}
 		newReserved := row.Reserved + int32(it.Count)
 		if newReserved > row.Total {
-			return fmt.Errorf("error reserving %d units if item with skuId = %d: %w", it.Count, it.SkuId, errInsufficientStocks)
+			return fmt.Errorf("error reserving %d units if item with skuId = %d: %w", it.Count, it.SkuId, orderscreator.ErrInsufficientStocks)
 		}
 		params := updateReservedParams{SkuID: it.SkuId, Reserved: newReserved}
 		err = ps.queries.updateReserved(ctx, params)

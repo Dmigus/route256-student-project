@@ -18,8 +18,8 @@ type TxManagerMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcWithinTransaction          func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) (err error)
-	inspectFuncWithinTransaction   func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error)
+	funcWithinTransaction          func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) (err error)
+	inspectFuncWithinTransaction   func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool)
 	afterWithinTransactionCounter  uint64
 	beforeWithinTransactionCounter uint64
 	WithinTransactionMock          mTxManagerMockWithinTransaction
@@ -61,7 +61,7 @@ type TxManagerMockWithinTransactionExpectation struct {
 // TxManagerMockWithinTransactionParams contains parameters of the txManager.WithinTransaction
 type TxManagerMockWithinTransactionParams struct {
 	ctx context.Context
-	f1  func(ctx context.Context, orders OrderRepo, _ any) error
+	f1  func(ctx context.Context, orders OrderRepo) bool
 }
 
 // TxManagerMockWithinTransactionResults contains results of the txManager.WithinTransaction
@@ -70,7 +70,7 @@ type TxManagerMockWithinTransactionResults struct {
 }
 
 // Expect sets up expected params for txManager.WithinTransaction
-func (mmWithinTransaction *mTxManagerMockWithinTransaction) Expect(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) *mTxManagerMockWithinTransaction {
+func (mmWithinTransaction *mTxManagerMockWithinTransaction) Expect(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) *mTxManagerMockWithinTransaction {
 	if mmWithinTransaction.mock.funcWithinTransaction != nil {
 		mmWithinTransaction.mock.t.Fatalf("TxManagerMock.WithinTransaction mock is already set by Set")
 	}
@@ -90,7 +90,7 @@ func (mmWithinTransaction *mTxManagerMockWithinTransaction) Expect(ctx context.C
 }
 
 // Inspect accepts an inspector function that has same arguments as the txManager.WithinTransaction
-func (mmWithinTransaction *mTxManagerMockWithinTransaction) Inspect(f func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error)) *mTxManagerMockWithinTransaction {
+func (mmWithinTransaction *mTxManagerMockWithinTransaction) Inspect(f func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool)) *mTxManagerMockWithinTransaction {
 	if mmWithinTransaction.mock.inspectFuncWithinTransaction != nil {
 		mmWithinTransaction.mock.t.Fatalf("Inspect function is already set for TxManagerMock.WithinTransaction")
 	}
@@ -114,7 +114,7 @@ func (mmWithinTransaction *mTxManagerMockWithinTransaction) Return(err error) *T
 }
 
 // Set uses given function f to mock the txManager.WithinTransaction method
-func (mmWithinTransaction *mTxManagerMockWithinTransaction) Set(f func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) (err error)) *TxManagerMock {
+func (mmWithinTransaction *mTxManagerMockWithinTransaction) Set(f func(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) (err error)) *TxManagerMock {
 	if mmWithinTransaction.defaultExpectation != nil {
 		mmWithinTransaction.mock.t.Fatalf("Default expectation is already set for the txManager.WithinTransaction method")
 	}
@@ -129,7 +129,7 @@ func (mmWithinTransaction *mTxManagerMockWithinTransaction) Set(f func(ctx conte
 
 // When sets expectation for the txManager.WithinTransaction which will trigger the result defined by the following
 // Then helper
-func (mmWithinTransaction *mTxManagerMockWithinTransaction) When(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) *TxManagerMockWithinTransactionExpectation {
+func (mmWithinTransaction *mTxManagerMockWithinTransaction) When(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) *TxManagerMockWithinTransactionExpectation {
 	if mmWithinTransaction.mock.funcWithinTransaction != nil {
 		mmWithinTransaction.mock.t.Fatalf("TxManagerMock.WithinTransaction mock is already set by Set")
 	}
@@ -149,7 +149,7 @@ func (e *TxManagerMockWithinTransactionExpectation) Then(err error) *TxManagerMo
 }
 
 // WithinTransaction implements txManager
-func (mmWithinTransaction *TxManagerMock) WithinTransaction(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo, _ any) error) (err error) {
+func (mmWithinTransaction *TxManagerMock) WithinTransaction(ctx context.Context, f1 func(ctx context.Context, orders OrderRepo) bool) (err error) {
 	mm_atomic.AddUint64(&mmWithinTransaction.beforeWithinTransactionCounter, 1)
 	defer mm_atomic.AddUint64(&mmWithinTransaction.afterWithinTransactionCounter, 1)
 

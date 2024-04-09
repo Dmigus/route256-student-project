@@ -28,6 +28,21 @@ func (q *Queries) createOrder(ctx context.Context, arg createOrderParams) (int64
 	return id, err
 }
 
+const insertEvent = `-- name: insertEvent :exec
+INSERT INTO event_outbox(order_id, message, at)
+VALUES ($1, $2, NOW())
+`
+
+type insertEventParams struct {
+	OrderID int64
+	Message string
+}
+
+func (q *Queries) insertEvent(ctx context.Context, arg insertEventParams) error {
+	_, err := q.db.Exec(ctx, insertEvent, arg.OrderID, arg.Message)
+	return err
+}
+
 type insertOrderItemParams struct {
 	OrderID int64
 	SkuID   int64
