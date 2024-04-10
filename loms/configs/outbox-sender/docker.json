@@ -1,0 +1,14 @@
+{
+  "Outbox": {
+    "Host": "loms-postgres-master",
+    "Port": 5432,
+    "Database": "postgres",
+    "User": "postgres"
+  },
+  "Kafka": {
+    "Brokers": ["kafka0:29092"],
+    "Topic": "loms.order-events"
+  },
+  "BatchSize": 1,
+  "BatchInterval": 3
+}

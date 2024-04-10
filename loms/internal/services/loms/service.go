@@ -1,5 +1,5 @@
 // Package usecases представляет из себя реализацию сервисног слоя приложения
-package usecases
+package loms
 
 import (
 	"context"

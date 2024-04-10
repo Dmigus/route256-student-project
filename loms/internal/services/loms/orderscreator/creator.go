@@ -4,10 +4,12 @@ package orderscreator
 import (
 	"context"
 	"fmt"
+
 	anotherErrors "github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
+// ErrInsufficientStocks это ошибка, обозначающая нехватку стоков для осуществления заказа
 var ErrInsufficientStocks = anotherErrors.Wrap(models.ErrFailedPrecondition, "insufficient stocks")
 
 type (

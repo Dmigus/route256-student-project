@@ -44,10 +44,7 @@ func (oc *OrderCanceller) Cancel(ctx context.Context, orderID int64) error {
 	var businessErr error
 	trErr := oc.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo, evSender EventSender) bool {
 		businessErr = cancelOrder(ctx, orderID, orders, stocks, evSender)
-		if businessErr != nil {
-			return false
-		}
-		return true
+		return businessErr == nil
 	})
 	if businessErr != nil {
 		return businessErr

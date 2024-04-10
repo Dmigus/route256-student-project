@@ -22,4 +22,4 @@ COPY --from=build-stage /app/third_party/swagger-ui /app/third_party/swagger-ui
 EXPOSE 50051
 EXPOSE 8081
 
-CMD ["./bin/app", "--config=./configs/docker.json"]
+CMD ["./bin/app", "--loms-config=./configs/loms/docker.json", "--outbox-sender-config=./configs/outbox-sender/docker.json"]

@@ -1,15 +1,14 @@
-package app
+package loms
 
 import (
 	_ "embed"
-	"encoding/json"
-	"errors"
-	"os"
+	"route256.ozon.ru/project/loms/internal/apps"
 )
 
 //go:embed stock-data.json
 var stockdata []byte
 
+// Config это конфигурация для приложения loms
 type Config struct {
 	GRPCServer struct {
 		Port                  uint16 `json:"Port"`
@@ -23,23 +22,7 @@ type Config struct {
 		Path string `json:"Path"`
 	} `json:"Swagger"`
 	Storage *struct {
-		Master  PostgresConnectConfig `json:"Master"`
-		Replica PostgresConnectConfig `json:"Replica"`
+		Master  apps.PostgresConnectConfig `json:"Master"`
+		Replica apps.PostgresConnectConfig `json:"Replica"`
 	} `json:"Storage"`
-}
-
-func NewConfig(configPath string) (conf Config, err error) {
-	file, err := os.Open(configPath)
-	if err != nil {
-		return Config{}, err
-	}
-	defer func() {
-		err2 := file.Close()
-		err = errors.Join(err, err2)
-	}()
-	jsonParser := json.NewDecoder(file)
-	if err = jsonParser.Decode(&conf); err != nil {
-		return Config{}, err
-	}
-	return conf, nil
 }

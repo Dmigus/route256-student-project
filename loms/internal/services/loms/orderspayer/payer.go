@@ -43,10 +43,7 @@ func (or *OrdersPayer) Pay(ctx context.Context, orderID int64) error {
 	var businessErr error
 	trErr := or.tx.WithinTransaction(ctx, func(ctx context.Context, orders OrderRepo, stocks StockRepo, evSender EventSender) bool {
 		businessErr = payOrder(ctx, orderID, orders, stocks, evSender)
-		if businessErr != nil {
-			return false
-		}
-		return true
+		return businessErr == nil
 	})
 	if businessErr != nil {
 		return businessErr

@@ -1,4 +1,5 @@
-package app
+// Package loms содержит приложение, в котором функционирует сервис loms
+package loms
 
 import (
 	"context"
@@ -16,14 +17,16 @@ import (
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/reader"
-	"route256.ozon.ru/project/loms/internal/usecases"
-	"route256.ozon.ru/project/loms/internal/usecases/orderscanceller"
-	"route256.ozon.ru/project/loms/internal/usecases/orderscreator"
-	"route256.ozon.ru/project/loms/internal/usecases/ordersgetter"
-	"route256.ozon.ru/project/loms/internal/usecases/orderspayer"
-	"route256.ozon.ru/project/loms/internal/usecases/stocksinfogetter"
+
 	"sync/atomic"
 	"time"
+
+	"route256.ozon.ru/project/loms/internal/services/loms"
+	"route256.ozon.ru/project/loms/internal/services/loms/orderscanceller"
+	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
+	"route256.ozon.ru/project/loms/internal/services/loms/ordersgetter"
+	"route256.ozon.ru/project/loms/internal/services/loms/orderspayer"
+	"route256.ozon.ru/project/loms/internal/services/loms/stocksinfogetter"
 )
 
 type App struct {
@@ -42,8 +45,7 @@ func NewApp(config Config) *App {
 }
 
 func (a *App) init() {
-	var service *usecases.LOMService
-	service = a.initServiceWithPostgres()
+	service := a.initServiceWithPostgres()
 	a.grpcController = grpcContoller.NewServer(service)
 }
 
@@ -59,13 +61,13 @@ func createConnToPostgres(dsn string) *pgxpool.Pool {
 	return conn
 }
 
-func (a *App) initServiceWithPostgres() *usecases.LOMService {
-	connMaster := createConnToPostgres(a.config.Storage.Master.getPostgresDSN())
+func (a *App) initServiceWithPostgres() *loms.LOMService {
+	connMaster := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
 	if err := fillStocksFromStockData(context.Background(), modifier.NewStocks(connMaster)); err != nil {
 		log.Fatal(err)
 	}
 
-	connReplica := createConnToPostgres(a.config.Storage.Replica.getPostgresDSN())
+	connReplica := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
 			return modifier.NewOrders(tx)
@@ -98,7 +100,7 @@ func (a *App) initServiceWithPostgres() *usecases.LOMService {
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {
 			return reader.NewStocks(tx)
 		}))
-	return usecases.NewLOMService(
+	return loms.NewLOMService(
 		creator,
 		payer,
 		stocksInfoGetter,

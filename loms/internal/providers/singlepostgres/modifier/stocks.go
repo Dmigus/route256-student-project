@@ -3,12 +3,12 @@ package modifier
 import (
 	"context"
 	"fmt"
-	"route256.ozon.ru/project/loms/internal/usecases/orderscreator"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
+	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
 )
 
 var errItemIsNotFound = errors.Wrap(models.ErrNotFound, "item is not found")
