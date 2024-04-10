@@ -28,21 +28,6 @@ func (q *Queries) createOrder(ctx context.Context, arg createOrderParams) (int64
 	return id, err
 }
 
-const insertEvent = `-- name: insertEvent :exec
-INSERT INTO event_outbox(order_id, message, at)
-VALUES ($1, $2, NOW())
-`
-
-type insertEventParams struct {
-	OrderID int64
-	Message string
-}
-
-func (q *Queries) insertEvent(ctx context.Context, arg insertEventParams) error {
-	_, err := q.db.Exec(ctx, insertEvent, arg.OrderID, arg.Message)
-	return err
-}
-
 type insertOrderItemParams struct {
 	OrderID int64
 	SkuID   int64
@@ -64,6 +49,53 @@ type insertStockParams struct {
 
 func (q *Queries) insertStock(ctx context.Context, arg insertStockParams) error {
 	_, err := q.db.Exec(ctx, insertStock, arg.SkuID, arg.Total, arg.Reserved)
+	return err
+}
+
+const pullEvents = `-- name: pullEvents :many
+DELETE FROM event_outbox
+WHERE id IN
+(SELECT id from event_outbox ORDER BY id LIMIT $1)
+RETURNING id, order_id, message, at
+`
+
+func (q *Queries) pullEvents(ctx context.Context, limit int32) ([]EventOutbox, error) {
+	rows, err := q.db.Query(ctx, pullEvents, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventOutbox
+	for rows.Next() {
+		var i EventOutbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.Message,
+			&i.At,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pushEvent = `-- name: pushEvent :exec
+INSERT INTO event_outbox(order_id, message, at)
+VALUES ($1, $2, clock_timestamp())
+`
+
+type pushEventParams struct {
+	OrderID int64
+	Message string
+}
+
+func (q *Queries) pushEvent(ctx context.Context, arg pushEventParams) error {
+	_, err := q.db.Exec(ctx, pushEvent, arg.OrderID, arg.Message)
 	return err
 }
 

@@ -9,6 +9,7 @@ import (
 )
 
 type EventOutbox struct {
+	ID      int64
 	OrderID int64
 	Message string
 	At      pgtype.Timestamp

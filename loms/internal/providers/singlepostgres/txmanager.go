@@ -59,7 +59,7 @@ func NewTxManagerThree[T1, T2, T3 any](conn TxBeginner, creator1 func(conn pgx.T
 	}
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) bool) error {
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
@@ -72,7 +72,7 @@ func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx cont
 	return nil
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с двумя провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с двумя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) bool) error {
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
@@ -85,7 +85,7 @@ func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx
 	return nil
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с тремя провайдерами. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с тремя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerThree[T1, T2, T3]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2, provider3 T3) bool) error {
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
