@@ -1,0 +1,4 @@
+{
+  "Brokers": ["kafka0:29092"],
+  "Topic": "loms.order-events"
+}

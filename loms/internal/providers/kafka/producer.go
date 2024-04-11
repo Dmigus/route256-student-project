@@ -10,7 +10,7 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-// Producer это провайдер, который умеет отправлять события изменения статуса заказа в брокер кафки
+// Producer это провайдер, который умеет отправлять события изменения статуса заказа в брокер кафку
 type Producer struct {
 	topic    string
 	producer sarama.SyncProducer
@@ -46,7 +46,7 @@ func (p *Producer) PushOrderStatusChangedEvents(_ context.Context, events []mode
 }
 
 func (p *Producer) orderStatusChangeEvToMessage(ev models.OrderStatusChangedEvent) *sarama.ProducerMessage {
-	evTimeStampHeader := sarama.RecordHeader{Key: []byte("At"), Value: []byte(ev.At.String())}
+	evTimeStampHeader := sarama.RecordHeader{Key: []byte("At"), Value: []byte(ev.At.Format(time.RFC3339))}
 	return &sarama.ProducerMessage{
 		Topic:   p.topic,
 		Key:     sarama.StringEncoder(strconv.FormatInt(ev.OrderID, 10)),
