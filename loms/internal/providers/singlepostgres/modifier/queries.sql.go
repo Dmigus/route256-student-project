@@ -55,7 +55,7 @@ func (q *Queries) insertStock(ctx context.Context, arg insertStockParams) error 
 const pullEvents = `-- name: pullEvents :many
 DELETE FROM event_outbox
 WHERE id IN
-(SELECT id from event_outbox ORDER BY id LIMIT $1)
+(SELECT id from event_outbox ORDER BY id LIMIT $1 FOR UPDATE)
 RETURNING id, order_id, message, at
 `
 

@@ -53,6 +53,6 @@ VALUES ($1, $2, clock_timestamp());
 -- name: pullEvents :many
 DELETE FROM event_outbox
 WHERE id IN
-(SELECT id from event_outbox ORDER BY id LIMIT $1)
+(SELECT id from event_outbox ORDER BY id LIMIT $1 FOR UPDATE)
 RETURNING *;
 
