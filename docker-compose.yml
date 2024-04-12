@@ -106,6 +106,14 @@ services:
         condition: service_healthy
     command: "kafka-topics --create --topic loms.order-events --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:29092"
 
+  notifier:
+    image: notifier
+    build: ./notifier
+    stop_signal: SIGTERM
+    depends_on:
+      kafka-init-topics:
+        condition: service_completed_successfully
+
 
 secrets:
   postgres-passwd:

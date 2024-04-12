@@ -13,7 +13,7 @@ run-kafka:
 
 run-all: build-all run-postgres run-kafka
 	docker-compose build -q
-	docker-compose up -d --force-recreate cart loms
+	docker-compose up -d --force-recreate cart loms notifier
 
 
 stop-all:
