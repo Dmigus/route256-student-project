@@ -1,4 +1,5 @@
 {
   "Brokers": ["kafka0:29092"],
-  "Topic": "loms.order-events"
+  "Topic": "loms.order-events",
+  "NotifiersNum": 3
 }

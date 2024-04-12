@@ -3,13 +3,17 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 )
 
+// Config это конфигурация приложения
 type Config struct {
-	Brokers []string `json:"Brokers"`
-	Topic   string   `json:"Topic"`
+	Brokers      []string `json:"Brokers"`
+	Topic        string   `json:"Topic"`
+	LogsWriter   io.Writer
+	NotifiersNum int `json:"NotifiersNum"`
 }
 
 // NewConfig читает файл configPath в формате json в структуру типа configType и возвращает её
@@ -20,8 +24,8 @@ func NewConfig[configType any](configPath string) (configType, error) {
 		return conf, err
 	}
 	defer func() {
-		err2 := file.Close()
-		err = errors.Join(err, err2)
+		errClosing := file.Close()
+		err = errors.Join(err, errClosing)
 	}()
 	jsonParser := json.NewDecoder(file)
 	if err = jsonParser.Decode(&conf); err != nil {

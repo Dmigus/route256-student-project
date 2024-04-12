@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os/signal"
 	"route256.ozon.ru/project/notifier/internal/app"
@@ -15,15 +14,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	notifierApp, err := app.NewApp(config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	notifierApp := app.NewApp(config)
 	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	err = notifierApp.Run(processLiveContext)
-	if err != nil && !errors.Is(err, context.Canceled) {
+	if err != nil {
 		log.Printf("%v\n", err)
 	}
 }
