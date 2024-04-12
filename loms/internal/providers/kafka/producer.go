@@ -20,14 +20,7 @@ type Producer struct {
 
 // NewProducer создайт новый Producer
 func NewProducer(brokers []string, topic string) (*Producer, error) {
-	config := PrepareConfig(
-		WithProducerPartitioner(sarama.NewHashPartitioner),
-		WithRequiredAcks(sarama.WaitForAll),
-		WithMaxOpenRequests(1),
-		WithMaxRetries(5),
-		WithRetryBackoff(10*time.Millisecond),
-	)
-	syncProducer, err := sarama.NewSyncProducer(brokers, config)
+	syncProducer, err := sarama.NewSyncProducer(brokers, getConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -55,4 +48,15 @@ func (p *Producer) orderStatusChangeEvToMessage(ev models.OrderStatusChangedEven
 		Value:   sarama.ByteEncoder(ev.Message),
 		Headers: []sarama.RecordHeader{evTimeStampHeader},
 	}
+}
+
+func getConfig() *sarama.Config {
+	c := sarama.NewConfig()
+	c.Producer.Partitioner = sarama.NewHashPartitioner
+	c.Producer.Return.Successes = true
+	c.Producer.Return.Errors = true
+	// at least once
+	c.Producer.RequiredAcks = sarama.WaitForAll
+	c.Net.MaxOpenRequests = 1
+	return c
 }

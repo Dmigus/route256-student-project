@@ -4,12 +4,13 @@ package app
 import (
 	"context"
 	"errors"
-	"route256.ozon.ru/project/notifier/internal/providers/eventhandler"
-	"route256.ozon.ru/project/notifier/internal/providers/handlingrunner"
-	"route256.ozon.ru/project/notifier/internal/service"
 	"strconv"
 	"sync"
 	"time"
+
+	"route256.ozon.ru/project/notifier/internal/providers/eventhandler"
+	"route256.ozon.ru/project/notifier/internal/providers/handlingrunner"
+	"route256.ozon.ru/project/notifier/internal/service"
 )
 
 // App это приложение, которое инициализирует и запускает экземпляры notifier'ов

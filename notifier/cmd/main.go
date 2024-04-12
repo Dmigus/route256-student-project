@@ -5,8 +5,9 @@ import (
 	"context"
 	"log"
 	"os/signal"
-	"route256.ozon.ru/project/notifier/internal/app"
 	"syscall"
+
+	"route256.ozon.ru/project/notifier/internal/app"
 )
 
 func main() {

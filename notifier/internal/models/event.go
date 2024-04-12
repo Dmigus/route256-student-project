@@ -1,3 +1,4 @@
+// Package models содержит сущности, которыми оперируют различные слои
 package models
 
 import "time"

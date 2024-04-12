@@ -1,9 +1,11 @@
+// Package eventhandler содрежит обработчики событий
 package eventhandler
 
 import (
 	"context"
 	"io"
 	"log"
+
 	"route256.ozon.ru/project/notifier/internal/models"
 )
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+
 	"route256.ozon.ru/project/notifier/internal/app"
 )
 

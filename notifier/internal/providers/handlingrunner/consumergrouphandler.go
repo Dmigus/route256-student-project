@@ -2,11 +2,12 @@ package handlingrunner
 
 import (
 	"errors"
+	"strconv"
+	"time"
+
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/notifier/internal/models"
 	"route256.ozon.ru/project/notifier/internal/service"
-	"strconv"
-	"time"
 )
 
 var errMsgCorrupted = errors.New("message corrupted")

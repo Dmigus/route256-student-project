@@ -1,9 +1,11 @@
+// Package service содержит сервис нотификатор
 package service
 
 import (
 	"context"
+
+	"route256.ozon.ru/project/notifier/internal/models"
 )
-import "route256.ozon.ru/project/notifier/internal/models"
 
 type (
 	// EventHandler это обработчик событий

@@ -1,18 +1,22 @@
+// Package handlingrunner содержит функциональность, которая позволяет запустить обработку событий, получаемых из некоторого источника
 package handlingrunner
 
 import (
 	"context"
+
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/notifier/internal/service"
 )
 
 const groupName = "notifier-group"
 
+// KafkaConsumerGroupRunner это структура, которая умеет запускать обработку событий, получаемых из кафки
 type KafkaConsumerGroupRunner struct {
 	brokers []string
 	topic   string
 }
 
+// NewKafkaConsumerGroupRunner возращает новый KafkaConsumerGroupRunner, сконфигурированный на брокеры brokers и топик topic
 func NewKafkaConsumerGroupRunner(brokers []string, topic string) *KafkaConsumerGroupRunner {
 	return &KafkaConsumerGroupRunner{
 		brokers: brokers,
