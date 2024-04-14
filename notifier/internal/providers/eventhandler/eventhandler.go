@@ -31,8 +31,9 @@ func (s *LoggerToWriter) Handle(_ context.Context, message *models.EventMessage)
 		return err
 	}
 	orderID := evMess.GetOrderID().GetOrderID()
+	userID := evMess.GetUserID()
 	newStatus := converter.TransportStatusToString(evMess.GetStatus())
 	dt := evMess.GetDatetime().AsTime()
-	s.logger.Printf("Order with id = %d changed status to %s at %s\n", orderID, newStatus, dt)
+	s.logger.Printf("Order with id = %d (for user with id %d) changed status to %s at %s\n", orderID, userID, newStatus, dt)
 	return nil
 }
