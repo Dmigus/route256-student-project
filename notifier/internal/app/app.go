@@ -1,4 +1,4 @@
-// Package app содержит инициализацию и запуск сервиса, согласно конфигурацию
+// Package app содержит инициализацию и запуск сервиса, согласно конфигурации
 package app
 
 import (
@@ -9,7 +9,7 @@ import (
 	"route256.ozon.ru/project/notifier/internal/service"
 )
 
-// App это приложение, которое инициализирует и запускает экземпляры notifier'ов
+// App это приложение, которое инициализирует и запускает notifier
 type App struct {
 	config  Config
 	service *service.Notifier
@@ -30,7 +30,7 @@ func (a *App) init() {
 	a.service = service.NewNotifier(handler, runner)
 }
 
-// Run запускает сконфигурированное количество notifier'ов. Блокирующий. Завершится, когда завершаться все notifier'ы
+// Run запускает notifier. Блокирующий.
 func (a *App) Run(ctx context.Context) error {
 	return a.service.Run(ctx)
 }
