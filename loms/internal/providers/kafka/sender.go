@@ -7,8 +7,6 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-const atHeaderKey = "At"
-
 // Sender это провайдер, который умеет отправлять сообщения в кафку
 type Sender struct {
 	topic    string

@@ -10,10 +10,9 @@ import (
 
 // Config это конфигурация приложения
 type Config struct {
-	Brokers      []string `json:"Brokers"`
-	Topic        string   `json:"Topic"`
-	LogsWriter   io.Writer
-	NotifiersNum int `json:"NotifiersNum"`
+	Brokers    []string `json:"Brokers"`
+	Topic      string   `json:"Topic"`
+	LogsWriter io.Writer
 }
 
 // NewConfig читает файл configPath в формате json в структуру типа configType и возвращает её

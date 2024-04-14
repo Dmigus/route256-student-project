@@ -1,6 +1,7 @@
 build-all:
 	cd cart && make build
 	cd loms && make build
+	cd notifier && make build
 
 .PHONY: run-postgres
 run-postgres:

@@ -5,7 +5,9 @@ go 1.22.0
 require (
 	github.com/IBM/sarama v1.43.1
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
+	github.com/golang/protobuf v1.5.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
+	github.com/pkg/errors v0.9.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20240412170617-26222e5d3d56
 	google.golang.org/protobuf v1.33.0
 )

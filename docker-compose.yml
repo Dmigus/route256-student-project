@@ -109,6 +109,8 @@ services:
   notifier:
     image: notifier
     build: ./notifier
+    deploy:
+      replicas: 3
     stop_signal: SIGTERM
     depends_on:
       kafka-init-topics:
