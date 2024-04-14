@@ -12,10 +12,11 @@ import (
 	"net"
 	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
+	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier/events"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/reader"
 
 	"sync/atomic"
@@ -74,7 +75,7 @@ func (a *App) initServiceWithPostgres() *loms.LOMService {
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
 			return modifier.NewStocks(tx)
 		}, func(tx pgx.Tx) orderscanceller.EventSender {
-			return modifier.NewEvents(tx)
+			return events.NewEvents(tx)
 		}))
 	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscreator.OrderRepo {
@@ -82,7 +83,7 @@ func (a *App) initServiceWithPostgres() *loms.LOMService {
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
 			return modifier.NewStocks(tx)
 		}, func(tx pgx.Tx) orderscreator.EventSender {
-			return modifier.NewEvents(tx)
+			return events.NewEvents(tx)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
@@ -94,7 +95,7 @@ func (a *App) initServiceWithPostgres() *loms.LOMService {
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
 			return modifier.NewStocks(tx)
 		}, func(tx pgx.Tx) orderspayer.EventSender {
-			return modifier.NewEvents(tx)
+			return events.NewEvents(tx)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {

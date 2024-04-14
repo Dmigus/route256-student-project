@@ -4,8 +4,8 @@ import (
 	"context"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"route256.ozon.ru/project/loms/internal/controllers/grpc/converter"
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	"route256.ozon.ru/project/loms/internal/models"
+	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
 type service interface {

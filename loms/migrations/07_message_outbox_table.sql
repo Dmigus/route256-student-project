@@ -1,15 +1,14 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS event_outbox
+CREATE TABLE IF NOT EXISTS message_outbox
 (
     id BIGSERIAL NOT NULL primary key,
-    order_id BIGINT NOT NULL,
-    message VARCHAR NOT NULL,
-    at TIMESTAMP
+    partition_key BYTEA NOT NULL,
+    payload BYTEA NOT NULL
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS event_outbox;
+DROP TABLE IF EXISTS message_outbox;
 -- +goose StatementEnd

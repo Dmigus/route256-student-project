@@ -4,13 +4,13 @@ package outboxsender
 import (
 	"context"
 	"log"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier/events"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"route256.ozon.ru/project/loms/internal/providers/kafka"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier"
 	"route256.ozon.ru/project/loms/internal/services/outboxsender"
 )
 
@@ -32,13 +32,13 @@ func NewApp(config Config) (*App, error) {
 }
 
 func (a *App) init() error {
-	pusher, err := kafka.NewProducer(a.config.Kafka.Brokers, a.config.Kafka.Topic)
+	pusher, err := kafka.NewSender(a.config.Kafka.Brokers, a.config.Kafka.Topic)
 	if err != nil {
 		return err
 	}
 	connOutbox := createConnToPostgres(a.config.Outbox.GetPostgresDSN())
 	txM := singlepostgres.NewTxManagerOne(connOutbox, func(conn pgx.Tx) outboxsender.Outbox {
-		return modifier.NewEvents(conn)
+		return events.NewEvents(conn)
 	})
 	a.service = outboxsender.NewService(txM, pusher, time.Duration(a.config.BatchInterval)*time.Second, a.config.BatchSize)
 	return nil

@@ -1,18 +1,10 @@
 package handlingrunner
 
 import (
-	"errors"
-	"strconv"
-	"time"
-
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/notifier/internal/models"
 	"route256.ozon.ru/project/notifier/internal/service"
 )
-
-var errMsgCorrupted = errors.New("message corrupted")
-
-const atHeaderKey = "At"
 
 type consumerGroupHandler struct {
 	handler service.EventHandler
@@ -52,28 +44,9 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	}
 }
 
-func messageToEvent(message *sarama.ConsumerMessage) (*models.OrderStatusChangedEvent, error) {
-	orderID, err := strconv.ParseInt(string(message.Key), 10, 64)
-	if err != nil {
-		return nil, errMsgCorrupted
-	}
-	headers := message.Headers
-	if len(headers) == 0 {
-		return nil, errMsgCorrupted
-	}
-	var at time.Time
-	for _, header := range headers {
-		if string(header.Key) == atHeaderKey {
-			at, err = time.Parse(time.RFC3339, string(header.Value))
-			break
-		}
-	}
-	if err != nil {
-		return nil, errMsgCorrupted
-	}
-	return &models.OrderStatusChangedEvent{
-		OrderID: orderID,
-		Message: string(message.Value),
-		At:      at,
+func messageToEvent(message *sarama.ConsumerMessage) (*models.EventMessage, error) {
+	return &models.EventMessage{
+		PartitionKey: message.Key,
+		Payload:      message.Value,
 	}, nil
 }

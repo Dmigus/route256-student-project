@@ -10,7 +10,7 @@ import (
 type (
 	// EventHandler это обработчик событий
 	EventHandler interface {
-		Handle(context.Context, *models.OrderStatusChangedEvent) error
+		Handle(context.Context, *models.EventMessage) error
 	}
 	eventHandlingRunner interface {
 		Run(context.Context, EventHandler) error

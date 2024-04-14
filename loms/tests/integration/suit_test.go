@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"route256.ozon.ru/project/loms/internal/apps"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"strconv"
 	"time"
 )

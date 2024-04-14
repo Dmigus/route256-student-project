@@ -4,21 +4,16 @@
 
 package modifier
 
-import (
-	"github.com/jackc/pgx/v5/pgtype"
-)
-
-type EventOutbox struct {
-	ID      int64
-	OrderID int64
-	Message string
-	At      pgtype.Timestamp
-}
-
 type ItemUnit struct {
 	SkuID    int64
 	Total    int32
 	Reserved int32
+}
+
+type MessageOutbox struct {
+	ID           int64
+	PartitionKey []byte
+	Payload      []byte
 }
 
 type Order struct {

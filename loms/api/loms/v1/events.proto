@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "loms/v1";
+import "loms.proto";
+import "google/protobuf/timestamp.proto";
+
+message ChangeOrderStatusEvent {
+  OrderId orderID = 1;
+  google.protobuf.Timestamp datetime = 2;
+  int64 userID = 3;
+  OrderStatus status = 4;
+}

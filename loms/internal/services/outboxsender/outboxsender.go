@@ -12,10 +12,10 @@ import (
 type (
 	// Outbox представляет из себя хранилище событий, из которого можно получать набор событий не более
 	Outbox interface {
-		PullNextEvents(ctx context.Context, batchSize int32) ([]models.OrderStatusChangedEvent, error)
+		PullNextEvents(ctx context.Context, batchSize int32) ([]models.EventMessage, error)
 	}
 	eventsPusher interface {
-		PushOrderStatusChangedEvents(ctx context.Context, events []models.OrderStatusChangedEvent) error
+		SendMessages(ctx context.Context, events []models.EventMessage) error
 	}
 	txManager interface {
 		WithinTransaction(context.Context, func(ctx context.Context, outbox Outbox) bool) error
@@ -64,7 +64,7 @@ func (s *Service) iteration(serviceLiveCtx context.Context) error {
 			serviceErr = fmt.Errorf("could not pull events from outbox: %w", err)
 			return false
 		}
-		err = s.broker.PushOrderStatusChangedEvents(ctx, events)
+		err = s.broker.SendMessages(ctx, events)
 		if err != nil {
 			serviceErr = fmt.Errorf("could not push events to broker: %w", err)
 			return false

@@ -111,14 +111,12 @@ bin/protoc-gen-openapiv2:
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate bin/protoc-gen-grpc-gateway bin/protoc-gen-openapiv2
 
 
-LOMS_PROTO_PATH := api/loms
-OUT_DIR := internal/controllers/grpc/protoc
-SWAGGER_OUT_DIR := api/openapiv2
+LOMS_PROTO_PATH := api/loms/v1
+OUT_DIR := internal/pkg/$(LOMS_PROTO_PATH)
 
 .PHONY: protoc-generate-service
 protoc-generate-service: .bin-deps .vendor-proto
 	mkdir -p $(OUT_DIR)
-	mkdir -p $(SWAGGER_OUT_DIR)
 	protoc \
 	-I $(LOMS_PROTO_PATH) \
 	-I vendor-proto \
@@ -133,9 +131,19 @@ protoc-generate-service: .bin-deps .vendor-proto
     --plugin=protoc-gen-grpc-gateway=$(LOCAL_BIN)/protoc-gen-grpc-gateway \
 	--grpc-gateway_out $(OUT_DIR) \
 	--grpc-gateway_opt logtostderr=true --grpc-gateway_opt paths=source_relative --grpc-gateway_opt generate_unbound_methods=true \
+	$(LOMS_PROTO_PATH)/*.proto
+	go mod tidy
+
+
+SWAGGER_OUT_DIR := api/openapiv2/v1
+
+.PHONY: protoc-generate-swagger
+protoc-generate-swagger: .bin-deps .vendor-proto
+	mkdir -p $(SWAGGER_OUT_DIR)
+	protoc \
+	-I $(LOMS_PROTO_PATH) \
+	-I vendor-proto \
 	--plugin=protoc-gen-openapiv2=$(LOCAL_BIN)/protoc-gen-openapiv2 \
     --openapiv2_out $(SWAGGER_OUT_DIR) \
     --openapiv2_opt logtostderr=true \
-	$(LOMS_PROTO_PATH)/v*/*.proto
-	go mod tidy
-
+	$(LOMS_PROTO_PATH)/loms.proto

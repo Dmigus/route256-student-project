@@ -8,3 +8,11 @@ sql:
         package: "modifier"
         sql_package: "pgx/v5"
         out: "../internal/providers/singlepostgres/modifier"
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/modifier/events/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "events"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/modifier/events"
