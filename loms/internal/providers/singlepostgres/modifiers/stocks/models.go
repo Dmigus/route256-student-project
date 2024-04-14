@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.26.0
 
-package reader
+package stocks
 
 type ItemUnit struct {
 	SkuID    int64

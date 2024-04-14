@@ -3,29 +3,11 @@
 //   sqlc v1.26.0
 // source: queries.sql
 
-package reader
+package orders
 
 import (
 	"context"
 )
-
-const selectCount = `-- name: selectCount :one
-SELECT total, reserved
-FROM item_unit
-WHERE sku_id = $1
-`
-
-type selectCountRow struct {
-	Total    int32
-	Reserved int32
-}
-
-func (q *Queries) selectCount(ctx context.Context, skuID int64) (selectCountRow, error) {
-	row := q.db.QueryRow(ctx, selectCount, skuID)
-	var i selectCountRow
-	err := row.Scan(&i.Total, &i.Reserved)
-	return i, err
-}
 
 const selectOrder = `-- name: selectOrder :one
 SELECT user_id, status, are_items_reserved

@@ -3,6 +3,7 @@ package kafka
 
 import (
 	"context"
+
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/loms/internal/models"
 )

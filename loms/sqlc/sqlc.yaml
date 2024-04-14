@@ -1,0 +1,42 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/modifier/orders/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "orders"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/modifier/orders"
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/modifier/stocks/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "stocks"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/modifier/stocks"
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/modifier/events/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "events"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/modifier/events"
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/reader/orders/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "orders"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/reader/orders"
+  - engine: "postgresql"
+    queries: "../internal/providers/singlepostgres/reader/stocks/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "stocks"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/singlepostgres/reader/stocks"

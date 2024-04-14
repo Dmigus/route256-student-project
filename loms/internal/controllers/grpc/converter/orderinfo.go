@@ -2,7 +2,7 @@ package converter
 
 import (
 	"route256.ozon.ru/project/loms/internal/models"
-	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
+	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
 func OrderToOrderInfoResponse(order *models.Order) *v1.OrderInfoResponse {

@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+
 	"route256.ozon.ru/project/notifier/internal/providers/eventhandler"
 	"route256.ozon.ru/project/notifier/internal/providers/handlingrunner"
 	"route256.ozon.ru/project/notifier/internal/service"

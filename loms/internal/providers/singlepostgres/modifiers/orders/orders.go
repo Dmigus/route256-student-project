@@ -1,5 +1,5 @@
-// Package modifier содержит реализацию репозиториев для транзакционной модификации данных в PostgreSQL.
-package modifier
+// Package orders содержит реализацию заказов для транзакционной модификации данных в PostgreSQL.
+package orders
 
 import (
 	"context"

@@ -1,5 +1,5 @@
-// Package reader содержит реализацию репозиториев для чтения данных из PostgreSQL.
-package reader
+// Package orders содержит реализацию заказов только для чтения из PostgreSQL.
+package orders
 
 import (
 	"context"

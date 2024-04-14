@@ -25,8 +25,7 @@ lint:
 
 .PHONY: sqlc
 sqlc:
-	sqlc generate --file=./sqlc/modifier.yaml
-	sqlc generate --file=./sqlc/reader.yaml
+	sqlc generate --file=./sqlc/sqlc.yaml
 
 POSTGRES_PASSWORD:=$(shell cat ./db_password.txt)
 .PHONY: migrate-postgres

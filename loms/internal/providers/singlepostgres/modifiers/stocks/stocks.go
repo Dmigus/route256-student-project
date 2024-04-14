@@ -1,4 +1,5 @@
-package modifier
+// Package stocks содержит реализацию стоков для транзакционной модификации данных в PostgreSQL.
+package stocks
 
 import (
 	"context"

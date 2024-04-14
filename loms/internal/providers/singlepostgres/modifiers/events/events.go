@@ -1,17 +1,17 @@
+// Package events содержит функциональность для работы с очередью сообщений, хранящихся в postgres
 package events
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier/events/converter"
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events/converter"
+
+	"google.golang.org/protobuf/proto"
 	"route256.ozon.ru/project/loms/internal/models"
 )
-
-const orderStatusChangedFmt = "order status was updated to %s"
 
 // Events это структура, позволяющая работать с очередью событий
 type Events struct {
@@ -26,6 +26,9 @@ func NewEvents(db DBTX) *Events {
 // OrderStatusChanged сохраняет новое событие изменения статуса заказа
 func (e *Events) OrderStatusChanged(ctx context.Context, order *models.Order) error {
 	dt, err := e.currentDatetime(ctx)
+	if err != nil {
+		return err
+	}
 	eventMessage := converter.NewEventMessage(order, dt)
 	partitionKey := []byte(strconv.FormatInt(order.Id(), 10))
 	payload, err := proto.Marshal(eventMessage)

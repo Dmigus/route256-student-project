@@ -7,8 +7,3 @@ WHERE id = $1;
 SELECT sku_id, count
 FROM order_item
 WHERE order_id = $1;
-
--- name: selectCount :one
-SELECT total, reserved
-FROM item_unit
-WHERE sku_id = $1;

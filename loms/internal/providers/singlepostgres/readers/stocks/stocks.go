@@ -1,4 +1,5 @@
-package reader
+// Package stocks содержит реализацию стоков только для чтения из PostgreSQL.
+package stocks
 
 import (
 	"context"

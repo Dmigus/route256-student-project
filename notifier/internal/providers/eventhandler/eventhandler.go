@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"log"
+
 	"route256.ozon.ru/project/notifier/internal/providers/eventhandler/converter"
 
 	"route256.ozon.ru/project/notifier/internal/models"

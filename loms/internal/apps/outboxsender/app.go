@@ -4,8 +4,9 @@ package outboxsender
 import (
 	"context"
 	"log"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifier/events"
 	"time"
+
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

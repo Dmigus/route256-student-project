@@ -3,7 +3,7 @@
 //   sqlc v1.26.0
 // source: queries.sql
 
-package modifier
+package orders
 
 import (
 	"context"
@@ -34,48 +34,11 @@ type insertOrderItemParams struct {
 	Count   int32
 }
 
-const insertStock = `-- name: insertStock :exec
-INSERT INTO item_unit(sku_id, total, reserved)
-VALUES ($1, $2, $3)
-ON CONFLICT (sku_id)
-    DO UPDATE SET total=$2, reserved=$3
-`
-
-type insertStockParams struct {
-	SkuID    int64
-	Total    int32
-	Reserved int32
-}
-
-func (q *Queries) insertStock(ctx context.Context, arg insertStockParams) error {
-	_, err := q.db.Exec(ctx, insertStock, arg.SkuID, arg.Total, arg.Reserved)
-	return err
-}
-
-const selectCount = `-- name: selectCount :one
-SELECT total, reserved
-FROM item_unit
-WHERE sku_id = $1
-FOR UPDATE
-`
-
-type selectCountRow struct {
-	Total    int32
-	Reserved int32
-}
-
-func (q *Queries) selectCount(ctx context.Context, skuID int64) (selectCountRow, error) {
-	row := q.db.QueryRow(ctx, selectCount, skuID)
-	var i selectCountRow
-	err := row.Scan(&i.Total, &i.Reserved)
-	return i, err
-}
-
 const selectOrder = `-- name: selectOrder :one
 SELECT user_id, status, are_items_reserved
 FROM "order"
 WHERE id = $1
-FOR UPDATE
+    FOR UPDATE
 `
 
 type selectOrderRow struct {
@@ -136,38 +99,5 @@ type updateOrderParams struct {
 
 func (q *Queries) updateOrder(ctx context.Context, arg updateOrderParams) error {
 	_, err := q.db.Exec(ctx, updateOrder, arg.ID, arg.Status, arg.AreItemsReserved)
-	return err
-}
-
-const updateReserved = `-- name: updateReserved :exec
-UPDATE item_unit
-SET reserved = $2
-WHERE sku_id = $1
-`
-
-type updateReservedParams struct {
-	SkuID    int64
-	Reserved int32
-}
-
-func (q *Queries) updateReserved(ctx context.Context, arg updateReservedParams) error {
-	_, err := q.db.Exec(ctx, updateReserved, arg.SkuID, arg.Reserved)
-	return err
-}
-
-const updateTotalReserved = `-- name: updateTotalReserved :exec
-UPDATE item_unit
-SET total = $2, reserved = $3
-WHERE sku_id = $1
-`
-
-type updateTotalReservedParams struct {
-	SkuID    int64
-	Total    int32
-	Reserved int32
-}
-
-func (q *Queries) updateTotalReserved(ctx context.Context, arg updateTotalReservedParams) error {
-	_, err := q.db.Exec(ctx, updateTotalReserved, arg.SkuID, arg.Total, arg.Reserved)
 	return err
 }

@@ -2,9 +2,10 @@ package converter
 
 import (
 	"route256.ozon.ru/project/loms/internal/models"
-	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
+	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
+// ModelOrderStatusToTransportStatus сопоставляет доменный OrderStatus сгенерированному
 func ModelOrderStatusToTransportStatus(st models.OrderStatus) v1.OrderStatus {
 	switch st {
 	case models.New:
