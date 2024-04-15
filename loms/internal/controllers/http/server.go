@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 	"log"
 	"net/http"
-	v1 "route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"time"
 )
 

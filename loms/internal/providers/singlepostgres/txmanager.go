@@ -12,33 +12,88 @@ type (
 	TxBeginner interface {
 		Begin(ctx context.Context) (pgx.Tx, error)
 	}
-	// TxManager предоставляет обёртку для юзкейсов, позволяющую использовать репозитории в атомарных сценариях
-	TxManager[OrderRepoType, StocksRepoType any] struct {
-		conn          TxBeginner
-		ordersCreator func(pgx.Tx) OrderRepoType
-		stocksCreator func(pgx.Tx) StocksRepoType
+	// TxManagerOne предоставляет обёртку для юзкейсов, позволяющую использовать один провайдер в атомарных сценариях
+	TxManagerOne[T any] struct {
+		conn    TxBeginner
+		creator func(pgx.Tx) T
+	}
+	// TxManagerTwo предоставляет обёртку для юзкейсов, позволяющую использовать два провайдера в атомарных сценариях
+	TxManagerTwo[T1, T2 any] struct {
+		conn     TxBeginner
+		creator1 func(pgx.Tx) T1
+		creator2 func(pgx.Tx) T2
+	}
+	// TxManagerThree предоставляет обёртку для юзкейсов, позволяющую использовать три провайдера в атомарных сценариях
+	TxManagerThree[T1, T2, T3 any] struct {
+		conn     TxBeginner
+		creator1 func(pgx.Tx) T1
+		creator2 func(pgx.Tx) T2
+		creator3 func(pgx.Tx) T3
 	}
 )
 
-// NewTxManager создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. ordersCreator - функция создания экземпляра репозитория заказов, привязанного к новой транзакции. stocksCreator - функция создания экземпляра репозитория стоков, привязанного к новой транзакции.
-func NewTxManager[OrderRepoType, StocksRepoType any](conn TxBeginner, ordersCreator func(conn pgx.Tx) OrderRepoType, stocksCreator func(conn pgx.Tx) StocksRepoType) *TxManager[OrderRepoType, StocksRepoType] {
-	return &TxManager[OrderRepoType, StocksRepoType]{
-		conn:          conn,
-		ordersCreator: ordersCreator,
-		stocksCreator: stocksCreator,
+// NewTxManagerOne создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator - функция создания экземпляра провайдера, привязанного к новой транзакции
+func NewTxManagerOne[T any](conn TxBeginner, creator func(conn pgx.Tx) T) *TxManagerOne[T] {
+	return &TxManagerOne[T]{
+		conn:    conn,
+		creator: creator,
 	}
 }
 
-// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими репозиториями. Если функция завершилась без ошибки, транзакция фиксируется, иначе откатывается.
-func (u *TxManager[OrderRepoType, StocksRepoType]) WithinTransaction(ctx context.Context, f func(ctx context.Context, orders OrderRepoType, stocks StocksRepoType) error) error {
+// NewTxManagerTwo создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator'ы - функции создания экземпляра провайдера, привязанного к новой транзакции.
+func NewTxManagerTwo[T1, T2 any](conn TxBeginner, creator1 func(conn pgx.Tx) T1, creator2 func(conn pgx.Tx) T2) *TxManagerTwo[T1, T2] {
+	return &TxManagerTwo[T1, T2]{
+		conn:     conn,
+		creator1: creator1,
+		creator2: creator2,
+	}
+}
+
+// NewTxManagerThree создаёт новую обёртку. conn - объект, который будет использоваться для открытия новых транзакций. creator'ы - функции создания экземпляра провайдера, привязанного к новой транзакции.
+func NewTxManagerThree[T1, T2, T3 any](conn TxBeginner, creator1 func(conn pgx.Tx) T1, creator2 func(conn pgx.Tx) T2, creator3 func(conn pgx.Tx) T3) *TxManagerThree[T1, T2, T3] {
+	return &TxManagerThree[T1, T2, T3]{
+		conn:     conn,
+		creator1: creator1,
+		creator2: creator2,
+		creator3: creator3,
+	}
+}
+
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) bool) error {
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-	err = f(ctx, u.ordersCreator(tx), u.stocksCreator(tx))
+	if f(ctx, u.creator(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
+}
+
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с двумя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) bool) error {
+	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	defer tx.Rollback(ctx)
+	if f(ctx, u.creator1(tx), u.creator2(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
+}
+
+// WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с тремя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
+func (u *TxManagerThree[T1, T2, T3]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2, provider3 T3) bool) error {
+	tx, err := u.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if f(ctx, u.creator1(tx), u.creator2(tx), u.creator3(tx)) {
+		return tx.Commit(ctx)
+	}
+	return nil
 }

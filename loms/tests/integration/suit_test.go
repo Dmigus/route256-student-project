@@ -13,8 +13,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"route256.ozon.ru/project/loms/internal/app"
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	"route256.ozon.ru/project/loms/internal/apps"
+	"route256.ozon.ru/project/loms/internal/apps/loms"
+	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"strconv"
 	"time"
 )
@@ -27,13 +28,13 @@ const (
 type Suite struct {
 	suite.Suite
 	Pg       *postgres.PostgresContainer
-	app      *app.App
+	app      *loms.App
 	ConnToDB *sql.DB
 	client   v1.LOMServiceClient
 }
 
 func (s *Suite) SetupSuite() {
-	config, err := app.NewConfig(configDir)
+	config, err := apps.NewConfig[loms.Config](configDir)
 	s.Require().NoError(err)
 	ctx := context.Background()
 	postgresContainer, err := postgres.RunContainer(ctx,
@@ -65,7 +66,7 @@ func (s *Suite) SetupSuite() {
 	port := exposedTcpPort.Int()
 	config.Storage.Master.Port = uint16(port)
 	config.Storage.Replica.Port = uint16(port)
-	s.app = app.NewApp(config)
+	s.app = loms.NewApp(config)
 	go s.app.Run()
 	conn, err := grpc.Dial(":"+strconv.Itoa(int(config.GRPCServer.Port)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	s.Require().NoError(err)

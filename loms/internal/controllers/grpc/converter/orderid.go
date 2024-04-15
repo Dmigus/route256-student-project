@@ -1,7 +1,7 @@
 package converter
 
 import (
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
+	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
 func OrderIdToId(orderId *v1.OrderId) int64 {

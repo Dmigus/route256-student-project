@@ -1,60 +1,36 @@
+// Package main содержит main для запуска программы, а также обработку переменных окружения и аргументов командной строки
 package main
 
 import (
-	"flag"
+	"context"
 	"log"
-	"os"
 	"os/signal"
-	"path/filepath"
-	"route256.ozon.ru/project/loms/internal/app"
+	"route256.ozon.ru/project/loms/internal/apps/loms"
+	"route256.ozon.ru/project/loms/internal/apps/outboxsender"
 	"syscall"
 )
 
 func main() {
-	config, err := setupConfig()
+	lomsConfig, err := setupLOMSConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	appl := app.NewApp(config)
-	defer appl.Stop()
-	go appl.Run()
-	defer appl.StopGateway()
-	go appl.RunGateway()
+	lomsApp := loms.NewApp(lomsConfig)
+	defer lomsApp.Stop()
+	go lomsApp.Run()
+	defer lomsApp.StopGateway()
+	go lomsApp.RunGateway()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
-}
+	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-func setupConfig() (app.Config, error) {
-	var configPath string
-	flag.StringVar(&configPath, "config", "./configs/local.json", "path to config file")
-	flag.Parse()
-	config, err := app.NewConfig(configPath)
+	outboxSenderConfig, err := setupOutboxSenderConfig()
 	if err != nil {
-		return app.Config{}, err
+		log.Fatal(err)
 	}
-	if config.Storage == nil {
-		return config, nil
-	}
-
-	dbPassFromEnv := os.Getenv("POSTGRES_PASSWORD_FILE")
-	if len(dbPassFromEnv) > 0 {
-		postgresPwd, err := readSecretFromFile(dbPassFromEnv)
-		if err != nil {
-			return app.Config{}, err
-		}
-		config.Storage.Master.Password = postgresPwd
-		config.Storage.Replica.Password = postgresPwd
-	}
-	return config, nil
-}
-
-func readSecretFromFile(addr string) (string, error) {
-	cleaned := filepath.Clean(addr)
-	dataBytes, err := os.ReadFile(cleaned)
+	outboxSenderApp, err := outboxsender.NewApp(outboxSenderConfig)
 	if err != nil {
-		return "", err
+		log.Fatal(err)
 	}
-	return string(dataBytes), nil
+	outboxSenderApp.Run(processLiveContext)
 }

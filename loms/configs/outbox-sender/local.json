@@ -1,0 +1,14 @@
+{
+  "Outbox": {
+    "Host": "127.0.0.1",
+    "Port": 5432,
+    "Database": "postgres",
+    "User": "postgres"
+  },
+  "Kafka": {
+    "Brokers": ["127.0.0.1:9092"],
+    "Topic": "loms.order-events"
+  },
+  "BatchSize": 1,
+  "BatchInterval": 3
+}

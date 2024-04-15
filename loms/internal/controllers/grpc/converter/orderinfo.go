@@ -1,8 +1,8 @@
 package converter
 
 import (
-	"route256.ozon.ru/project/loms/internal/controllers/grpc/protoc/v1"
 	"route256.ozon.ru/project/loms/internal/models"
+	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
 func OrderToOrderInfoResponse(order *models.Order) *v1.OrderInfoResponse {
