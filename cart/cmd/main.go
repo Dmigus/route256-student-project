@@ -18,14 +18,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	appLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	appl, err := app.NewApp(config)
 	if err != nil {
 		log.Printf("err initializing app: %v\n", err)
 		return
 	}
-	err = appl.Run(appLiveContext)
+	err = appl.Run(processLiveContext)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
