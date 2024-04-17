@@ -3,6 +3,7 @@ package events
 
 import (
 	"context"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"strconv"
 	"time"
 
@@ -20,7 +21,7 @@ const (
 // Events это структура, позволяющая работать с очередью событий
 type (
 	durationRecorder interface {
-		RecordDuration(table, category string, f func() error)
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
 	Events struct {
 		queries *Queries
@@ -46,7 +47,7 @@ func (e *Events) OrderStatusChanged(ctx context.Context, order *models.Order) er
 		return errors.Wrap(err, "could not marshal event message")
 	}
 	params := pushEventParams{PartitionKey: partitionKey, Payload: payload}
-	e.reqDur.RecordDuration(messageOutboxTableName, "insert", func() error {
+	e.reqDur.RecordDuration(messageOutboxTableName, sqlmetrics.Insert, func() error {
 		err = e.queries.pushEvent(ctx, params)
 		return err
 	})
@@ -57,7 +58,7 @@ func (e *Events) OrderStatusChanged(ctx context.Context, order *models.Order) er
 func (e *Events) PullNextEvents(ctx context.Context, batchSize int32) ([]models.EventMessage, error) {
 	var events []MessageOutbox
 	var err error
-	e.reqDur.RecordDuration(messageOutboxTableName, "delete", func() error {
+	e.reqDur.RecordDuration(messageOutboxTableName, sqlmetrics.Delete, func() error {
 		events, err = e.queries.pullEvents(ctx, batchSize)
 		return err
 	})

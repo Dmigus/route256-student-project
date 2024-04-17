@@ -8,7 +8,7 @@ import (
 const (
 	CategoryLabel = "category"
 	TableLabel    = "table"
-	ErrLabel      = "code"
+	ErrLabel      = "error"
 )
 
 type (

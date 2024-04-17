@@ -4,6 +4,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 
 	"github.com/jackc/pgx/v5"
 	pkgerrors "github.com/pkg/errors"
@@ -21,7 +22,7 @@ const (
 // Orders представялет реализацию репозитория заказов с методами для модификации данных
 type (
 	durationRecorder interface {
-		RecordDuration(table, category string, f func() error)
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
 	Orders struct {
 		queries *Queries
@@ -39,7 +40,7 @@ func (po *Orders) Create(ctx context.Context, userID int64, items []models.Order
 	params := createOrderParams{UserID: userID, Status: orderStatusToString(models.New), AreItemsReserved: false}
 	var orderID int64
 	var err error
-	po.durRec.RecordDuration(orderTableName, "insert", func() error {
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Insert, func() error {
 		orderID, err = po.queries.createOrder(ctx, params)
 		return err
 	})
@@ -48,7 +49,7 @@ func (po *Orders) Create(ctx context.Context, userID int64, items []models.Order
 	}
 	order := models.NewOrder(userID, orderID)
 	itemsParams := insertItemParamsFrom(orderID, items)
-	po.durRec.RecordDuration(orderItemTableName, "insert", func() error {
+	po.durRec.RecordDuration(orderItemTableName, sqlmetrics.Insert, func() error {
 		_, err = po.queries.insertOrderItem(ctx, itemsParams)
 		return err
 	})
@@ -76,7 +77,7 @@ func (po *Orders) Save(ctx context.Context, order *models.Order) error {
 		AreItemsReserved: order.IsItemsReserved,
 	}
 	var err error
-	po.durRec.RecordDuration(orderTableName, "update", func() error {
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Update, func() error {
 		err = po.queries.updateOrder(ctx, params)
 		return err
 	})
@@ -134,7 +135,7 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
 	var row selectOrderRow
 	var err error
-	po.durRec.RecordDuration(orderTableName, "select", func() error {
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Select, func() error {
 		row, err = po.queries.selectOrder(ctx, orderID)
 		return err
 	})
@@ -153,7 +154,7 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 func (po *Orders) readItemsForOrder(ctx context.Context, orderID int64) ([]models.OrderItem, error) {
 	var rows []selectOrderItemsRow
 	var err error
-	po.durRec.RecordDuration(orderItemTableName, "select", func() error {
+	po.durRec.RecordDuration(orderItemTableName, sqlmetrics.Select, func() error {
 		rows, err = po.queries.selectOrderItems(ctx, orderID)
 		return err
 	})

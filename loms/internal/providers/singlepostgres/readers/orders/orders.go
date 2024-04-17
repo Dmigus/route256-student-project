@@ -4,6 +4,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 
 	"github.com/jackc/pgx/v5"
 	pkgerrors "github.com/pkg/errors"
@@ -21,7 +22,7 @@ const (
 // Orders представялет реализацию репозитория заказов с методами для чтения данных
 type (
 	durationRecorder interface {
-		RecordDuration(table, category string, f func() error)
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
 	Orders struct {
 		queries *Queries
@@ -68,7 +69,7 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
 	var row selectOrderRow
 	var err error
-	po.reqDur.RecordDuration(orderTableName, "select", func() error {
+	po.reqDur.RecordDuration(orderTableName, sqlmetrics.Select, func() error {
 		row, err = po.queries.selectOrder(ctx, orderID)
 		return err
 	})
@@ -87,7 +88,7 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 func (po *Orders) readItemsForOrder(ctx context.Context, orderID int64) ([]models.OrderItem, error) {
 	var rows []selectOrderItemsRow
 	var err error
-	po.reqDur.RecordDuration(orderItemTableName, "select", func() error {
+	po.reqDur.RecordDuration(orderItemTableName, sqlmetrics.Select, func() error {
 		rows, err = po.queries.selectOrderItems(ctx, orderID)
 		return err
 	})

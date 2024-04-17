@@ -3,6 +3,7 @@ package stocks
 
 import (
 	"context"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
@@ -18,7 +19,7 @@ const itemUnitTable = "item_unit"
 // Stocks представляет репозиторий стоков с методами для чтения данных
 type (
 	durationRecorder interface {
-		RecordDuration(table, category string, f func() error)
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
 	Stocks struct {
 		queries *Queries
@@ -35,7 +36,7 @@ func NewStocks(db DBTX, durRec durationRecorder) *Stocks {
 func (ps *Stocks) GetNumOfAvailable(ctx context.Context, skuID int64) (uint64, error) {
 	var row selectCountRow
 	var err error
-	ps.durRec.RecordDuration(itemUnitTable, "select", func() error {
+	ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Select, func() error {
 		row, err = ps.queries.selectCount(ctx, skuID)
 		return err
 	})

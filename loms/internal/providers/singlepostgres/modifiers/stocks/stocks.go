@@ -4,6 +4,7 @@ package stocks
 import (
 	"context"
 	"fmt"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +20,7 @@ const itemUnitTable = "item_unit"
 // Stocks представляет репозиторий стоков с методами для модификации данных
 type (
 	durationRecorder interface {
-		RecordDuration(table, category string, f func() error)
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
 	Stocks struct {
 		queries *Queries
@@ -36,7 +37,7 @@ func NewStocks(db DBTX, durRec durationRecorder) *Stocks {
 func (ps *Stocks) SetItemUnits(ctx context.Context, skuID int64, total, reserved uint64) error {
 	params := insertStockParams{SkuID: skuID, Total: int32(total), Reserved: int32(reserved)}
 	var err error
-	ps.durRec.RecordDuration(itemUnitTable, "insert", func() error {
+	ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Insert, func() error {
 		err = ps.queries.insertStock(ctx, params)
 		return err
 	})
@@ -56,7 +57,7 @@ func (ps *Stocks) AddItems(ctx context.Context, items []models.OrderItem) error 
 		}
 		newTotal := row.Total + int32(it.Count)
 		params := updateTotalReservedParams{SkuID: it.SkuId, Total: newTotal, Reserved: row.Reserved}
-		ps.durRec.RecordDuration(itemUnitTable, "update", func() error {
+		ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Update, func() error {
 			err = ps.queries.updateTotalReserved(ctx, params)
 			return err
 		})
@@ -83,7 +84,7 @@ func (ps *Stocks) Reserve(ctx context.Context, items []models.OrderItem) error {
 			return fmt.Errorf("error reserving %d units if item with skuId = %d: %w", it.Count, it.SkuId, orderscreator.ErrInsufficientStocks)
 		}
 		params := updateReservedParams{SkuID: it.SkuId, Reserved: newReserved}
-		ps.durRec.RecordDuration(itemUnitTable, "update", func() error {
+		ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Update, func() error {
 			err = ps.queries.updateReserved(ctx, params)
 			return err
 		})
@@ -108,7 +109,7 @@ func (ps *Stocks) RemoveReserved(ctx context.Context, items []models.OrderItem) 
 		newTotalCnt := row.Total - int32(it.Count)
 		newReserved := row.Reserved - int32(it.Count)
 		params := updateTotalReservedParams{SkuID: it.SkuId, Total: newTotalCnt, Reserved: newReserved}
-		ps.durRec.RecordDuration(itemUnitTable, "update", func() error {
+		ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Update, func() error {
 			err = ps.queries.updateTotalReserved(ctx, params)
 			return err
 		})
@@ -132,7 +133,7 @@ func (ps *Stocks) CancelReserved(ctx context.Context, items []models.OrderItem) 
 		}
 		newReserved := row.Reserved - int32(it.Count)
 		params := updateReservedParams{SkuID: it.SkuId, Reserved: newReserved}
-		ps.durRec.RecordDuration(itemUnitTable, "update", func() error {
+		ps.durRec.RecordDuration(itemUnitTable, sqlmetrics.Update, func() error {
 			err = ps.queries.updateReserved(ctx, params)
 			return err
 		})
