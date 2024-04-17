@@ -2,6 +2,8 @@ package loms
 
 import (
 	_ "embed"
+	"github.com/prometheus/client_golang/prometheus"
+	"net/http"
 	"route256.ozon.ru/project/loms/internal/apps"
 )
 
@@ -25,4 +27,6 @@ type Config struct {
 		Master  apps.PostgresConnectConfig `json:"Master"`
 		Replica apps.PostgresConnectConfig `json:"Replica"`
 	} `json:"Storage"`
+	MetricsRegisterer prometheus.Registerer
+	MetricsHandler    http.Handler
 }

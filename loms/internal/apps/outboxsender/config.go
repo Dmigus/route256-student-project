@@ -1,6 +1,9 @@
 package outboxsender
 
-import "route256.ozon.ru/project/loms/internal/apps"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"route256.ozon.ru/project/loms/internal/apps"
+)
 
 // Config это конфигурация для приложения outboxsender
 type Config struct {
@@ -9,6 +12,7 @@ type Config struct {
 		Brokers []string `json:"Brokers"`
 		Topic   string   `json:"Topic"`
 	} `json:"Kafka"`
-	BatchSize     int32 `json:"BatchSize"`
-	BatchInterval int64 `json:"BatchInterval"`
+	BatchSize         int32 `json:"BatchSize"`
+	BatchInterval     int64 `json:"BatchInterval"`
+	MetricsRegisterer prometheus.Registerer
 }

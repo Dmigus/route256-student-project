@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"os"
 	"path/filepath"
 
@@ -28,6 +30,8 @@ func setupLOMSConfig() (loms.Config, error) {
 		config.Storage.Master.Password = postgresPwd
 		config.Storage.Replica.Password = postgresPwd
 	}
+	config.MetricsRegisterer = prometheus.DefaultRegisterer
+	config.MetricsHandler = promhttp.Handler()
 	return config, nil
 }
 

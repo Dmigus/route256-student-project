@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
 	"route256.ozon.ru/project/loms/internal/apps/outboxsender"
+	"sync"
 	"syscall"
 )
 
@@ -15,15 +16,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	lomsApp := loms.NewApp(lomsConfig)
-	defer lomsApp.Stop()
-	go lomsApp.Run()
-	defer lomsApp.StopGateway()
-	go lomsApp.RunGateway()
-
-	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
+	lomsApp, err := loms.NewApp(lomsConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
 	outboxSenderConfig, err := setupOutboxSenderConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -32,5 +28,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	outboxSenderApp.Run(processLiveContext)
+
+	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	var lomsErr error
+	go func() {
+		defer wg.Done()
+		lomsErr = lomsApp.Run(processLiveContext)
+	}()
+	go func() {
+		defer wg.Done()
+		outboxSenderApp.Run(processLiveContext)
+	}()
+	wg.Wait()
+	if lomsErr != nil {
+		log.Fatal(err)
+	}
 }

@@ -3,7 +3,6 @@ package outboxsender
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
@@ -37,7 +36,10 @@ func (a *App) init() error {
 	if err != nil {
 		return err
 	}
-	connOutbox := createConnToPostgres(a.config.Outbox.GetPostgresDSN())
+	connOutbox, err := createConnToPostgres(a.config.Outbox.GetPostgresDSN())
+	if err != nil {
+		return err
+	}
 	txM := singlepostgres.NewTxManagerOne(connOutbox, func(conn pgx.Tx) outboxsender.Outbox {
 		return events.NewEvents(conn)
 	})
@@ -50,14 +52,14 @@ func (a *App) Run(ctx context.Context) {
 	a.service.Run(ctx)
 }
 
-func createConnToPostgres(dsn string) *pgxpool.Pool {
+func createConnToPostgres(dsn string) (*pgxpool.Pool, error) {
 	conn, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	err = conn.Ping(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return conn
+	return conn, nil
 }

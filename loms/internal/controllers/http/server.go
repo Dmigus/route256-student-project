@@ -14,18 +14,24 @@ import (
 	"time"
 )
 
-const basePath = "/api/"
+const (
+	basePath    = "/api/"
+	metricsPath = "/metrics"
+)
 
 type Server struct {
 	serv *http.Server
 }
 
-func NewServer(lomsaddress, addr, swaggerPath string) *Server {
+func NewServer(lomsaddress, addr, swaggerPath string, metricsHandler http.Handler) *Server {
 	gwmux := initGateWayMux(lomsaddress)
 	swaggeruimux := swaggerUIHandler(swaggerPath)
 	merged := http.NewServeMux()
 	merged.Handle(basePath, gwmux)
 	merged.Handle(swaggeruiprefix, swaggeruimux)
+	if metricsHandler != nil {
+		merged.Handle(metricsPath, metricsHandler)
+	}
 	gwServer := &http.Server{
 		Addr:    addr,
 		Handler: merged,
@@ -58,18 +64,20 @@ func fixFailedPreconditionCodeMapping(ctx context.Context, mux *runtime.ServeMux
 	runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, writer, request, err)
 }
 
-func (s *Server) Serve() {
+func (s *Server) Serve() error {
 	if err := s.serv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
-func (s *Server) Stop(timeout time.Duration) {
+func (s *Server) Stop(timeout time.Duration) error {
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), timeout)
 	defer shutdownRelease()
 	if err := s.serv.Shutdown(shutdownCtx); err != nil {
 		errClose := s.serv.Close()
 		err = errors.Join(err, errClose)
-		log.Fatalf("HTTP shutdown error: %v", err)
+		return err
 	}
+	return nil
 }
