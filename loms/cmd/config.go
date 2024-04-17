@@ -49,6 +49,7 @@ func setupOutboxSenderConfig() (outboxsender.Config, error) {
 		}
 		config.Outbox.Password = postgresPwd
 	}
+	config.MetricsRegisterer = prometheus.DefaultRegisterer
 	return config, nil
 }
 

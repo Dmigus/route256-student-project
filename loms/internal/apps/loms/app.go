@@ -16,6 +16,7 @@ import (
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
 	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	eventsToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
 	ordersToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/orders"
@@ -77,43 +78,56 @@ func createConnToPostgres(dsn string) *pgxpool.Pool {
 }
 
 func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
+	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "loms",
+		Name:      "sql_request_duration_seconds",
+		Help:      "Response time distribution made to PostgreSQL",
+	},
+		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
+	)
+	err := a.config.MetricsRegisterer.Register(responseTime)
+	if err != nil {
+		return nil, err
+	}
+	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
+
 	connMaster := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
-	if err := fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster)); err != nil {
+	if err := fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster, sqlDurationRecorder)); err != nil {
 		return nil, err
 	}
 
 	connReplica := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscanceller.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscreator.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscreator.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
-			return ordersToRead.NewOrders(tx)
+			return ordersToRead.NewOrders(tx, sqlDurationRecorder)
 		}))
 	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderspayer.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderspayer.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {
-			return stocksToRead.NewStocks(tx)
+			return stocksToRead.NewStocks(tx, sqlDurationRecorder)
 		}))
 	return loms.NewLOMService(
 		creator,
@@ -130,7 +144,7 @@ func (a *App) initInterceptors() error {
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.RecoverPanic)
 	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "loms",
-		Name:      "grpc_duration_seconds",
+		Name:      "grpc_request_duration_seconds",
 		Help:      "Response time distribution made to loms",
 	},
 		[]string{mwGRPC.MethodNameLabel, mwGRPC.CodeLabel},

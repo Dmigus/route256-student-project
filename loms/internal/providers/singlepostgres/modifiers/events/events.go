@@ -13,14 +13,24 @@ import (
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
+const (
+	messageOutboxTableName = "message_outbox"
+)
+
 // Events это структура, позволяющая работать с очередью событий
-type Events struct {
-	queries *Queries
-}
+type (
+	durationRecorder interface {
+		RecordDuration(table, category string, f func() error)
+	}
+	Events struct {
+		queries *Queries
+		reqDur  durationRecorder
+	}
+)
 
 // NewEvents cоздаёт объект объект очереди, работающего в рамках транзакции db
-func NewEvents(db DBTX) *Events {
-	return &Events{queries: New(db)}
+func NewEvents(db DBTX, reqDur durationRecorder) *Events {
+	return &Events{queries: New(db), reqDur: reqDur}
 }
 
 // OrderStatusChanged сохраняет новое событие изменения статуса заказа
@@ -36,12 +46,21 @@ func (e *Events) OrderStatusChanged(ctx context.Context, order *models.Order) er
 		return errors.Wrap(err, "could not marshal event message")
 	}
 	params := pushEventParams{PartitionKey: partitionKey, Payload: payload}
-	return e.queries.pushEvent(ctx, params)
+	e.reqDur.RecordDuration(messageOutboxTableName, "insert", func() error {
+		err = e.queries.pushEvent(ctx, params)
+		return err
+	})
+	return err
 }
 
 // PullNextEvents удаляет набор сообщений из outbox, не более  batchSize за раз и возвращает их в порядке
 func (e *Events) PullNextEvents(ctx context.Context, batchSize int32) ([]models.EventMessage, error) {
-	events, err := e.queries.pullEvents(ctx, batchSize)
+	var events []MessageOutbox
+	var err error
+	e.reqDur.RecordDuration(messageOutboxTableName, "delete", func() error {
+		events, err = e.queries.pullEvents(ctx, batchSize)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

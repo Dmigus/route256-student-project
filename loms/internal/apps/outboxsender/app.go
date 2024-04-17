@@ -3,6 +3,8 @@ package outboxsender
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"time"
 
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
@@ -40,8 +42,22 @@ func (a *App) init() error {
 	if err != nil {
 		return err
 	}
+
+	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "outboxsender",
+		Name:      "sql_request_duration_seconds",
+		Help:      "Response time distribution made to PostgreSQL",
+	},
+		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
+	)
+	err = a.config.MetricsRegisterer.Register(responseTime)
+	if err != nil {
+		return err
+	}
+	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
+
 	txM := singlepostgres.NewTxManagerOne(connOutbox, func(conn pgx.Tx) outboxsender.Outbox {
-		return events.NewEvents(conn)
+		return events.NewEvents(conn, sqlDurationRecorder)
 	})
 	a.service = outboxsender.NewService(txM, pusher, time.Duration(a.config.BatchInterval)*time.Second, a.config.BatchSize)
 	return nil
