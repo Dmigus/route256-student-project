@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os/signal"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
@@ -31,6 +32,19 @@ func main() {
 
 	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	tracerProvider, err := setUpProductionTracing()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		errFlush := tracerProvider.ForceFlush(context.Background())
+		errShutdown := tracerProvider.Shutdown(context.Background())
+		errs := errors.Join(errFlush, errShutdown)
+		if errs != nil {
+			log.Println(errs)
+		}
+	}()
+
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	var lomsErr error

@@ -12,6 +12,9 @@ run-postgres:
 run-kafka:
 	docker-compose up -d --wait kafka0 kafka-init-topics kafka-ui
 
+run-jaeger:
+	docker-compose up -d --wait jaeger
+
 run-all: build-all run-postgres run-kafka
 	docker-compose build -q
 	docker-compose up -d --force-recreate cart loms notifier

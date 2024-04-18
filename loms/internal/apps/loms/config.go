@@ -2,8 +2,9 @@ package loms
 
 import (
 	_ "embed"
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus"
 	"route256.ozon.ru/project/loms/internal/apps"
 )
 

@@ -5,8 +5,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+var tracer = otel.Tracer("order cancelling")
 
 var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
 
@@ -52,7 +56,14 @@ func (oc *OrderCanceller) Cancel(ctx context.Context, orderID int64) error {
 	return trErr
 }
 
-func cancelOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks StockRepo, evSender EventSender) error {
+func cancelOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks StockRepo, evSender EventSender) (err error) {
+	ctx, span := tracer.Start(ctx, "cancelling")
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 	order, err := orders.Load(ctx, orderID)
 	if err != nil {
 		err = fmt.Errorf("could not load order %d: %w", orderID, err)
@@ -61,6 +72,7 @@ func cancelOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks St
 	if err = cancelAnyOrder(ctx, stocks, order); err != nil {
 		return err
 	}
+	span.AddEvent("order cancelled")
 	if err = saveFinalOrderState(ctx, order, orders, evSender); err != nil {
 		return err
 	}

@@ -5,12 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"log"
 	"net"
 	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
@@ -65,16 +65,17 @@ func (a *App) init() error {
 	return nil
 }
 
-func createConnToPostgres(dsn string) *pgxpool.Pool {
-	conn, err := pgxpool.New(context.Background(), dsn)
+func createConnToPostgres(dsn string) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("create connection pool: %w", err)
 	}
-	err = conn.Ping(context.Background())
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	conn, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("connect to database: %w", err)
 	}
-	return conn
+	return conn, nil
 }
 
 func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
@@ -91,12 +92,19 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 	}
 	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
 
-	connMaster := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
-	if err := fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster, sqlDurationRecorder)); err != nil {
+	connMaster, err := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
+	if err != nil {
+		return nil, err
+	}
+	// заполнение стоков начальными данными
+	if err = fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster, sqlDurationRecorder)); err != nil {
 		return nil, err
 	}
 
-	connReplica := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
+	connReplica, err := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
+	if err != nil {
+		return nil, err
+	}
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
 			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
@@ -154,6 +162,7 @@ func (a *App) initInterceptors() error {
 		return err
 	}
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.NewRequestDurationInterceptor(responseTime).RecordDuration)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.TraceRequest)
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.Validate)
 	return nil
 }

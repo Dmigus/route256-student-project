@@ -2,11 +2,12 @@ package mw
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
-	"strconv"
-	"time"
 )
 
 const (

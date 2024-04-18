@@ -5,10 +5,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
-var errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
+var (
+	tracer              = otel.Tracer("order paying")
+	errWrongOrderStatus = errors.Wrap(models.ErrFailedPrecondition, "order status is wrong")
+)
 
 type (
 	// OrderRepo это контракт для использования репозитория заказов OrdersPayer'ом. Используется другими слоями для настройки атомарности
@@ -51,7 +56,14 @@ func (or *OrdersPayer) Pay(ctx context.Context, orderID int64) error {
 	return trErr
 }
 
-func payOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks StockRepo, evSender EventSender) error {
+func payOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks StockRepo, evSender EventSender) (err error) {
+	ctx, span := tracer.Start(ctx, "paying")
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 	order, err := orders.Load(ctx, orderID)
 	if err != nil {
 		return fmt.Errorf("could not load order %d: %w", orderID, err)
@@ -60,6 +72,7 @@ func payOrder(ctx context.Context, orderID int64, orders OrderRepo, stocks Stock
 		return errWrongOrderStatus
 	}
 	err = stocks.RemoveReserved(ctx, order.Items)
+	span.AddEvent("stocks removed")
 	if err != nil {
 		return fmt.Errorf("could not remove reserved items for order %d: %w", orderID, err)
 	}
