@@ -132,7 +132,7 @@ func (a *App) init() error {
 	metricsPattern := "/metrics"
 	metricsHandler := middleware.NewDurationObserverMW(promhttp.Handler(), responseTime, "/metrics")
 	mux.Handle(metricsPattern, metricsHandler)
-	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux), "processing request by cart")
+	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux, a.config.Logger), "processing request by cart")
 	return nil
 }
 

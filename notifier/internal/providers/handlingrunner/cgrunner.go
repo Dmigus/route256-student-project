@@ -4,6 +4,7 @@ package handlingrunner
 import (
 	"context"
 	"github.com/dnwe/otelsarama"
+	"go.uber.org/zap"
 
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/notifier/internal/service"
@@ -15,13 +16,15 @@ const groupName = "notifier-group"
 type KafkaConsumerGroupRunner struct {
 	brokers []string
 	topic   string
+	logger  *zap.Logger
 }
 
 // NewKafkaConsumerGroupRunner возращает новый KafkaConsumerGroupRunner, сконфигурированный на брокеры brokers и топик topic
-func NewKafkaConsumerGroupRunner(brokers []string, topic string) *KafkaConsumerGroupRunner {
+func NewKafkaConsumerGroupRunner(brokers []string, topic string, logger *zap.Logger) *KafkaConsumerGroupRunner {
 	return &KafkaConsumerGroupRunner{
 		brokers: brokers,
 		topic:   topic,
+		logger:  logger,
 	}
 }
 
@@ -34,11 +37,13 @@ func (k *KafkaConsumerGroupRunner) Run(ctx context.Context, handler service.Even
 	defer func() {
 		err = cg.Close()
 	}()
-	saramaHandler := newConsumerGroupHandler(handler)
+	saramaHandler := newConsumerGroupHandler(handler, k.logger)
 	tracedHandler := otelsarama.WrapConsumerGroupHandler(saramaHandler)
 	for {
-		// Непонятно куда логировать ошибки
-		_ = cg.Consume(ctx, []string{k.topic}, tracedHandler)
+		err = cg.Consume(ctx, []string{k.topic}, tracedHandler)
+		if err != nil {
+			k.logger.Error("error in consumer group session", zap.Error(err))
+		}
 		if ctx.Err() != nil {
 			return nil
 		}

@@ -2,6 +2,7 @@ package loms
 
 import (
 	_ "embed"
+	"go.uber.org/zap"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,4 +31,5 @@ type Config struct {
 	} `json:"Storage"`
 	MetricsRegisterer prometheus.Registerer
 	MetricsHandler    http.Handler
+	Logger            *zap.Logger
 }

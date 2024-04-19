@@ -59,7 +59,7 @@ func (a *App) init() error {
 	txM := singlepostgres.NewTxManagerOne(connOutbox, func(conn pgx.Tx) outboxsender.Outbox {
 		return events.NewEvents(conn, sqlDurationRecorder)
 	})
-	a.service = outboxsender.NewService(txM, pusher, time.Duration(a.config.BatchInterval)*time.Second, a.config.BatchSize)
+	a.service = outboxsender.NewService(txM, pusher, time.Duration(a.config.BatchInterval)*time.Second, a.config.BatchSize, a.config.Logger)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
@@ -10,7 +11,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-func setUpProductionTracing() (*trace.TracerProvider, error) {
+func setUpProductionTracing() (func() error, error) {
 	exporter, err := otlptracehttp.New(context.Background())
 	if err != nil {
 		return nil, err
@@ -25,5 +26,10 @@ func setUpProductionTracing() (*trace.TracerProvider, error) {
 	)
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	return provider, nil
+	shutdown := func() error {
+		errFlush := provider.ForceFlush(context.Background())
+		errShutdown := provider.Shutdown(context.Background())
+		return errors.Join(errFlush, errShutdown)
+	}
+	return shutdown, nil
 }

@@ -149,7 +149,8 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 
 func (a *App) initInterceptors() error {
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.SetUpErrorCode)
-	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.LogReqAndResp)
+	mwLogger := mwGRPC.NewLoggerMW(a.config.Logger)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwLogger.LogReqAndResp)
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.RecoverPanic)
 	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "loms",

@@ -5,8 +5,9 @@ import (
 	"context"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"io"
-	"log"
+	"go.uber.org/zap"
+	v1 "route256.ozon.ru/project/notifier/internal/pkg/api/loms/v1"
+	"route256.ozon.ru/project/notifier/internal/pkg/logging"
 
 	"route256.ozon.ru/project/notifier/internal/providers/eventhandler/converter"
 
@@ -17,14 +18,13 @@ var tracer = otel.Tracer("event handler")
 
 // LoggerToWriter это обработчик, который логирует поступившее событие в переданный Writer
 type LoggerToWriter struct {
-	logger *log.Logger
+	logger *zap.Logger
 }
 
 // NewLoggerToWriter создаёт LoggerToWriter, который будет логировать в wr
-func NewLoggerToWriter(wr io.Writer) *LoggerToWriter {
-	prefix := "Handler is processing event: "
+func NewLoggerToWriter(logger *zap.Logger) *LoggerToWriter {
 	return &LoggerToWriter{
-		logger: log.New(wr, prefix, log.Lmsgprefix|log.LstdFlags),
+		logger: logger,
 	}
 }
 
@@ -38,11 +38,21 @@ func (s *LoggerToWriter) Handle(ctx context.Context, message *models.EventMessag
 		return err
 	}
 	span.AddEvent("eventMessage recognized as ChangeOrderStatusEvent")
-	orderID := evMess.GetOrderID().GetOrderID()
-	userID := evMess.GetUserID()
-	newStatus := converter.TransportStatusToString(evMess.GetStatus())
-	dt := evMess.GetDatetime().AsTime()
-	s.logger.Printf("Order with id = %d (for user with id %d) changed status to %s at %s\n", orderID, userID, newStatus, dt)
+	s.handleChangeOrderStatusEvent(ctx, evMess)
 	span.SetStatus(codes.Ok, "")
 	return nil
+}
+
+func (s *LoggerToWriter) handleChangeOrderStatusEvent(ctx context.Context, ev *v1.ChangeOrderStatusEvent) {
+	orderID := ev.GetOrderID().GetOrderID()
+	userID := ev.GetUserID()
+	newStatus := converter.TransportStatusToString(ev.GetStatus())
+	dt := ev.GetDatetime().AsTime()
+	fields := logging.AddTraceFieldsFromCtx(ctx,
+		zap.Int64("order_id", orderID),
+		zap.Int64("user_id", userID),
+		zap.String("new_status", newStatus),
+		zap.Time("at", dt),
+	)
+	s.logger.Info("Order status changed", fields...)
 }

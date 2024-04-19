@@ -4,6 +4,7 @@ package outboxsender
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"time"
 
 	"route256.ozon.ru/project/loms/internal/models"
@@ -26,16 +27,18 @@ type (
 		broker       eventsPusher
 		iterInterval time.Duration
 		batchSize    int32
+		logger       *zap.Logger
 	}
 )
 
 // NewService создаёт новый Service.
-func NewService(tx txManager, broker eventsPusher, iterInterval time.Duration, batchSize int32) *Service {
+func NewService(tx txManager, broker eventsPusher, iterInterval time.Duration, batchSize int32, logger *zap.Logger) *Service {
 	return &Service{
 		tx:           tx,
 		broker:       broker,
 		iterInterval: iterInterval,
 		batchSize:    batchSize,
+		logger:       logger,
 	}
 }
 
@@ -48,8 +51,10 @@ func (s *Service) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			// пока непонятно, куда логировать ошибку
-			s.iteration(ctx)
+			err := s.iteration(ctx)
+			if err != nil {
+				s.logger.Error("processing error", zap.Error(err))
+			}
 		}
 	}
 }
