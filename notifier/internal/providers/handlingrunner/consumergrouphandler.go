@@ -1,7 +1,10 @@
 package handlingrunner
 
 import (
+	"context"
 	"github.com/IBM/sarama"
+	"github.com/dnwe/otelsarama"
+	"go.opentelemetry.io/otel"
 	"route256.ozon.ru/project/notifier/internal/models"
 	"route256.ozon.ru/project/notifier/internal/service"
 )
@@ -32,9 +35,7 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			if !ok {
 				return nil
 			}
-			// пока непонятно, куда логировать ошибки
-			ev, _ := messageToEvent(message)
-			err := c.handler.Handle(session.Context(), ev)
+			err := c.processTracedMessage(session.Context(), message)
 			if err == nil {
 				session.MarkMessage(message, "")
 			}
@@ -44,9 +45,16 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	}
 }
 
-func messageToEvent(message *sarama.ConsumerMessage) (*models.EventMessage, error) {
+func (c *consumerGroupHandler) processTracedMessage(sessionCtx context.Context, message *sarama.ConsumerMessage) error {
+	ctx := otel.GetTextMapPropagator().Extract(sessionCtx, otelsarama.NewConsumerMessageCarrier(message))
+	// пока непонятно, куда логировать ошибки
+	ev := messageToEvent(message)
+	return c.handler.Handle(ctx, ev)
+}
+
+func messageToEvent(message *sarama.ConsumerMessage) *models.EventMessage {
 	return &models.EventMessage{
 		PartitionKey: message.Key,
 		Payload:      message.Value,
-	}, nil
+	}
 }

@@ -3,6 +3,7 @@ package handlingrunner
 
 import (
 	"context"
+	"github.com/dnwe/otelsarama"
 
 	"github.com/IBM/sarama"
 	"route256.ozon.ru/project/notifier/internal/service"
@@ -34,9 +35,10 @@ func (k *KafkaConsumerGroupRunner) Run(ctx context.Context, handler service.Even
 		err = cg.Close()
 	}()
 	saramaHandler := newConsumerGroupHandler(handler)
+	tracedHandler := otelsarama.WrapConsumerGroupHandler(saramaHandler)
 	for {
 		// Непонятно куда логировать ошибки
-		_ = cg.Consume(ctx, []string{k.topic}, saramaHandler)
+		_ = cg.Consume(ctx, []string{k.topic}, tracedHandler)
 		if ctx.Err() != nil {
 			return nil
 		}
