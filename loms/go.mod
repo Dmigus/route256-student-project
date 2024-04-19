@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	github.com/IBM/sarama v1.43.1
+	github.com/dnwe/otelsarama v0.0.0-20240308230250-9388d9d40bc0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/exaring/otelpgx v0.5.4
 	github.com/gojuno/minimock/v3 v3.3.6
@@ -15,6 +16,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.29.1
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	go.opentelemetry.io/otel v1.25.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.25.0
 	go.opentelemetry.io/otel/sdk v1.25.0

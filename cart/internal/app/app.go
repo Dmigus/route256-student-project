@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
 	"net/netip"
@@ -131,7 +132,7 @@ func (a *App) init() error {
 	metricsPattern := "/metrics"
 	metricsHandler := middleware.NewDurationObserverMW(promhttp.Handler(), responseTime, "/metrics")
 	mux.Handle(metricsPattern, metricsHandler)
-	a.httpController = middleware.NewLogger(mux)
+	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux), "processing request by cart")
 	return nil
 }
 

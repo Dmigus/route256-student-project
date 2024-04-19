@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"log"
 	"route256.ozon.ru/project/cart/internal/clients/loms/converter"
 	v1 "route256.ozon.ru/project/cart/internal/clients/loms/protoc/v1"
 	"route256.ozon.ru/project/cart/internal/models"
@@ -32,7 +35,9 @@ func NewClient(addr string, reqDurationObserver observerVec) (*Client, error) {
 	interceptor := requestDurationInterceptor{reqDurationObserver}
 	conn, err := grpc.Dial(addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptor.intercept))
+		grpc.WithUnaryInterceptor(interceptor.intercept),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	conn.Connect()
 	if err != nil {
 		return nil, err
@@ -53,6 +58,8 @@ func (c *Client) OrderCreate(ctx context.Context, userId int64, items []models.C
 }
 
 func (c *Client) GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint64, error) {
+	sc := trace.SpanContextFromContext(ctx)
+	log.Printf("Trace ID: %s, Span ID: %s", sc.TraceID(), sc.SpanID())
 	req := converter.SkuIdToStocksInfoRequest(skuId)
 	response, err := c.client.StocksInfo(ctx, req)
 	if err != nil {

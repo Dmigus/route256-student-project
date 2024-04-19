@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
@@ -162,7 +163,6 @@ func (a *App) initInterceptors() error {
 		return err
 	}
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.NewRequestDurationInterceptor(responseTime).RecordDuration)
-	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.TraceRequest)
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.Validate)
 	return nil
 }
@@ -170,6 +170,7 @@ func (a *App) initInterceptors() error {
 // Run представляет из себя блокирующий вызов, который запускает новый grpc и http контроллеры
 func (a *App) Run(ctx context.Context) error {
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(a.grpcInterceptors...),
 	)
 	reflection.Register(grpcServer)

@@ -19,7 +19,7 @@ func setUpProductionTracing() (*trace.TracerProvider, error) {
 		trace.WithBatcher(exporter),
 		trace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("loms"),
+			semconv.ServiceNameKey.String("cart"),
 			semconv.DeploymentEnvironmentKey.String("production"),
 		)),
 	)
