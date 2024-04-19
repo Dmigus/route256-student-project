@@ -1,42 +1,42 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "../internal/providers/singlepostgres/modifier/orders/queries.sql"
+    queries: "../internal/providers/singlepostgres/modifiers/orders/queries.sql"
     schema: "../migrations"
     gen:
       go:
         package: "orders"
         sql_package: "pgx/v5"
-        out: "../internal/providers/singlepostgres/modifier/orders"
+        out: "../internal/providers/singlepostgres/modifiers/orders"
   - engine: "postgresql"
-    queries: "../internal/providers/singlepostgres/modifier/stocks/queries.sql"
+    queries: "../internal/providers/singlepostgres/modifiers/stocks/queries.sql"
     schema: "../migrations"
     gen:
       go:
         package: "stocks"
         sql_package: "pgx/v5"
-        out: "../internal/providers/singlepostgres/modifier/stocks"
+        out: "../internal/providers/singlepostgres/modifiers/stocks"
   - engine: "postgresql"
-    queries: "../internal/providers/singlepostgres/modifier/events/queries.sql"
+    queries: "../internal/providers/singlepostgres/modifiers/events/queries.sql"
     schema: "../migrations"
     gen:
       go:
         package: "events"
         sql_package: "pgx/v5"
-        out: "../internal/providers/singlepostgres/modifier/events"
+        out: "../internal/providers/singlepostgres/modifiers/events"
   - engine: "postgresql"
-    queries: "../internal/providers/singlepostgres/reader/orders/queries.sql"
+    queries: "../internal/providers/singlepostgres/readers/orders/queries.sql"
     schema: "../migrations"
     gen:
       go:
         package: "orders"
         sql_package: "pgx/v5"
-        out: "../internal/providers/singlepostgres/reader/orders"
+        out: "../internal/providers/singlepostgres/readers/orders"
   - engine: "postgresql"
-    queries: "../internal/providers/singlepostgres/reader/stocks/queries.sql"
+    queries: "../internal/providers/singlepostgres/readers/stocks/queries.sql"
     schema: "../migrations"
     gen:
       go:
         package: "stocks"
         sql_package: "pgx/v5"
-        out: "../internal/providers/singlepostgres/reader/stocks"
+        out: "../internal/providers/singlepostgres/readers/stocks"

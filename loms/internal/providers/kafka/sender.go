@@ -35,11 +35,11 @@ func NewSender(brokers []string, topic string) (*Sender, error) {
 }
 
 // SendMessages синхронно отправляет сообщения events в брокер
-func (p *Sender) SendMessages(ctx context.Context, messages []models.EventMessage) error {
+func (p *Sender) SendMessages(_ context.Context, messages []models.EventMessage) error {
 	saramaMessages := make([]*sarama.ProducerMessage, 0, len(messages))
 	for _, ev := range messages {
 		message := p.modelMessageToSarama(ev)
-		otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(message))
+		otel.GetTextMapPropagator().Inject(ev.TraceContext, otelsarama.NewProducerMessageCarrier(message))
 		saramaMessages = append(saramaMessages, message)
 	}
 	return p.producer.SendMessages(saramaMessages)

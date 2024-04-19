@@ -1,6 +1,6 @@
 -- name: pushEvent :exec
-INSERT INTO message_outbox(partition_key, payload)
-VALUES ($1, $2);
+INSERT INTO message_outbox(partition_key, payload, tracing)
+VALUES ($1, $2, $3);
 
 -- name: pullEvents :many
 DELETE FROM message_outbox
