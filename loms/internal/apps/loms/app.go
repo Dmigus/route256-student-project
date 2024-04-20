@@ -13,6 +13,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"sync"
+	"time"
+
 	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
@@ -24,10 +27,6 @@ import (
 	stocksToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/stocks"
 	ordersToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/orders"
 	stocksToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/stocks"
-	"sync"
-
-	"time"
-
 	"route256.ozon.ru/project/loms/internal/services/loms"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
@@ -36,6 +35,8 @@ import (
 	"route256.ozon.ru/project/loms/internal/services/loms/stocksinfogetter"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 type App struct {
 	config           Config
 	grpcController   *grpcContoller.Server
@@ -43,6 +44,7 @@ type App struct {
 	httpController   *httpContoller.Server
 }
 
+// NewApp возвращает иннициализарованный App, готовый к запуску
 func NewApp(config Config) (*App, error) {
 	app := &App{
 		config: config,
@@ -84,6 +86,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		Namespace: "loms",
 		Name:      "sql_request_duration_seconds",
 		Help:      "Response time distribution made to PostgreSQL",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
 	)
@@ -149,12 +152,14 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 
 func (a *App) initInterceptors() error {
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.SetUpErrorCode)
-	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.LogReqAndResp)
+	mwLogger := mwGRPC.NewLoggerMW(a.config.Logger)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwLogger.LogReqAndResp)
 	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.RecoverPanic)
 	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "loms",
 		Name:      "grpc_request_duration_seconds",
-		Help:      "Response time distribution made to loms",
+		Help:      "Response time distribution made to loms. Example: Median of all queries duration histogram_quantile(0.5, loms_grpc_request_duration_seconds_bucket)",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{mwGRPC.MethodNameLabel, mwGRPC.CodeLabel},
 	)
@@ -193,11 +198,14 @@ func (a *App) Run(ctx context.Context) error {
 		err = grpcServer.Serve(lis)
 		cancel()
 	}()
-	a.httpController = httpContoller.NewServer(
+	a.httpController, err = httpContoller.NewServer(
 		fmt.Sprintf(":%d", a.config.GRPCServer.Port),
 		fmt.Sprintf(":%d", a.config.HTTPGateway.Port),
 		a.config.Swagger.Path,
 		a.config.MetricsHandler)
+	if err != nil {
+		return err
+	}
 	var errHTTP, errHTTPClose error
 	go func() {
 		defer wg.Done()

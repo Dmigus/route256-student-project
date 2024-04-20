@@ -3,19 +3,15 @@ build-all:
 	cd loms && make build
 	cd notifier && make build
 
-.PHONY: run-postgres
-run-postgres:
-	docker-compose up -d --wait loms-postgres-master
-	docker-compose up -d --wait loms-postgres-replica
+.PHONY: run-storage
+run-storage:
+	docker-compose up -d --wait loms-postgres-master loms-postgres-replica kafka0 kafka-init-topics kafka-ui
 	cd loms && make migrate-postgres && make .setup-replication
 
-run-kafka:
-	docker-compose up -d --wait kafka0 kafka-init-topics kafka-ui
+run-monitoring:
+	docker-compose up -d --wait jaeger prometheus grafana
 
-run-jaeger:
-	docker-compose up -d --wait jaeger
-
-run-all: build-all run-postgres run-kafka run-jaeger
+run-all: build-all run-storage run-monitoring
 	docker-compose build -q
 	docker-compose up -d --force-recreate cart loms notifier
 

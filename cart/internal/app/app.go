@@ -1,3 +1,4 @@
+// Package app содержит приложение, в котором функционирует сервис cart
 package app
 
 import (
@@ -39,6 +40,8 @@ import (
 	"time"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 type App struct {
 	config         Config
 	httpController http.Handler
@@ -67,8 +70,9 @@ func (a *App) init() error {
 		Namespace: "cart",
 		Name:      "http_product_service_duration_seconds",
 		Help:      "Response time distribution made to Product service by cart service",
+		Buckets:   bucketsForRequestDuration,
 	},
-		[]string{durationobserverhttp.MethodNameLabel, durationobserverhttp.CodeLabel, durationobserverhttp.UrlLabel},
+		[]string{durationobserverhttp.MethodNameLabel, durationobserverhttp.CodeLabel, durationobserverhttp.URLLabel},
 	)
 	observerTripper := durationobserverhttp.NewDurationObserverTripper(psResponseTime, http.DefaultTransport)
 
@@ -87,6 +91,7 @@ func (a *App) init() error {
 		Namespace: "cart",
 		Name:      "grpc_loms_duration_seconds",
 		Help:      "Response time distribution made to loms by cart service",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{lomsClientPkg.MethodNameLabel, lomsClientPkg.CodeLabel},
 	)
@@ -107,8 +112,9 @@ func (a *App) init() error {
 		Namespace: "cart",
 		Name:      "http_duration_seconds",
 		Help:      "Response time distribution made to cart",
+		Buckets:   bucketsForRequestDuration,
 	},
-		[]string{middleware.MethodNameLabel, middleware.CodeLabel, middleware.UrlLabel},
+		[]string{middleware.MethodNameLabel, middleware.CodeLabel, middleware.URLLabel},
 	)
 	addHandler := middleware.NewDurationObserverMW(addPkg.New(wholeCartService), responseTime, "/user/<user_id>/cart/<cart_id>")
 	addPattern := fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment)
@@ -132,7 +138,7 @@ func (a *App) init() error {
 	metricsPattern := "/metrics"
 	metricsHandler := middleware.NewDurationObserverMW(promhttp.Handler(), responseTime, "/metrics")
 	mux.Handle(metricsPattern, metricsHandler)
-	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux), "processing request by cart")
+	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux, a.config.Logger), "processing request by cart")
 	return nil
 }
 

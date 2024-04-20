@@ -2,16 +2,19 @@ package loms
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
-	"strconv"
-	"time"
 )
 
 const (
+	// MethodNameLabel это метка в которую запишется название метода loms
 	MethodNameLabel = "method"
-	CodeLabel       = "code"
+	// CodeLabel это метка в которую запишется код grpc ответа
+	CodeLabel = "code"
 )
 
 type requestDurationInterceptor struct {

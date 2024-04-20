@@ -2,6 +2,7 @@ package outboxsender
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"route256.ozon.ru/project/loms/internal/apps"
 )
 
@@ -15,4 +16,5 @@ type Config struct {
 	BatchSize         int32 `json:"BatchSize"`
 	BatchInterval     int64 `json:"BatchInterval"`
 	MetricsRegisterer prometheus.Registerer
+	Logger            *zap.Logger
 }

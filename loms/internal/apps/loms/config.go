@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"route256.ozon.ru/project/loms/internal/apps"
 )
@@ -30,4 +32,5 @@ type Config struct {
 	} `json:"Storage"`
 	MetricsRegisterer prometheus.Registerer
 	MetricsHandler    http.Handler
+	Logger            *zap.Logger
 }

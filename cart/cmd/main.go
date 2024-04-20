@@ -1,48 +1,46 @@
+// Package main содержит код для запуска сервиса cart в рамках одного процесса операционной системы
 package main
 
 import (
 	"context"
-	"errors"
-	"flag"
-	"log"
 	"os/signal"
-	"route256.ozon.ru/project/cart/internal/app"
 	"syscall"
+
+	"go.uber.org/zap"
+	"route256.ozon.ru/project/cart/internal/app"
 )
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "./configs/local.json", "path to config file")
-	flag.Parse()
-	config, err := app.NewConfig(configPath)
+	logger := getLogger()
+	defer logger.Sync()
+	config, err := setupCartConfig()
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("error setting up cart config", zap.Error(err))
+		return
 	}
-
+	config.Logger = logger.With(zap.String("service", "cart"))
+	appl, err := app.NewApp(config)
+	if err != nil {
+		logger.Error("error initializing cart app", zap.Error(err))
+		return
+	}
 	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	tracerProvider, err := setUpProductionTracing()
+	shutdown, err := setUpProductionTracing()
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("error setting up tracing", zap.Error(err))
+		return
 	}
 	defer func() {
-		errFlush := tracerProvider.ForceFlush(context.Background())
-		errShutdown := tracerProvider.Shutdown(context.Background())
-		errs := errors.Join(errFlush, errShutdown)
-		if errs != nil {
-			log.Println(errs)
+		errShutdown := shutdown()
+		if errShutdown != nil {
+			logger.Error("error shutting down tracing", zap.Error(errShutdown))
 		}
 	}()
 
-	appl, err := app.NewApp(config)
-	if err != nil {
-		log.Printf("err initializing app: %v\n", err)
-		return
-	}
 	err = appl.Run(processLiveContext)
 	if err != nil {
-		log.Printf("%v\n", err)
-		return
+		logger.Error("services completed with error", zap.Error(err))
 	}
 }

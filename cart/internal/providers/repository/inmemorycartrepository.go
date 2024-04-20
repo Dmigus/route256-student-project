@@ -20,6 +20,7 @@ func New() *InMemoryCartRepository {
 	}
 }
 
+// GetCart возвращает сохранённую или новую корзину для пользователя user
 func (i *InMemoryCartRepository) GetCart(ctx context.Context, user int64) (*models.Cart, error) {
 	_, span := tracer.Start(ctx, "getting cart")
 	defer span.End()
@@ -34,6 +35,7 @@ func (i *InMemoryCartRepository) GetCart(ctx context.Context, user int64) (*mode
 	return newCart, nil
 }
 
+// SaveCart сохраняет корзину cart пользователю user
 func (i *InMemoryCartRepository) SaveCart(ctx context.Context, user int64, cart *models.Cart) error {
 	_, span := tracer.Start(ctx, "saving cart")
 	defer span.End()
