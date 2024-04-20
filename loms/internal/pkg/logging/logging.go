@@ -1,11 +1,14 @@
+// Package logging содержит вспомогательные функции, используемые для логирования в loms и outbox-sender
 package logging
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
+// AddTraceFieldsFromCtx дополняет поля fields полями trace_id и span_id из контекста ctx, если они там присутствуют
 func AddTraceFieldsFromCtx(ctx context.Context, fields ...zap.Field) []zap.Field {
 	spanCtx := trace.SpanContextFromContext(ctx)
 	if spanCtx.HasTraceID() {

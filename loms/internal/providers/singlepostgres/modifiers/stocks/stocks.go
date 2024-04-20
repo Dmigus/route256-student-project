@@ -4,12 +4,12 @@ package stocks
 import (
 	"context"
 	"fmt"
-	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
 )
 

@@ -13,6 +13,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"sync"
+	"time"
+
 	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
@@ -24,10 +27,6 @@ import (
 	stocksToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/stocks"
 	ordersToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/orders"
 	stocksToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/stocks"
-	"sync"
-
-	"time"
-
 	"route256.ozon.ru/project/loms/internal/services/loms"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
@@ -45,6 +44,7 @@ type App struct {
 	httpController   *httpContoller.Server
 }
 
+// NewApp возвращает иннициализарованный App, готовый к запуску
 func NewApp(config Config) (*App, error) {
 	app := &App{
 		config: config,
@@ -198,11 +198,14 @@ func (a *App) Run(ctx context.Context) error {
 		err = grpcServer.Serve(lis)
 		cancel()
 	}()
-	a.httpController = httpContoller.NewServer(
+	a.httpController, err = httpContoller.NewServer(
 		fmt.Sprintf(":%d", a.config.GRPCServer.Port),
 		fmt.Sprintf(":%d", a.config.HTTPGateway.Port),
 		a.config.Swagger.Path,
 		a.config.MetricsHandler)
+	if err != nil {
+		return err
+	}
 	var errHTTP, errHTTPClose error
 	go func() {
 		defer wg.Done()

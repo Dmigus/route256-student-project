@@ -3,12 +3,13 @@ package main
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"os/signal"
-	"route256.ozon.ru/project/loms/internal/apps/loms"
-	"route256.ozon.ru/project/loms/internal/apps/outboxsender"
 	"sync"
 	"syscall"
+
+	"go.uber.org/zap"
+	"route256.ozon.ru/project/loms/internal/apps/loms"
+	"route256.ozon.ru/project/loms/internal/apps/outboxsender"
 )
 
 func main() {
@@ -46,9 +47,9 @@ func main() {
 		return
 	}
 	defer func() {
-		err := shutdown()
-		if err != nil {
-			logger.Error("error shutting down tracing", zap.Error(err))
+		errShutdown := shutdown()
+		if errShutdown != nil {
+			logger.Error("error shutting down tracing", zap.Error(errShutdown))
 		}
 	}()
 

@@ -1,3 +1,4 @@
+// Package sqlmetrics содержит функции для замера времени выполнения запросов в sql
 package sqlmetrics
 
 import (
@@ -7,20 +8,25 @@ import (
 )
 
 const (
+	// CategoryLabel это метка, в которой будет записана категория запроса
 	CategoryLabel = "category"
-	TableLabel    = "table"
-	ErrLabel      = "error"
+	// TableLabel это метка, содержащая название таблицы, с которой производилась работа
+	TableLabel = "table"
+	// ErrLabel это метка, содержашая ошибку выполнения запроса
+	ErrLabel = "error"
 )
 
 type (
 	observerVec interface {
 		With(prometheus.Labels) prometheus.Observer
 	}
+	// SQLRequestDuration это стуруктура, которая замеряет и записывает время выполнения запроса
 	SQLRequestDuration struct {
 		observer observerVec
 	}
 )
 
+// NewSQLRequestDuration возвращает новый SQLRequestDuration, который будет записывать в observer
 func NewSQLRequestDuration(observer observerVec) *SQLRequestDuration {
 	return &SQLRequestDuration{observer: observer}
 }

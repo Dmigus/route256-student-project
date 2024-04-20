@@ -2,8 +2,9 @@ package loms
 
 import (
 	_ "embed"
-	"go.uber.org/zap"
 	"net/http"
+
+	"go.uber.org/zap"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"route256.ozon.ru/project/loms/internal/apps"

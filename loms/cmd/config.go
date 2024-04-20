@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"os"
 	"path/filepath"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"route256.ozon.ru/project/loms/internal/apps"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
 	"route256.ozon.ru/project/loms/internal/apps/outboxsender"

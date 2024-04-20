@@ -4,9 +4,9 @@ package outboxsender
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"time"
 
+	"go.uber.org/zap"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 
