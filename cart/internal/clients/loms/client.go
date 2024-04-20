@@ -24,11 +24,13 @@ type (
 	observerVec interface {
 		With(prometheus.Labels) prometheus.Observer
 	}
+	// Client это структура для работы с loms
 	Client struct {
 		client v1.LOMServiceClient
 	}
 )
 
+// NewClient возвращает новый Client, который, помимо прочего, записывает продолжительность запросов в метрику reqDurationObserver
 func NewClient(addr string, reqDurationObserver observerVec) (*Client, error) {
 	interceptor := requestDurationInterceptor{reqDurationObserver}
 	conn, err := grpc.Dial(addr,
@@ -45,6 +47,7 @@ func NewClient(addr string, reqDurationObserver observerVec) (*Client, error) {
 	}, nil
 }
 
+// OrderCreate создаёт новый заказ дял пользователя userId с итемами items
 func (c *Client) OrderCreate(ctx context.Context, userId int64, items []models.CartItem) (int64, error) {
 	request := converter.ModelsToOrderCreateRequest(userId, items)
 	response, err := c.client.OrderCreate(ctx, request)
@@ -55,6 +58,7 @@ func (c *Client) OrderCreate(ctx context.Context, userId int64, items []models.C
 	return converter.OrderIdToId(response), nil
 }
 
+// GetNumberOfItemInStocks возвращает количество товаров с id = skuId в стоках
 func (c *Client) GetNumberOfItemInStocks(ctx context.Context, skuId int64) (uint64, error) {
 	req := converter.SkuIdToStocksInfoRequest(skuId)
 	response, err := c.client.StocksInfo(ctx, req)

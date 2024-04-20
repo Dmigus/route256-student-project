@@ -1,3 +1,4 @@
+// Package app содержит приложение, в котором функционирует сервис cart
 package app
 
 import (
@@ -71,7 +72,7 @@ func (a *App) init() error {
 		Help:      "Response time distribution made to Product service by cart service",
 		Buckets:   bucketsForRequestDuration,
 	},
-		[]string{durationobserverhttp.MethodNameLabel, durationobserverhttp.CodeLabel, durationobserverhttp.UrlLabel},
+		[]string{durationobserverhttp.MethodNameLabel, durationobserverhttp.CodeLabel, durationobserverhttp.URLLabel},
 	)
 	observerTripper := durationobserverhttp.NewDurationObserverTripper(psResponseTime, http.DefaultTransport)
 
@@ -113,7 +114,7 @@ func (a *App) init() error {
 		Help:      "Response time distribution made to cart",
 		Buckets:   bucketsForRequestDuration,
 	},
-		[]string{middleware.MethodNameLabel, middleware.CodeLabel, middleware.UrlLabel},
+		[]string{middleware.MethodNameLabel, middleware.CodeLabel, middleware.URLLabel},
 	)
 	addHandler := middleware.NewDurationObserverMW(addPkg.New(wholeCartService), responseTime, "/user/<user_id>/cart/<cart_id>")
 	addPattern := fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment)

@@ -1,11 +1,13 @@
+// Package main содержит код для запуска сервиса cart в рамках одного процесса операционной системы
 package main
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"os/signal"
-	"route256.ozon.ru/project/cart/internal/app"
 	"syscall"
+
+	"go.uber.org/zap"
+	"route256.ozon.ru/project/cart/internal/app"
 )
 
 func main() {
@@ -31,9 +33,9 @@ func main() {
 		return
 	}
 	defer func() {
-		err := shutdown()
-		if err != nil {
-			logger.Error("error shutting down tracing", zap.Error(err))
+		errShutdown := shutdown()
+		if errShutdown != nil {
+			logger.Error("error shutting down tracing", zap.Error(errShutdown))
 		}
 	}()
 

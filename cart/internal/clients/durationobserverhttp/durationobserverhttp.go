@@ -2,16 +2,20 @@
 package durationobserverhttp
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
+	// MethodNameLabel это метка в которую запишется название http запроса в product service
 	MethodNameLabel = "method"
-	CodeLabel       = "code"
-	UrlLabel        = "url"
+	// CodeLabel это метка в которую запишется код http ответа
+	CodeLabel = "code"
+	// URLLabel это метка, содержащая url путь в запросе к product service
+	URLLabel = "url"
 )
 
 type (
@@ -43,7 +47,7 @@ func (dot *DurationObserverTripper) RoundTrip(r *http.Request) (*http.Response, 
 	endTime := time.Now()
 	duration := endTime.Sub(startTime).Seconds()
 	codeStr := strconv.Itoa(resp.StatusCode)
-	labels := prometheus.Labels{MethodNameLabel: r.Method, CodeLabel: codeStr, UrlLabel: r.URL.Path}
+	labels := prometheus.Labels{MethodNameLabel: r.Method, CodeLabel: codeStr, URLLabel: r.URL.Path}
 	dot.requestDurationObserver.With(labels).Observe(duration)
 	return resp, nil
 }

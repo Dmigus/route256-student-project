@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"go.uber.org/zap"
 	"net/http"
+
+	"go.uber.org/zap"
 	"route256.ozon.ru/project/cart/internal/pkg/logging"
 )
 
@@ -11,11 +12,13 @@ const (
 	pathFieldName   = "path"
 )
 
+// RequestLoggerMW это mw для логирования информации о входящих http запросов в cart
 type RequestLoggerMW struct {
 	wrapped http.Handler
 	logger  *zap.Logger
 }
 
+// NewLogger возвращает новый RequestLoggerMW
 func NewLogger(handlerToWrap http.Handler, logger *zap.Logger) *RequestLoggerMW {
 	return &RequestLoggerMW{
 		wrapped: handlerToWrap,
@@ -23,6 +26,7 @@ func NewLogger(handlerToWrap http.Handler, logger *zap.Logger) *RequestLoggerMW 
 	}
 }
 
+// ServeHTTP обрабатывает запрос
 func (rl *RequestLoggerMW) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fields := logging.AddTraceFieldsFromCtx(r.Context(),
 		zap.String(methodFieldName, r.Method), zap.String(pathFieldName, r.URL.Path))

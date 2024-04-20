@@ -1,17 +1,22 @@
+// Package middleware содержит функции, используемые в качестве http middleware
 package middleware
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/urfave/negroni"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/urfave/negroni"
 )
 
 const (
+	// MethodNameLabel это метка, в которую запишется название http запроса
 	MethodNameLabel = "method"
-	CodeLabel       = "code"
-	UrlLabel        = "url"
+	// CodeLabel это метка в которую запишется код http ответа от cart
+	CodeLabel = "code"
+	// URLLabel это метка, содержашая очищенный url путь в запросе к cart
+	URLLabel = "url"
 )
 
 type (
@@ -27,6 +32,7 @@ type (
 	}
 )
 
+// NewDurationObserverMW создаёт DurationObserverMW
 func NewDurationObserverMW(handlerToWrap http.Handler, observer observerVec, clearedPath string) *DurationObserverMW {
 	return &DurationObserverMW{
 		wrapped:     handlerToWrap,
@@ -35,6 +41,7 @@ func NewDurationObserverMW(handlerToWrap http.Handler, observer observerVec, cle
 	}
 }
 
+// ServeHTTP обрабатывает запрос
 func (do *DurationObserverMW) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lrw := negroni.NewResponseWriter(w)
 	start := time.Now()
@@ -42,6 +49,6 @@ func (do *DurationObserverMW) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	end := time.Now()
 	duration := end.Sub(start).Seconds()
 	codeStr := strconv.Itoa(lrw.Status())
-	labels := prometheus.Labels{MethodNameLabel: r.Method, CodeLabel: codeStr, UrlLabel: do.clearedPath}
+	labels := prometheus.Labels{MethodNameLabel: r.Method, CodeLabel: codeStr, URLLabel: do.clearedPath}
 	do.observer.With(labels).Observe(duration)
 }

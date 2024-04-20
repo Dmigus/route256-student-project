@@ -3,9 +3,10 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 type Config struct {
