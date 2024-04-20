@@ -8,11 +8,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pkg/errors"
-	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events/converter"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/protobuf/proto"
 	"route256.ozon.ru/project/loms/internal/models"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
+	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events/converter"
 )
 
 const (
@@ -47,7 +47,7 @@ func (e *Events) OrderStatusChanged(ctx context.Context, order *models.Order) er
 	if err != nil {
 		return errors.Wrap(err, "could not marshal event message")
 	}
-	params := pushEventParams{PartitionKey: partitionKey, Payload: payload}
+	params := pushEventParams{PartitionKey: partitionKey, Payload: payload, Tracing: tracingFieldFromCtx(ctx)}
 	e.reqDur.RecordDuration(messageOutboxTableName, sqlmetrics.Insert, func() error {
 		err = e.queries.pushEvent(ctx, params)
 		return err
