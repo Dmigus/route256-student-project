@@ -36,6 +36,8 @@ import (
 	"route256.ozon.ru/project/loms/internal/services/loms/stocksinfogetter"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 type App struct {
 	config           Config
 	grpcController   *grpcContoller.Server
@@ -84,6 +86,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		Namespace: "loms",
 		Name:      "sql_request_duration_seconds",
 		Help:      "Response time distribution made to PostgreSQL",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
 	)
@@ -155,7 +158,8 @@ func (a *App) initInterceptors() error {
 	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "loms",
 		Name:      "grpc_request_duration_seconds",
-		Help:      "Response time distribution made to loms",
+		Help:      "Response time distribution made to loms. Example: Median of all queries duration histogram_quantile(0.5, loms_grpc_request_duration_seconds_bucket)",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{mwGRPC.MethodNameLabel, mwGRPC.CodeLabel},
 	)

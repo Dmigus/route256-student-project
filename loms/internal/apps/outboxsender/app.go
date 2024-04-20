@@ -16,6 +16,8 @@ import (
 	"route256.ozon.ru/project/loms/internal/services/outboxsender"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 // App это приложение для отправителя из outbox в топик кафки
 type App struct {
 	config  Config
@@ -47,6 +49,7 @@ func (a *App) init() error {
 		Namespace: "outboxsender",
 		Name:      "sql_request_duration_seconds",
 		Help:      "Response time distribution made to PostgreSQL",
+		Buckets:   bucketsForRequestDuration,
 	},
 		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
 	)
