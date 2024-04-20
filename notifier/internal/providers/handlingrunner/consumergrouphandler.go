@@ -2,6 +2,7 @@ package handlingrunner
 
 import (
 	"context"
+
 	"github.com/IBM/sarama"
 	"github.com/dnwe/otelsarama"
 	"go.opentelemetry.io/otel"

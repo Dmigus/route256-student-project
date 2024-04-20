@@ -3,10 +3,10 @@ package main
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/zap"
 	"route256.ozon.ru/project/notifier/internal/app"
 )
 
@@ -29,9 +29,9 @@ func main() {
 		return
 	}
 	defer func() {
-		err := shutdownProvider()
-		if err != nil {
-			logger.Error("error shutting down tracing", zap.Error(err))
+		errshutdown := shutdownProvider()
+		if errshutdown != nil {
+			logger.Error("error shutting down tracing", zap.Error(errshutdown))
 		}
 	}()
 

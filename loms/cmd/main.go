@@ -58,10 +58,12 @@ func main() {
 	var lomsErr error
 	go func() {
 		defer wg.Done()
+		defer stop()
 		lomsErr = lomsApp.Run(processLiveContext)
 	}()
 	go func() {
 		defer wg.Done()
+		defer stop()
 		outboxSenderApp.Run(processLiveContext)
 	}()
 	wg.Wait()
