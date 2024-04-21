@@ -5,12 +5,12 @@ import (
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
+	"route256.ozon.ru/project/loms/internal/pkg/sqltracing"
 	"time"
 
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"route256.ozon.ru/project/loms/internal/providers/kafka"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	"route256.ozon.ru/project/loms/internal/services/outboxsender"
@@ -24,7 +24,7 @@ type App struct {
 	service *outboxsender.Service
 }
 
-// NewApp создаёт и готовит к азпуску новое приложение App, согласно переданной конфигурации. Возвращает ошибку, если не удалось сконфигурировать.
+// NewApp создаёт и готовит к запуску новое приложение App, согласно переданной конфигурации. Возвращает ошибку, если не удалось сконфигурировать.
 func NewApp(config Config) (*App, error) {
 	app := &App{
 		config: config,
@@ -40,7 +40,7 @@ func (a *App) init() error {
 	if err != nil {
 		return err
 	}
-	connOutbox, err := createConnToPostgres(a.config.Outbox.GetPostgresDSN())
+	connOutbox, err := sqltracing.CreateConnToPostgres(a.config.Outbox.GetPostgresDSN())
 	if err != nil {
 		return err
 	}
@@ -69,16 +69,4 @@ func (a *App) init() error {
 // Run это блокирующий запуск приложения App с временем жизни, определяемым ctx
 func (a *App) Run(ctx context.Context) {
 	a.service.Run(ctx)
-}
-
-func createConnToPostgres(dsn string) (*pgxpool.Pool, error) {
-	conn, err := pgxpool.New(context.Background(), dsn)
-	if err != nil {
-		return nil, err
-	}
-	err = conn.Ping(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
 }
