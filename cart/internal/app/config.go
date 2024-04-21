@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -24,12 +27,15 @@ type Config struct {
 	LOMS struct {
 		Address string `json:"Address"`
 	}
+	Logger *zap.Logger
 }
 
-func NewConfig(configPath string) (conf Config, err error) {
-	file, err := os.Open(configPath)
+// NewConfig читает файл configPath в формате json в структуру типа configType и возвращает её
+func NewConfig[configType any](configPath string) (configType, error) {
+	var conf configType
+	file, err := os.Open(filepath.Clean(configPath))
 	if err != nil {
-		return Config{}, err
+		return conf, err
 	}
 	defer func() {
 		err2 := file.Close()
@@ -37,7 +43,7 @@ func NewConfig(configPath string) (conf Config, err error) {
 	}()
 	jsonParser := json.NewDecoder(file)
 	if err = jsonParser.Decode(&conf); err != nil {
-		return Config{}, err
+		return conf, err
 	}
 	return conf, nil
 }

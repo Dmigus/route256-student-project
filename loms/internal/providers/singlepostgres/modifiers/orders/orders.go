@@ -4,6 +4,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 
 	"github.com/jackc/pgx/v5"
 	pkgerrors "github.com/pkg/errors"
@@ -13,26 +14,45 @@ import (
 
 var errOrderNotFound = pkgerrors.Wrap(models.ErrNotFound, "order is not found")
 
+const (
+	orderTableName     = "order"
+	orderItemTableName = "order_item"
+)
+
 // Orders представялет реализацию репозитория заказов с методами для модификации данных
-type Orders struct {
-	queries *Queries
-}
+type (
+	durationRecorder interface {
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
+	}
+	Orders struct {
+		queries *Queries
+		durRec  durationRecorder
+	}
+)
 
 // NewOrders создаёт объект репозитория заказов, работающего в рамках транзакции tx
-func NewOrders(tx DBTX) *Orders {
-	return &Orders{queries: New(tx)}
+func NewOrders(tx DBTX, durRec durationRecorder) *Orders {
+	return &Orders{queries: New(tx), durRec: durRec}
 }
 
 // Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
 func (po *Orders) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
 	params := createOrderParams{UserID: userID, Status: orderStatusToString(models.New), AreItemsReserved: false}
-	orderID, err := po.queries.createOrder(ctx, params)
+	var orderID int64
+	var err error
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Insert, func() error {
+		orderID, err = po.queries.createOrder(ctx, params)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
 	order := models.NewOrder(userID, orderID)
 	itemsParams := insertItemParamsFrom(orderID, items)
-	_, err = po.queries.insertOrderItem(ctx, itemsParams)
+	po.durRec.RecordDuration(orderItemTableName, sqlmetrics.Insert, func() error {
+		_, err = po.queries.insertOrderItem(ctx, itemsParams)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +76,12 @@ func (po *Orders) Save(ctx context.Context, order *models.Order) error {
 		Status:           orderStatusToString(order.Status),
 		AreItemsReserved: order.IsItemsReserved,
 	}
-	return po.queries.updateOrder(ctx, params)
+	var err error
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Update, func() error {
+		err = po.queries.updateOrder(ctx, params)
+		return err
+	})
+	return err
 }
 
 func orderStatusToString(os models.OrderStatus) string {
@@ -108,7 +133,12 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 }
 
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
-	row, err := po.queries.selectOrder(ctx, orderID)
+	var row selectOrderRow
+	var err error
+	po.durRec.RecordDuration(orderTableName, sqlmetrics.Select, func() error {
+		row, err = po.queries.selectOrder(ctx, orderID)
+		return err
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = errOrderNotFound
@@ -122,7 +152,12 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 }
 
 func (po *Orders) readItemsForOrder(ctx context.Context, orderID int64) ([]models.OrderItem, error) {
-	rows, err := po.queries.selectOrderItems(ctx, orderID)
+	var rows []selectOrderItemsRow
+	var err error
+	po.durRec.RecordDuration(orderItemTableName, sqlmetrics.Select, func() error {
+		rows, err = po.queries.selectOrderItems(ctx, orderID)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

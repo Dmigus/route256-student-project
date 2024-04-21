@@ -1,3 +1,4 @@
+// Package app содержит приложение, в котором функционирует сервис cart
 package app
 
 import (
@@ -5,10 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jasongerard/healthz"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
 	"net/netip"
 	"net/url"
+	"route256.ozon.ru/project/cart/internal/clients/durationobserverhttp"
 	lomsClientPkg "route256.ozon.ru/project/cart/internal/clients/loms"
 	"route256.ozon.ru/project/cart/internal/clients/ratelimiterhttp"
 	"route256.ozon.ru/project/cart/internal/clients/retriablehttp"
@@ -34,6 +40,8 @@ import (
 	"time"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 type App struct {
 	config         Config
 	httpController http.Handler
@@ -57,17 +65,37 @@ func (a *App) init() error {
 	if err != nil {
 		return err
 	}
+
+	psResponseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "cart",
+		Name:      "http_product_service_duration_seconds",
+		Help:      "Response time distribution made to Product service by cart service",
+		Buckets:   bucketsForRequestDuration,
+	},
+		[]string{durationobserverhttp.MethodNameLabel, durationobserverhttp.CodeLabel, durationobserverhttp.URLLabel},
+	)
+	observerTripper := durationobserverhttp.NewDurationObserverTripper(psResponseTime, http.DefaultTransport)
+
 	retryPolicy := policies.NewRetryOnStatusCodes(prodServConfig.RetryPolicy.RetryStatusCodes, prodServConfig.RetryPolicy.MaxRetries)
 	ticker := ratelimiter.NewSystemTimeTicker(int64(prodServConfig.RPS))
 	rateLimiter := ratelimiter.NewRateLimiter(prodServConfig.RPS, ticker)
-	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, http.DefaultTransport)
+	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, observerTripper)
+
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
 	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
 
 	lomsConfig := a.config.LOMS
-	lomsClient, err := lomsClientPkg.NewClient(lomsConfig.Address)
+	lomsResponseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "cart",
+		Name:      "grpc_loms_duration_seconds",
+		Help:      "Response time distribution made to loms by cart service",
+		Buckets:   bucketsForRequestDuration,
+	},
+		[]string{lomsClientPkg.MethodNameLabel, lomsClientPkg.CodeLabel},
+	)
+	lomsClient, err := lomsClientPkg.NewClient(lomsConfig.Address, lomsResponseTime)
 	if err != nil {
 		return err
 	}
@@ -78,20 +106,39 @@ func (a *App) init() error {
 	cartLister := lister.New(cartRepo, prodInfoGetter)
 	checkouterUsecase := checkouter.NewCheckouter(cartRepo, loms)
 	wholeCartService := usecases.NewCartService(cartAdder, cartDeleter, cartClearer, cartLister, checkouterUsecase)
+
 	mux := http.NewServeMux()
-	addHandler := addPkg.New(wholeCartService)
-	mux.Handle(fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment), addHandler)
-	clearHandler := clearPkg.New(wholeCartService)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment), clearHandler)
-	deleteHandler := deletePkg.New(wholeCartService)
-	mux.Handle(fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment), deleteHandler)
-	listHandler := listPkg.New(wholeCartService)
-	mux.Handle(fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment), listHandler)
-	checkoutHandler := checkoutPkg.New(wholeCartService)
-	mux.Handle("POST /cart/checkout", checkoutHandler)
-	probesMux := healthz.CreateMux()
-	mux.Handle("GET /healthz/alive", probesMux)
-	a.httpController = middleware.NewLogger(mux)
+	responseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "cart",
+		Name:      "http_duration_seconds",
+		Help:      "Response time distribution made to cart",
+		Buckets:   bucketsForRequestDuration,
+	},
+		[]string{middleware.MethodNameLabel, middleware.CodeLabel, middleware.URLLabel},
+	)
+	addHandler := middleware.NewDurationObserverMW(addPkg.New(wholeCartService), responseTime, "/user/<user_id>/cart/<cart_id>")
+	addPattern := fmt.Sprintf("POST /user/{%s}/cart/{%s}", addPkg.UserIdSegment, addPkg.SkuIdSegment)
+	mux.Handle(addPattern, addHandler)
+	clearHandler := middleware.NewDurationObserverMW(clearPkg.New(wholeCartService), responseTime, "/user/<user_id>/cart")
+	clearPattern := fmt.Sprintf("DELETE /user/{%s}/cart", clearPkg.UserIdSegment)
+	mux.Handle(clearPattern, clearHandler)
+	deleteHandler := middleware.NewDurationObserverMW(deletePkg.New(wholeCartService), responseTime, "/user/<user_id>/cart/<cart_id>")
+	deletePattern := fmt.Sprintf("DELETE /user/{%s}/cart/{%s}", deletePkg.UserIdSegment, deletePkg.SkuIdSegment)
+	mux.Handle(deletePattern, deleteHandler)
+	listHandler := middleware.NewDurationObserverMW(listPkg.New(wholeCartService), responseTime, "/user/<user_id>/cart")
+	listPattern := fmt.Sprintf("GET /user/{%s}/cart", listPkg.UserIdSegment)
+	mux.Handle(listPattern, listHandler)
+	checkoutHandler := middleware.NewDurationObserverMW(checkoutPkg.New(wholeCartService), responseTime, "/cart/checkout")
+	checkoutPattern := "POST /cart/checkout"
+	mux.Handle(checkoutPattern, checkoutHandler)
+
+	probesMux := middleware.NewDurationObserverMW(healthz.CreateMux(), responseTime, "/healthz/alive")
+	probesPattern := "GET /healthz/alive"
+	mux.Handle(probesPattern, probesMux)
+	metricsPattern := "/metrics"
+	metricsHandler := middleware.NewDurationObserverMW(promhttp.Handler(), responseTime, "/metrics")
+	mux.Handle(metricsPattern, metricsHandler)
+	a.httpController = otelhttp.NewHandler(middleware.NewLogger(mux, a.config.Logger), "processing request by cart")
 	return nil
 }
 
@@ -119,12 +166,14 @@ func (a *App) Run(ctx context.Context) error {
 		Handler: a.httpController,
 	}
 	errStopping := make(chan error, 1)
+	appRunCtx, cancel := context.WithCancel(ctx)
 	go func() {
-		<-ctx.Done()
+		<-appRunCtx.Done()
 		errStopping <- a.stop(server)
 		close(errStopping)
 	}()
 	errServing := server.ListenAndServe()
+	cancel()
 	if errors.Is(errServing, http.ErrServerClosed) {
 		errServing = nil
 	}

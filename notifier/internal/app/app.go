@@ -25,8 +25,8 @@ func NewApp(config Config) *App {
 }
 
 func (a *App) init() {
-	runner := handlingrunner.NewKafkaConsumerGroupRunner(a.config.Brokers, a.config.Topic)
-	handler := eventhandler.NewLoggerToWriter(a.config.LogsWriter)
+	runner := handlingrunner.NewKafkaConsumerGroupRunner(a.config.Brokers, a.config.Topic, a.config.Logger)
+	handler := eventhandler.NewLoggerToWriter(a.config.Logger)
 	a.service = service.NewNotifier(handler, runner)
 }
 

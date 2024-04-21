@@ -3,25 +3,33 @@ package kafka
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
 
 	"github.com/IBM/sarama"
+	"github.com/dnwe/otelsarama"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+type messagesSender interface {
+	SendMessages([]*sarama.ProducerMessage) error
+}
 
 // Sender это провайдер, который умеет отправлять сообщения в кафку
 type Sender struct {
 	topic    string
-	producer sarama.SyncProducer
+	producer messagesSender
 }
 
 // NewSender создайт новый Sender
 func NewSender(brokers []string, topic string) (*Sender, error) {
-	syncProducer, err := sarama.NewSyncProducer(brokers, getConfig())
+	cfg := getConfig()
+	syncProducer, err := sarama.NewSyncProducer(brokers, cfg)
 	if err != nil {
 		return nil, err
 	}
+	otelProducer := otelsarama.WrapSyncProducer(cfg, syncProducer)
 	return &Sender{
-		producer: syncProducer,
+		producer: otelProducer,
 		topic:    topic,
 	}, nil
 }
@@ -31,6 +39,7 @@ func (p *Sender) SendMessages(_ context.Context, messages []models.EventMessage)
 	saramaMessages := make([]*sarama.ProducerMessage, 0, len(messages))
 	for _, ev := range messages {
 		message := p.modelMessageToSarama(ev)
+		otel.GetTextMapPropagator().Inject(ev.TraceContext, otelsarama.NewProducerMessageCarrier(message))
 		saramaMessages = append(saramaMessages, message)
 	}
 	return p.producer.SendMessages(saramaMessages)

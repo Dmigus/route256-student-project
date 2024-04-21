@@ -9,6 +9,6 @@
     "Brokers": ["kafka0:29092"],
     "Topic": "loms.order-events"
   },
-  "BatchSize": 1,
-  "BatchInterval": 3
+  "BatchSize": 3,
+  "BatchInterval": 1
 }

@@ -9,6 +9,6 @@
     "Brokers": ["127.0.0.1:9092"],
     "Topic": "loms.order-events"
   },
-  "BatchSize": 1,
-  "BatchInterval": 3
+  "BatchSize": 3,
+  "BatchInterval": 1
 }
