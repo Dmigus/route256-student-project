@@ -4,6 +4,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 
 	"github.com/jackc/pgx/v5"
 	pkgerrors "github.com/pkg/errors"
@@ -13,14 +14,25 @@ import (
 
 var errOrderNotFound = pkgerrors.Wrap(models.ErrNotFound, "order is not found")
 
+const (
+	orderTableName     = "order"
+	orderItemTableName = "order_item"
+)
+
 // Orders представялет реализацию репозитория заказов с методами для чтения данных
-type Orders struct {
-	queries *Queries
-}
+type (
+	durationRecorder interface {
+		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
+	}
+	Orders struct {
+		queries *Queries
+		reqDur  durationRecorder
+	}
+)
 
 // NewOrders создаёт объект репозитория заказов, работающего в рамках транзакции tx
-func NewOrders(tx DBTX) *Orders {
-	return &Orders{queries: New(tx)}
+func NewOrders(tx DBTX, reqDur durationRecorder) *Orders {
+	return &Orders{queries: New(tx), reqDur: reqDur}
 }
 
 func orderStatusFromString(s string) models.OrderStatus {
@@ -55,7 +67,12 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 }
 
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
-	row, err := po.queries.selectOrder(ctx, orderID)
+	var row selectOrderRow
+	var err error
+	po.reqDur.RecordDuration(orderTableName, sqlmetrics.Select, func() error {
+		row, err = po.queries.selectOrder(ctx, orderID)
+		return err
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = errOrderNotFound
@@ -69,7 +86,12 @@ func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (
 }
 
 func (po *Orders) readItemsForOrder(ctx context.Context, orderID int64) ([]models.OrderItem, error) {
-	rows, err := po.queries.selectOrderItems(ctx, orderID)
+	var rows []selectOrderItemsRow
+	var err error
+	po.reqDur.RecordDuration(orderItemTableName, sqlmetrics.Select, func() error {
+		rows, err = po.queries.selectOrderItems(ctx, orderID)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

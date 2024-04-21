@@ -3,9 +3,13 @@ package singlepostgres
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/jackc/pgx/v5"
 )
+
+var tracer = otel.Tracer("postgres txmanager")
 
 type (
 	// TxBeginner объект, умеющий открывать новую транзакцию
@@ -61,39 +65,66 @@ func NewTxManagerThree[T1, T2, T3 any](conn TxBeginner, creator1 func(conn pgx.T
 
 // WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с этими провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerOne[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) bool) error {
+	ctx, span := tracer.Start(ctx, "transaction")
+	defer span.End()
+	span.SetStatus(codes.Error, "transaction was not committed")
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	span.AddEvent("transaction started")
 	defer tx.Rollback(ctx)
-	if f(ctx, u.creator(tx)) {
-		return tx.Commit(ctx)
+	if !f(ctx, u.creator(tx)) {
+		return nil
 	}
-	return nil
+	err = tx.Commit(ctx)
+	if err == nil {
+		span.AddEvent("transaction committed")
+		span.SetStatus(codes.Ok, "")
+	}
+	return err
 }
 
 // WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с двумя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerTwo[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) bool) error {
+	ctx, span := tracer.Start(ctx, "transaction")
+	defer span.End()
+	span.SetStatus(codes.Error, "transaction was not committed")
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	span.AddEvent("transaction started")
 	defer tx.Rollback(ctx)
-	if f(ctx, u.creator1(tx), u.creator2(tx)) {
-		return tx.Commit(ctx)
+	if !f(ctx, u.creator1(tx), u.creator2(tx)) {
+		return nil
 	}
-	return nil
+	err = tx.Commit(ctx)
+	if err == nil {
+		span.AddEvent("transaction committed")
+		span.SetStatus(codes.Ok, "")
+	}
+	return err
 }
 
 // WithinTransaction создаёт новую транзакию, связанные с ней репозитории заказов и стоков и выполняет функцию f с тремя провайдерами. Если функция f вернула true, транзакция фиксируется, иначе откатывается.
 func (u *TxManagerThree[T1, T2, T3]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2, provider3 T3) bool) error {
+	ctx, span := tracer.Start(ctx, "transaction")
+	defer span.End()
+	span.SetStatus(codes.Error, "transaction was not committed")
 	tx, err := u.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	span.AddEvent("transaction started")
 	defer tx.Rollback(ctx)
-	if f(ctx, u.creator1(tx), u.creator2(tx), u.creator3(tx)) {
-		return tx.Commit(ctx)
+	if !f(ctx, u.creator1(tx), u.creator2(tx), u.creator3(tx)) {
+		return nil
 	}
-	return nil
+	err = tx.Commit(ctx)
+	if err == nil {
+		span.AddEvent("transaction committed")
+		span.SetStatus(codes.Ok, "")
+	}
+	return err
 }

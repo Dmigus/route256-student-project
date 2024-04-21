@@ -3,27 +3,30 @@ package loms
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"log"
 	"net"
+	"sync"
+	"time"
+
 	grpcContoller "route256.ozon.ru/project/loms/internal/controllers/grpc"
 	mwGRPC "route256.ozon.ru/project/loms/internal/controllers/grpc/mw"
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
 	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
+	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
 	eventsToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
 	ordersToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/orders"
 	stocksToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/stocks"
 	ordersToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/orders"
 	stocksToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/stocks"
-
-	"sync/atomic"
-	"time"
-
 	"route256.ozon.ru/project/loms/internal/services/loms"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
@@ -32,76 +35,111 @@ import (
 	"route256.ozon.ru/project/loms/internal/services/loms/stocksinfogetter"
 )
 
+var bucketsForRequestDuration = []float64{0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1}
+
 type App struct {
-	config         Config
-	grpcController *grpcContoller.Server
-	grpcServer     atomic.Pointer[grpc.Server]
-	httpGateway    atomic.Pointer[httpContoller.Server]
+	config           Config
+	grpcController   *grpcContoller.Server
+	grpcInterceptors []grpc.UnaryServerInterceptor
+	httpController   *httpContoller.Server
 }
 
-func NewApp(config Config) *App {
+// NewApp возвращает иннициализарованный App, готовый к запуску
+func NewApp(config Config) (*App, error) {
 	app := &App{
 		config: config,
 	}
-	app.init()
-	return app
+	if err := app.init(); err != nil {
+		return nil, err
+	}
+	return app, nil
 }
 
-func (a *App) init() {
-	service := a.initServiceWithPostgres()
+func (a *App) init() error {
+	service, err := a.initServiceWithPostgres()
+	if err != nil {
+		return err
+	}
 	a.grpcController = grpcContoller.NewServer(service)
+	err = a.initInterceptors()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func createConnToPostgres(dsn string) *pgxpool.Pool {
-	conn, err := pgxpool.New(context.Background(), dsn)
+func createConnToPostgres(dsn string) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("create connection pool: %w", err)
 	}
-	err = conn.Ping(context.Background())
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	conn, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("connect to database: %w", err)
 	}
-	return conn
+	return conn, nil
 }
 
-func (a *App) initServiceWithPostgres() *loms.LOMService {
-	connMaster := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
-	if err := fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster)); err != nil {
-		log.Fatal(err)
+func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
+	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "loms",
+		Name:      "sql_request_duration_seconds",
+		Help:      "Response time distribution made to PostgreSQL",
+		Buckets:   bucketsForRequestDuration,
+	},
+		[]string{sqlmetrics.TableLabel, sqlmetrics.CategoryLabel, sqlmetrics.ErrLabel},
+	)
+	err := a.config.MetricsRegisterer.Register(responseTime)
+	if err != nil {
+		return nil, err
+	}
+	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
+
+	connMaster, err := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
+	if err != nil {
+		return nil, err
+	}
+	// заполнение стоков начальными данными
+	if err = fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster, sqlDurationRecorder)); err != nil {
+		return nil, err
 	}
 
-	connReplica := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
+	connReplica, err := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
+	if err != nil {
+		return nil, err
+	}
 	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscanceller.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderscreator.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscreator.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
-			return ordersToRead.NewOrders(tx)
+			return ordersToRead.NewOrders(tx, sqlDurationRecorder)
 		}))
 	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(connMaster,
 		func(tx pgx.Tx) orderspayer.OrderRepo {
-			return ordersToModify.NewOrders(tx)
+			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
-			return stocksToModify.NewStocks(tx)
+			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderspayer.EventSender {
-			return eventsToModify.NewEvents(tx)
+			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
 	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {
-			return stocksToRead.NewStocks(tx)
+			return stocksToRead.NewStocks(tx, sqlDurationRecorder)
 		}))
 	return loms.NewLOMService(
 		creator,
@@ -109,78 +147,96 @@ func (a *App) initServiceWithPostgres() *loms.LOMService {
 		stocksInfoGetter,
 		getter,
 		canceller,
-	)
+	), nil
 }
 
-// Run представляет из себя блокирующий вызов, который запускает новый сервер, согласно текущей конфигурации.
-// Если он уже запущен, то функция ничего не делает. Если не удалось запустить, вся программа завершается с ошибкой
-func (a *App) Run() {
-	if a.grpcServer.Load() != nil {
-		return
-	}
-	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			mwGRPC.SetUpErrorCode,
-			mwGRPC.LogReqAndResp,
-			mwGRPC.RecoverPanic,
-			mwGRPC.Validate,
-		),
+func (a *App) initInterceptors() error {
+	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.SetUpErrorCode)
+	mwLogger := mwGRPC.NewLoggerMW(a.config.Logger)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwLogger.LogReqAndResp)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.RecoverPanic)
+	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "loms",
+		Name:      "grpc_request_duration_seconds",
+		Help:      "Response time distribution made to loms. Example: Median of all queries duration histogram_quantile(0.5, loms_grpc_request_duration_seconds_bucket)",
+		Buckets:   bucketsForRequestDuration,
+	},
+		[]string{mwGRPC.MethodNameLabel, mwGRPC.CodeLabel},
 	)
-	if !a.grpcServer.CompareAndSwap(nil, grpcServer) {
-		return
-	}
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", a.config.GRPCServer.Port))
+	err := a.config.MetricsRegisterer.Register(responseTime)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.NewRequestDurationInterceptor(responseTime).RecordDuration)
+	a.grpcInterceptors = append(a.grpcInterceptors, mwGRPC.Validate)
+	return nil
+}
+
+// Run представляет из себя блокирующий вызов, который запускает новый grpc и http контроллеры
+func (a *App) Run(ctx context.Context) error {
+	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(a.grpcInterceptors...),
+	)
 	reflection.Register(grpcServer)
 	v1.RegisterLOMServiceServer(grpcServer, a.grpcController)
-	if err = grpcServer.Serve(lis); err != nil {
-		log.Fatal(err)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", a.config.GRPCServer.Port))
+	if err != nil {
+		return err
 	}
-}
-
-func (a *App) RunGateway() {
-	if a.httpGateway.Load() != nil {
-		return
-	}
-	newGW := httpContoller.NewServer(
+	wg := &sync.WaitGroup{}
+	wg.Add(4)
+	serverRunCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		defer wg.Done()
+		<-serverRunCtx.Done()
+		a.stop(grpcServer)
+	}()
+	go func() {
+		defer wg.Done()
+		err = grpcServer.Serve(lis)
+		cancel()
+	}()
+	a.httpController, err = httpContoller.NewServer(
 		fmt.Sprintf(":%d", a.config.GRPCServer.Port),
 		fmt.Sprintf(":%d", a.config.HTTPGateway.Port),
-		a.config.Swagger.Path)
-	if !a.httpGateway.CompareAndSwap(nil, newGW) {
-		return
+		a.config.Swagger.Path,
+		a.config.MetricsHandler)
+	if err != nil {
+		return err
 	}
-	newGW.Serve()
+	var errHTTP, errHTTPClose error
+	go func() {
+		defer wg.Done()
+		<-serverRunCtx.Done()
+		errHTTPClose = a.stopGateway(a.httpController)
+	}()
+	go func() {
+		defer wg.Done()
+		errHTTP = a.httpController.Serve()
+		cancel()
+	}()
+	wg.Wait()
+	return errors.Join(err, errHTTP, errHTTPClose)
 }
 
-// Stop останавливает запущенный сервер в течение ShutdownTimoutSeconds секунд. Если не был запущен, функция ничего не делает. Если не удалось
-// остановить в течение таймаута, вся программа завершается с ошибкой. Возврат из функции произойдёт, когда shutdown завершится.
-func (a *App) Stop() {
-	srvToShutdown := a.grpcServer.Load()
-	if srvToShutdown == nil {
-		return
-	}
+// stop останавливает запущенный grpc сервер в течение ShutdownTimoutSeconds секунд.
+func (a *App) stop(server *grpc.Server) {
 	stopped := make(chan struct{})
 	go func() {
-		srvToShutdown.GracefulStop()
+		server.GracefulStop()
 		close(stopped)
 	}()
 	timerToForceStop := time.NewTimer(time.Duration(a.config.GRPCServer.ShutdownTimoutSeconds) * time.Second)
 	select {
 	case <-timerToForceStop.C:
-		srvToShutdown.Stop()
+		server.Stop()
 	case <-stopped:
 		timerToForceStop.Stop()
 	}
-	a.grpcServer.Store(nil)
 }
 
-func (a *App) StopGateway() {
-	gwToStop := a.httpGateway.Load()
-	if gwToStop == nil {
-		return
-	}
-	gwToStop.Stop(time.Duration(a.config.HTTPGateway.ShutdownTimoutSeconds))
-	a.httpGateway.Store(nil)
+func (a *App) stopGateway(gwToStop *httpContoller.Server) error {
+	return gwToStop.Stop(time.Duration(a.config.HTTPGateway.ShutdownTimoutSeconds))
 }

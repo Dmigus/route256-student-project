@@ -4,10 +4,14 @@ package orderscreator
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	anotherErrors "github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
+
+var tracer = otel.Tracer("order creation")
 
 // ErrInsufficientStocks это ошибка, обозначающая нехватку стоков для осуществления заказа
 var ErrInsufficientStocks = anotherErrors.Wrap(models.ErrFailedPrecondition, "insufficient stocks")
@@ -59,11 +63,19 @@ func (oc *OrdersCreator) Create(ctx context.Context, userID int64, items []model
 	return orderID, nil
 }
 
-func createOrder(ctx context.Context, userID int64, items []models.OrderItem, orders OrderRepo, stocks StockRepo, evSender EventSender) (int64, error) {
+func createOrder(ctx context.Context, userID int64, items []models.OrderItem, orders OrderRepo, stocks StockRepo, evSender EventSender) (_ int64, err error) {
+	ctx, span := tracer.Start(ctx, "creation")
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 	order, err := registerNewOrder(ctx, userID, items, orders, evSender)
 	if err != nil {
 		return 0, err
 	}
+	span.AddEvent("order registered in system")
 	errReserving := assignStocksForOrder(ctx, order, stocks)
 	if err = saveFinalOrderState(ctx, order, orders, evSender); err != nil {
 		return 0, err
@@ -71,6 +83,7 @@ func createOrder(ctx context.Context, userID int64, items []models.OrderItem, or
 	if errReserving != nil {
 		return 0, errReserving
 	}
+	span.AddEvent("item stock was reserved")
 	return order.Id(), nil
 }
 

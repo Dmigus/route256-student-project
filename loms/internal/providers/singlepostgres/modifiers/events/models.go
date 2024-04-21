@@ -4,6 +4,10 @@
 
 package events
 
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
 type ItemUnit struct {
 	SkuID    int64
 	Total    int32
@@ -14,6 +18,7 @@ type MessageOutbox struct {
 	ID           int64
 	PartitionKey []byte
 	Payload      []byte
+	Tracing      pgtype.Hstore
 }
 
 type Order struct {

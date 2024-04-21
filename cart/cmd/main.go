@@ -1,33 +1,46 @@
+// Package main содержит код для запуска сервиса cart в рамках одного процесса операционной системы
 package main
 
 import (
 	"context"
-	"flag"
-	"log"
 	"os/signal"
-	"route256.ozon.ru/project/cart/internal/app"
 	"syscall"
+
+	"go.uber.org/zap"
+	"route256.ozon.ru/project/cart/internal/app"
 )
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "./configs/local.json", "path to config file")
-	flag.Parse()
-	config, err := app.NewConfig(configPath)
+	logger := getLogger()
+	defer logger.Sync()
+	config, err := setupCartConfig()
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("error setting up cart config", zap.Error(err))
+		return
 	}
-
-	appLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	config.Logger = logger.With(zap.String("service", "cart"))
 	appl, err := app.NewApp(config)
 	if err != nil {
-		log.Printf("err initializing app: %v\n", err)
+		logger.Error("error initializing cart app", zap.Error(err))
 		return
 	}
-	err = appl.Run(appLiveContext)
+	processLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	shutdown, err := setUpProductionTracing()
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Error("error setting up tracing", zap.Error(err))
 		return
+	}
+	defer func() {
+		errShutdown := shutdown()
+		if errShutdown != nil {
+			logger.Error("error shutting down tracing", zap.Error(errShutdown))
+		}
+	}()
+
+	err = appl.Run(processLiveContext)
+	if err != nil {
+		logger.Error("services completed with error", zap.Error(err))
 	}
 }

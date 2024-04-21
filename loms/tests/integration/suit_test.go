@@ -7,16 +7,20 @@ import (
 	"database/sql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"os/signal"
 	"route256.ozon.ru/project/loms/internal/apps"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
 	"route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -27,10 +31,11 @@ const (
 
 type Suite struct {
 	suite.Suite
-	Pg       *postgres.PostgresContainer
-	app      *loms.App
-	ConnToDB *sql.DB
-	client   v1.LOMServiceClient
+	Pg           *postgres.PostgresContainer
+	appStop      func()
+	appStoppedCh chan struct{}
+	ConnToDB     *sql.DB
+	client       v1.LOMServiceClient
 }
 
 func (s *Suite) SetupSuite() {
@@ -66,8 +71,20 @@ func (s *Suite) SetupSuite() {
 	port := exposedTcpPort.Int()
 	config.Storage.Master.Port = uint16(port)
 	config.Storage.Replica.Port = uint16(port)
-	s.app = loms.NewApp(config)
-	go s.app.Run()
+	config.MetricsRegisterer = prometheus.DefaultRegisterer
+	config.MetricsHandler = promhttp.Handler()
+	app, err := loms.NewApp(config)
+	s.Require().NoError(err)
+
+	appLiveContext, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	s.appStop = stop
+	s.appStoppedCh = make(chan struct{})
+	go func() {
+		err := app.Run(appLiveContext)
+		s.Require().NoError(err)
+		close(s.appStoppedCh)
+	}()
+
 	conn, err := grpc.Dial(":"+strconv.Itoa(int(config.GRPCServer.Port)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	s.Require().NoError(err)
 	conn.Connect()
@@ -88,7 +105,8 @@ func (s *Suite) TearDownSuite() {
 	s.Assert().NoError(err)
 	err = s.ConnToDB.Close()
 	s.Assert().NoError(err)
-	s.app.Stop()
+	s.appStop()
+	<-s.appStoppedCh
 	err = s.Pg.Terminate(ctx)
 	s.Assert().NoError(err)
 }

@@ -3,16 +3,17 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 // Config это конфигурация приложения
 type Config struct {
-	Brokers    []string `json:"Brokers"`
-	Topic      string   `json:"Topic"`
-	LogsWriter io.Writer
+	Brokers []string `json:"Brokers"`
+	Topic   string   `json:"Topic"`
+	Logger  *zap.Logger
 }
 
 // NewConfig читает файл configPath в формате json в структуру типа configType и возвращает её

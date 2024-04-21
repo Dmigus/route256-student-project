@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"route256.ozon.ru/project/loms/internal/apps"
 	"route256.ozon.ru/project/loms/internal/apps/loms"
 	"route256.ozon.ru/project/loms/internal/apps/outboxsender"
@@ -28,6 +30,8 @@ func setupLOMSConfig() (loms.Config, error) {
 		config.Storage.Master.Password = postgresPwd
 		config.Storage.Replica.Password = postgresPwd
 	}
+	config.MetricsRegisterer = prometheus.DefaultRegisterer
+	config.MetricsHandler = promhttp.Handler()
 	return config, nil
 }
 
@@ -45,6 +49,7 @@ func setupOutboxSenderConfig() (outboxsender.Config, error) {
 		}
 		config.Outbox.Password = postgresPwd
 	}
+	config.MetricsRegisterer = prometheus.DefaultRegisterer
 	return config, nil
 }
 
