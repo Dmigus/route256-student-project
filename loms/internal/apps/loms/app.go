@@ -5,14 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"route256.ozon.ru/project/loms/internal/pkg/sqltracing"
 	"sync"
 	"time"
 
@@ -68,19 +67,6 @@ func (a *App) init() error {
 	return nil
 }
 
-func createConnToPostgres(dsn string) (*pgxpool.Pool, error) {
-	cfg, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		return nil, fmt.Errorf("create connection pool: %w", err)
-	}
-	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
-	conn, err := pgxpool.NewWithConfig(context.Background(), cfg)
-	if err != nil {
-		return nil, fmt.Errorf("connect to database: %w", err)
-	}
-	return conn, nil
-}
-
 func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 	responseTime := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "loms",
@@ -96,7 +82,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 	}
 	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
 
-	connMaster, err := createConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
+	connMaster, err := sqltracing.CreateConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +91,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		return nil, err
 	}
 
-	connReplica, err := createConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
+	connReplica, err := sqltracing.CreateConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
 	if err != nil {
 		return nil, err
 	}
