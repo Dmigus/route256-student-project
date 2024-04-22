@@ -18,7 +18,7 @@ var (
 const remoteMethodName = "get_product"
 
 type callPerformer interface {
-	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) error
+	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*GetProductResponse, error)
 }
 
 // ProductInfoGetter прдназначен для возвращения информации о продуктах
@@ -56,15 +56,14 @@ func (pig *ProductInfoGetter) getProductInfo(ctx context.Context, skuId int64) (
 	if err := pig.checkSkuId(skuId); err != nil {
 		return models.ProductInfo{}, errSkuIdIsNotUInt32
 	}
-	reqBody := getProductRequest{
+	reqBody := GetProductRequest{
 		Sku: uint32(skuId),
 	}
-	var respDTO getProductResponse
-	err := pig.rcPerformer.Perform(ctx, remoteMethodName, &reqBody, &respDTO)
+	respDTO, err := pig.rcPerformer.Perform(ctx, remoteMethodName, &reqBody)
 	if err != nil {
 		return models.ProductInfo{}, err
 	}
-	err = validateGetProductResponse(respDTO)
+	err = validateGetProductResponse(*respDTO)
 	if err != nil {
 		return models.ProductInfo{}, err
 	}
@@ -81,7 +80,7 @@ func (pig *ProductInfoGetter) checkSkuId(skuId int64) error {
 	return nil
 }
 
-func validateGetProductResponse(resp getProductResponse) error {
+func validateGetProductResponse(resp GetProductResponse) error {
 	var err error
 	if resp.Name == nil || !models.IsStringValidName(*resp.Name) {
 		err = errors.Join(err, errInvalidProductName)

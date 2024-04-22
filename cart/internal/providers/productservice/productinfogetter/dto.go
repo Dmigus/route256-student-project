@@ -1,15 +1,15 @@
 package productinfogetter
 
-type getProductRequest struct {
+type GetProductRequest struct {
 	Token string `json:"token"`
 	Sku   uint32 `json:"sku"`
 }
 
-func (l *getProductRequest) SetToken(token string) {
+func (l *GetProductRequest) SetToken(token string) {
 	l.Token = token
 }
 
-type getProductResponse struct {
+type GetProductResponse struct {
 	Name  *string `json:"name"`
 	Price *uint32 `json:"price"`
 }

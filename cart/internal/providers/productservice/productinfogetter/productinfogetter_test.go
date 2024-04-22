@@ -28,8 +28,8 @@ func TestProductInfoGetter_GetProductsInfoSuccess(t *testing.T) {
 		{"third", 30},
 	}
 	helper.performMock.Set(func(_ context.Context, _ string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
-		req := reqBody.(*getProductRequest)
-		respToSet := respBody.(*getProductResponse)
+		req := reqBody.(*GetProductRequest)
+		respToSet := respBody.(*GetProductResponse)
 		prodName := ""
 		prodPrice := uint32(0)
 		switch req.Sku {
@@ -43,7 +43,7 @@ func TestProductInfoGetter_GetProductsInfoSuccess(t *testing.T) {
 			prodName = "third"
 			prodPrice = 30
 		}
-		*respToSet = getProductResponse{Name: &prodName, Price: &prodPrice}
+		*respToSet = GetProductResponse{Name: &prodName, Price: &prodPrice}
 		return nil
 	})
 	returned, err := helper.prodInfoGetter.GetProductsInfo(context.Background(), skuIDs)
@@ -71,7 +71,7 @@ func TestProductInfoGetter_GetProductsInfoContextCancellation(t *testing.T) {
 	wg.Add(len(skuIDs))
 	helper.performMock.Set(func(ctx context.Context, _ string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
 		defer wg.Done()
-		req := reqBody.(*getProductRequest)
+		req := reqBody.(*GetProductRequest)
 		if req.Sku == 1 {
 			return errorToThrow
 		}
@@ -81,7 +81,7 @@ func TestProductInfoGetter_GetProductsInfoContextCancellation(t *testing.T) {
 			return ctx.Err()
 		case <-time.After(contextCancelTimeout):
 		}
-		respToSet := respBody.(*getProductResponse)
+		respToSet := respBody.(*GetProductResponse)
 		prodName := ""
 		prodPrice := uint32(0)
 		respToSet.Price = &prodPrice

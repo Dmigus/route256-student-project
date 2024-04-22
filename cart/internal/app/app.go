@@ -82,9 +82,10 @@ func (a *App) init() error {
 	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, observerTripper)
 
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
-	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
-	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
-	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
+	itPresPerformer := productservice.NewRCPerformer[itempresencechecker.ListSkusResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
+	itPresChecker := itempresencechecker.NewItemPresenceChecker(itPresPerformer)
+	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
+	prodInfoGetter := productinfogetter.NewProductInfoGetter(piPerformer)
 
 	lomsConfig := a.config.LOMS
 	lomsResponseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{
