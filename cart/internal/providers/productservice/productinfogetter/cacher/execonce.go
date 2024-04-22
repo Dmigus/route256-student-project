@@ -5,26 +5,26 @@ import (
 	"sync/atomic"
 )
 
-type funcToBeExecutedOnce func() CacheValue
+type funcToBeExecutedAtMostOnce func() CacheValue
 
-type executingOnce struct {
+// oneTimeExecutor это одноразовый executor, который должен выполнить переданную ему функцию
+type oneTimeExecutor struct {
 	key        CacheKey
 	val        CacheValue
 	once       sync.Once
-	f          funcToBeExecutedOnce
 	clientsNum atomic.Int64
 	container  *execOnceCoordinator
 }
 
-func (eo *executingOnce) Execute() CacheValue {
-	execWithSaving := func() {
-		eo.val = eo.f()
-	}
-	eo.once.Do(execWithSaving)
+func (eo *oneTimeExecutor) Execute(f funcToBeExecutedAtMostOnce) CacheValue {
+	defer eo.close()
+	eo.once.Do(func() {
+		eo.val = f()
+	})
 	return eo.val
 }
 
-func (eo *executingOnce) Close() {
+func (eo *oneTimeExecutor) close() {
 	eo.clientsNum.Add(-1)
 	if eo.clientsNum.Load() == 0 {
 		eo.container.deleteExecutor(eo)
@@ -33,26 +33,26 @@ func (eo *executingOnce) Close() {
 
 type execOnceCoordinator struct {
 	mu   sync.Mutex
-	data map[CacheKey]*executingOnce
+	data map[CacheKey]*oneTimeExecutor
 }
 
 func newExecOnceCoordinator() *execOnceCoordinator {
-	return &execOnceCoordinator{data: make(map[CacheKey]*executingOnce)}
+	return &execOnceCoordinator{data: make(map[CacheKey]*oneTimeExecutor)}
 }
 
-func (c *execOnceCoordinator) getExecutor(k CacheKey, f funcToBeExecutedOnce) *executingOnce {
+func (c *execOnceCoordinator) getExecutor(k CacheKey) *oneTimeExecutor {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	exec, exist := c.data[k]
 	if !exist {
-		exec = &executingOnce{key: k, container: c, f: f}
+		exec = &oneTimeExecutor{key: k, container: c}
 		c.data[k] = exec
 	}
 	exec.clientsNum.Add(1)
 	return exec
 }
 
-func (c *execOnceCoordinator) deleteExecutor(eo *executingOnce) {
+func (c *execOnceCoordinator) deleteExecutor(eo *oneTimeExecutor) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if eo.clientsNum.Load() == 0 {

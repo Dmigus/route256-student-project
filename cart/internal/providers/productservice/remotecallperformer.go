@@ -43,7 +43,7 @@ func NewRCPerformer[respT any](httpClient httpClient, baseURL *url.URL, token st
 	}
 }
 
-// Perform осуществляет вызов метода method, используя reqBody в качестве запроса и записывая ответ в respBody.
+// Perform осуществляет вызов метода method, используя reqBody в качестве запроса и вовращая ответ.
 // reqBody должен быть сериализуем в json.
 func (rcp *RemoteCallPerformer[respT]) Perform(ctx context.Context, method string, reqBody RequestWithSettableToken) (*respT, error) {
 	reqBody.SetToken(rcp.token)

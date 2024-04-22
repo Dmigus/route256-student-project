@@ -49,12 +49,12 @@ func (c *Cacher) Perform(ctx context.Context, method string, reqBody productserv
 }
 
 func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue {
-	execOnceAmongGroup := c.coordinator.getExecutor(k, c.getPerformAndSaveFunc(ctx, k))
-	defer execOnceAmongGroup.Close()
-	return execOnceAmongGroup.Execute()
+	execOnceAmongGroup := c.coordinator.getExecutor(k)
+	funcToExec := c.getPerformAndSaveFunc(ctx, k)
+	return execOnceAmongGroup.Execute(funcToExec)
 }
 
-func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedOnce {
+func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedAtMostOnce {
 	return func() CacheValue {
 		response, err := c.rcPerformer.Perform(ctx, k.method, &k.request)
 		val := CacheValue{response: *response, err: err}
