@@ -31,6 +31,7 @@ import (
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher/inmemorycache"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
 	"route256.ozon.ru/project/cart/internal/usecases"
 	"route256.ozon.ru/project/cart/internal/usecases/adder"
@@ -86,8 +87,9 @@ func (a *App) init() error {
 	itPresPerformer := productservice.NewRCPerformer[itempresencechecker.ListSkusResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(itPresPerformer)
 	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
-	cachedPiPerformer := cacher.NewCacher(piPerformer, cacher.WithMaxCacheSize(5))
-	prodInfoGetter := productinfogetter.NewProductInfoGetter(cachedPiPerformer)
+	cache := inmemorycache.NewInMemoryCache(inmemorycache.WithMaxCacheSize(5))
+	cacherPerformer := cacher.NewCacher(piPerformer, cache)
+	prodInfoGetter := productinfogetter.NewProductInfoGetter(cacherPerformer)
 
 	lomsConfig := a.config.LOMS
 	lomsResponseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{

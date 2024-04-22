@@ -8,36 +8,59 @@ import (
 )
 
 type (
+	CacheKey struct {
+		method  string
+		request productinfogetter.GetProductRequest
+	}
+	CacheValue struct {
+		response productinfogetter.GetProductResponse
+		err      error
+	}
 	callPerformer interface {
 		Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error)
 	}
+	cache interface {
+		Get(CacheKey) (CacheValue, bool)
+		Store(CacheKey, CacheValue)
+	}
 	Cacher struct {
 		rcPerformer callPerformer
-		cache       *cache
+		cache       cache
+		coordinator *execOnceCoordinator
 	}
 )
 
-func NewCacher(rcPerformer callPerformer, opts ...Option) *Cacher {
-	cacher := &Cacher{rcPerformer: rcPerformer, cache: newCache()}
-	for _, opt := range opts {
-		opt.apply(cacher)
-	}
-	return cacher
+func NewCacher(rcPerformer callPerformer, cache cache) *Cacher {
+	coordinator := newExecOnceCoordinator()
+	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator}
 }
 
 func (c *Cacher) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error) {
 	requestStruct := *reqBody.(*productinfogetter.GetProductRequest)
-	key := key{method: method, request: requestStruct}
-	cached, present := c.cache.Get(key)
-	if present {
-		if cached.err != nil {
-			return nil, cached.err
+	key := CacheKey{method: method, request: requestStruct}
+	result, present := c.cache.Get(key)
+	if !present {
+		result = c.performExecAndSave(ctx, key)
+	}
+	if result.err != nil {
+		return nil, result.err
+	}
+	return &result.response, nil
+}
+
+func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue {
+	execOnceAmongGroup := c.coordinator.getExecutor(k, c.getPerformAndSaveFunc(ctx, k))
+	defer execOnceAmongGroup.Close()
+	return execOnceAmongGroup.Execute()
+}
+
+func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedOnce {
+	return func() CacheValue {
+		response, err := c.rcPerformer.Perform(ctx, k.method, &k.request)
+		val := CacheValue{response: *response, err: err}
+		if !errors.Is(err, context.Canceled) {
+			c.cache.Store(k, val)
 		}
-		return &cached.response, nil
+		return val
 	}
-	response, err := c.rcPerformer.Perform(ctx, method, reqBody)
-	if !errors.Is(err, context.Canceled) {
-		c.cache.Insert(key, value{response: *response, err: err})
-	}
-	return response, err
 }
