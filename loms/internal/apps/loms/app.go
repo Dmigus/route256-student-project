@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
-	"route256.ozon.ru/project/loms/internal/pkg/sqltracing"
 	"sync"
 	"time"
 
@@ -82,20 +81,18 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 	}
 	sqlDurationRecorder := sqlmetrics.NewSQLRequestDuration(responseTime)
 
-	connMaster, err := sqltracing.CreateConnToPostgres(a.config.Storage.Master.GetPostgresDSN())
+	shardManager, err := newShardManager(a.config.Storages)
 	if err != nil {
-		return nil, err
-	}
-	// заполнение стоков начальными данными
-	if err = fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(connMaster, sqlDurationRecorder)); err != nil {
 		return nil, err
 	}
 
-	connReplica, err := sqltracing.CreateConnToPostgres(a.config.Storage.Replica.GetPostgresDSN())
-	if err != nil {
+	defaultShard := shardManager.GetDefaultShard()
+	// заполнение стоков начальными данными
+	if err = fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(defaultShard.Master(), sqlDurationRecorder)); err != nil {
 		return nil, err
 	}
-	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(connMaster,
+
+	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(defaultShard.Master(),
 		func(tx pgx.Tx) orderscanceller.OrderRepo {
 			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscanceller.StockRepo {
@@ -103,7 +100,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tx pgx.Tx) orderscanceller.EventSender {
 			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
-	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(connMaster,
+	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(defaultShard.Master(),
 		func(tx pgx.Tx) orderscreator.OrderRepo {
 			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderscreator.StockRepo {
@@ -111,11 +108,11 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tx pgx.Tx) orderscreator.EventSender {
 			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
-	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(connReplica,
+	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(defaultShard.Replica(),
 		func(tx pgx.Tx) ordersgetter.OrderRepo {
 			return ordersToRead.NewOrders(tx, sqlDurationRecorder)
 		}))
-	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(connMaster,
+	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(defaultShard.Master(),
 		func(tx pgx.Tx) orderspayer.OrderRepo {
 			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
 		}, func(tx pgx.Tx) orderspayer.StockRepo {
@@ -123,7 +120,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tx pgx.Tx) orderspayer.EventSender {
 			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
 		}))
-	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(connReplica,
+	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(defaultShard.Replica(),
 		func(tx pgx.Tx) stocksinfogetter.StockRepo {
 			return stocksToRead.NewStocks(tx, sqlDurationRecorder)
 		}))

@@ -10,18 +10,34 @@
   "Swagger": {
     "Path": "./api/openapiv2/v1/loms.swagger.json"
   },
-  "Storage": {
-    "Master" : {
-      "Host": "loms-postgres-master",
-      "Port": 5432,
-      "Database": "postgres",
-      "User": "postgres"
+  "Storages": [
+    {
+      "Master": {
+        "Host": "loms-postgres-master-1",
+        "Port": 5432,
+        "Database": "postgres",
+        "User": "postgres"
+      },
+      "Replica": {
+        "Host": "loms-postgres-replica-1",
+        "Port": 5432,
+        "Database": "postgres",
+        "User": "postgres"
+      }
     },
-    "Replica" : {
-      "Host": "loms-postgres-replica",
-      "Port": 5432,
-      "Database": "postgres",
-      "User": "postgres"
+    {
+      "Master": {
+        "Host": "loms-postgres-master-2",
+        "Port": 5432,
+        "Database": "postgres",
+        "User": "postgres"
+      },
+      "Replica": {
+        "Host": "loms-postgres-replica-2",
+        "Port": 5432,
+        "Database": "postgres",
+        "User": "postgres"
+      }
     }
-  }
+  ]
 }
