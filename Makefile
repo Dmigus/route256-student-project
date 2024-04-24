@@ -5,7 +5,7 @@ build-all:
 
 .PHONY: run-storage
 run-storage:
-	docker-compose up -d --wait loms-postgres-master loms-postgres-replica kafka0 kafka-init-topics kafka-ui
+	docker-compose up -d --wait loms-postgres-master-1 loms-postgres-replica-1 kafka0 kafka-init-topics kafka-ui
 	cd loms && make migrate-postgres && make .setup-replication
 
 run-monitoring:

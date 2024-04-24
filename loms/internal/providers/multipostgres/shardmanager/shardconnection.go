@@ -10,10 +10,10 @@ func NewShardConnection(master, replica *pgxpool.Pool) *ShardConnection {
 	return &ShardConnection{master: master, replica: replica}
 }
 
-func (s *ShardConnection) Master() *pgxpool.Pool {
+func (s ShardConnection) Master() *pgxpool.Pool {
 	return s.master
 }
 
-func (s *ShardConnection) Replica() *pgxpool.Pool {
+func (s ShardConnection) Replica() *pgxpool.Pool {
 	return s.replica
 }

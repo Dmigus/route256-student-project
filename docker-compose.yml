@@ -60,6 +60,8 @@ services:
       - "postgres"
       - "-c"
       - "wal_level=logical"
+      - "-c"
+      - "max_prepared_transactions=100"
 
   loms-postgres-replica-1:
     image: postgres:16.2-bullseye
@@ -96,6 +98,8 @@ services:
       - "postgres"
       - "-c"
       - "wal_level=logical"
+      - "-c"
+      - "max_prepared_transactions=100"
 
   loms-postgres-replica-2:
     image: postgres:16.2-bullseye

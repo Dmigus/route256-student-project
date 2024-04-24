@@ -48,6 +48,14 @@ func (m *Manager) GetDefaultShard() ShardConnection {
 	return m.defaultShard
 }
 
+func (m *Manager) ShardNum() int {
+	return len(m.shards)
+}
+
+func (m *Manager) GetShardByInd(ind int) ShardConnection {
+	return m.shards[ind]
+}
+
 func Murmur3HashFn() HashFn {
 	// всегда инициируется with seed = 0
 	hasher := murmur3.New32()
