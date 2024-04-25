@@ -32,12 +32,18 @@ POSTGRES_PASSWORD:=$(shell cat ./db_password.txt)
 migrate-postgres:
 	@goose -dir ./migrations postgres "host=127.0.0.1 port=5432 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
 	@goose -dir ./migrations postgres "host=127.0.0.1 port=5433 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
+	@goose -dir ./migrations postgres "host=127.0.0.1 port=5434 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
+	@goose -dir ./migrations postgres "host=127.0.0.1 port=5435 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres sslmode=disable" up
 
 .PHONY: .setup-replication
 .setup-replication:
 	@docker exec $(shell docker ps -lq -f name=loms-postgres-master-1) psql -U postgres -c "CREATE PUBLICATION alltables FOR ALL TABLES;"  > /dev/null
 	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica-1) psql -U postgres -c "CREATE SUBSCRIPTION mysub CONNECTION 'host=loms-postgres-master-1 port=5432 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres' PUBLICATION alltables WITH (synchronous_commit='on');" > /dev/null
 	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica-1) psql -U postgres -c "ALTER DATABASE postgres SET default_transaction_read_only to ON;"  > /dev/null
+
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-master-2) psql -U postgres -c "CREATE PUBLICATION alltables FOR ALL TABLES;"  > /dev/null
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica-2) psql -U postgres -c "CREATE SUBSCRIPTION mysub CONNECTION 'host=loms-postgres-master-2 port=5432 user=postgres password=$(POSTGRES_PASSWORD) dbname=postgres' PUBLICATION alltables WITH (synchronous_commit='on');" > /dev/null
+	@docker exec $(shell docker ps -lq -f name=loms-postgres-replica-2) psql -U postgres -c "ALTER DATABASE postgres SET default_transaction_read_only to ON;"  > /dev/null
 
 
 # Используем bin в текущей директории для установки плагинов protoc

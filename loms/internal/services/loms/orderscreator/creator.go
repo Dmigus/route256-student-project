@@ -4,10 +4,9 @@ package orderscreator
 import (
 	"context"
 	"fmt"
+	anotherErrors "github.com/pkg/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-
-	anotherErrors "github.com/pkg/errors"
 	"route256.ozon.ru/project/loms/internal/models"
 )
 

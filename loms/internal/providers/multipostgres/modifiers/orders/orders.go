@@ -33,14 +33,14 @@ func NewOrders(trGetter multipostgres.TransactionCreator, shardManager shardmana
 
 // Create создаёт заказ для юзера userID и товарами items в репозитории и возращает его
 func (po *Orders) Create(ctx context.Context, userID int64, items []models.OrderItem) (*models.Order, error) {
-	shardNum := po.chooseShardNumToNewOrder(userID)
+	shardKey := po.chooseShardKeyToNewOrder(userID)
 	var err error
-	queries, err := po.initQueriesForNewOrder(ctx, shardNum)
+	queries, err := po.initQueriesForNewOrder(ctx, shardKey)
 	if err != nil {
 		return nil, err
 	}
 	var orderID int64
-	params := createOrderParams{Column1: shardNum, UserID: userID, Status: "New", AreItemsReserved: false}
+	params := createOrderParams{Column1: int(shardKey), UserID: userID, Status: "New", AreItemsReserved: false}
 	po.durRec.RecordDuration(orderTableName, sqlmetrics.Insert, func() error {
 		orderID, err = queries.createOrder(ctx, params)
 		return err
@@ -61,8 +61,8 @@ func (po *Orders) Create(ctx context.Context, userID int64, items []models.Order
 	return order, nil
 }
 
-func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardNum int) (*Queries, error) {
-	shard := po.shardManager.GetShardByInd(shardNum).Master()
+func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardKey shardmanager.ShardKey) (*Queries, error) {
+	shard := po.shardManager.GetShard(shardKey).Master()
 	tx, err := po.trGetter.GetTransaction(ctx, shard)
 	if err != nil {
 		return nil, err
@@ -79,9 +79,9 @@ func insertItemParamsFrom(orderID int64, items []models.OrderItem) []insertOrder
 	return itemsParams
 }
 
-func (po *Orders) chooseShardNumToNewOrder(userID int64) int {
-	maxVal := po.shardManager.ShardNum()
-	return rand.Intn(maxVal)
+func (po *Orders) chooseShardKeyToNewOrder(userID int64) shardmanager.ShardKey {
+	maxVal := 1000
+	return shardmanager.ShardKey(rand.Intn(maxVal))
 }
 
 // Save сохраняет заказ в БД в PostgreSQL. Изменение позиций заказа не предусмотрено

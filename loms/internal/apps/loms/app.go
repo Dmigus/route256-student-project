@@ -5,12 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
 	"sync"
 	"time"
 
@@ -19,12 +19,12 @@ import (
 	httpContoller "route256.ozon.ru/project/loms/internal/controllers/http"
 	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres"
-	eventsToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/events"
-	ordersToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/orders"
-	stocksToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/stocks"
-	ordersToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/orders"
-	stocksToRead "route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/stocks"
+	eventsToModify "route256.ozon.ru/project/loms/internal/providers/multipostgres/modifiers/events"
+	ordersToModify "route256.ozon.ru/project/loms/internal/providers/multipostgres/modifiers/orders"
+	stocksToModify "route256.ozon.ru/project/loms/internal/providers/multipostgres/modifiers/stocks"
+	ordersToRead "route256.ozon.ru/project/loms/internal/providers/multipostgres/readers/orders"
+	stocksToRead "route256.ozon.ru/project/loms/internal/providers/multipostgres/readers/stocks"
+	singleStocksToModify "route256.ozon.ru/project/loms/internal/providers/singlepostgres/modifiers/stocks"
 	"route256.ozon.ru/project/loms/internal/services/loms"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscanceller"
 	"route256.ozon.ru/project/loms/internal/services/loms/orderscreator"
@@ -88,41 +88,41 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 
 	defaultShard := shardManager.GetDefaultShard()
 	// заполнение стоков начальными данными
-	if err = fillStocksFromStockData(context.Background(), stocksToModify.NewStocks(defaultShard.Master(), sqlDurationRecorder)); err != nil {
+	if err = fillStocksFromStockData(context.Background(), singleStocksToModify.NewStocks(defaultShard.Master(), sqlDurationRecorder)); err != nil {
 		return nil, err
 	}
 
-	canceller := orderscanceller.NewOrderCanceller(singlepostgres.NewTxManagerThree(defaultShard.Master(),
-		func(tx pgx.Tx) orderscanceller.OrderRepo {
-			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderscanceller.StockRepo {
-			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderscanceller.EventSender {
-			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
+	canceller := orderscanceller.NewOrderCanceller(multipostgres.NewTxManager3(*shardManager,
+		func(tc multipostgres.TransactionCreator) orderscanceller.OrderRepo {
+			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderscanceller.StockRepo {
+			return stocksToModify.NewStocks(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderscanceller.EventSender {
+			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	creator := orderscreator.NewOrdersCreator(singlepostgres.NewTxManagerThree(defaultShard.Master(),
-		func(tx pgx.Tx) orderscreator.OrderRepo {
-			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderscreator.StockRepo {
-			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderscreator.EventSender {
-			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
+	creator := orderscreator.NewOrdersCreator(multipostgres.NewTxManager3(*shardManager,
+		func(tc multipostgres.TransactionCreator) orderscreator.OrderRepo {
+			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderscreator.StockRepo {
+			return stocksToModify.NewStocks(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderscreator.EventSender {
+			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	getter := ordersgetter.NewOrdersGetter(singlepostgres.NewTxManagerOne(defaultShard.Replica(),
-		func(tx pgx.Tx) ordersgetter.OrderRepo {
-			return ordersToRead.NewOrders(tx, sqlDurationRecorder)
+	getter := ordersgetter.NewOrdersGetter(multipostgres.NewTxManager1(*shardManager,
+		func(tc multipostgres.TransactionCreator) ordersgetter.OrderRepo {
+			return ordersToRead.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}))
-	payer := orderspayer.NewOrdersPayer(singlepostgres.NewTxManagerThree(defaultShard.Master(),
-		func(tx pgx.Tx) orderspayer.OrderRepo {
-			return ordersToModify.NewOrders(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderspayer.StockRepo {
-			return stocksToModify.NewStocks(tx, sqlDurationRecorder)
-		}, func(tx pgx.Tx) orderspayer.EventSender {
-			return eventsToModify.NewEvents(tx, sqlDurationRecorder)
+	payer := orderspayer.NewOrdersPayer(multipostgres.NewTxManager3(*shardManager,
+		func(tc multipostgres.TransactionCreator) orderspayer.OrderRepo {
+			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderspayer.StockRepo {
+			return stocksToModify.NewStocks(tc, *shardManager, sqlDurationRecorder)
+		}, func(tc multipostgres.TransactionCreator) orderspayer.EventSender {
+			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	stocksInfoGetter := stocksinfogetter.NewGetter(singlepostgres.NewTxManagerOne(defaultShard.Replica(),
-		func(tx pgx.Tx) stocksinfogetter.StockRepo {
-			return stocksToRead.NewStocks(tx, sqlDurationRecorder)
+	stocksInfoGetter := stocksinfogetter.NewGetter(multipostgres.NewTxManager1(*shardManager,
+		func(tc multipostgres.TransactionCreator) stocksinfogetter.StockRepo {
+			return stocksToRead.NewStocks(tc, *shardManager, sqlDurationRecorder)
 		}))
 	return loms.NewLOMService(
 		creator,

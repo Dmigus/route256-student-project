@@ -20,6 +20,10 @@ type (
 	command interface {
 		execute(ctx context.Context) (hasToBeCommitted bool)
 	}
+	connWithTr struct {
+		conn TxBeginner
+		tr   pgx.Tx
+	}
 	distributedTransaction struct {
 		mu                 sync.Mutex
 		openedTransactions map[TxBeginner]pgx.Tx
@@ -28,7 +32,10 @@ type (
 )
 
 func newDistributedTransaction() *distributedTransaction {
-	return &distributedTransaction{openedTransactions: make(map[TxBeginner]pgx.Tx)}
+	return &distributedTransaction{
+		openedTransactions: make(map[TxBeginner]pgx.Tx),
+		preparedForCommit:  make(map[pgx.Tx]string),
+	}
 }
 
 func (tx *distributedTransaction) WithinTransaction(ctx context.Context, command command) (err error) {
@@ -48,7 +55,7 @@ func (tx *distributedTransaction) WithinTransaction(ctx context.Context, command
 	if err != nil {
 		return err
 	}
-	err = tx.commit(ctx)
+	err = tx.commitPrepared(ctx)
 	if err == nil {
 		span.AddEvent("distributed transaction committed")
 		span.SetStatus(codes.Ok, "")
@@ -69,28 +76,26 @@ func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner T
 }
 
 func (tx *distributedTransaction) rollback(ctx context.Context) error {
-	return tx.forEachTransaction(ctx, func(ctx context.Context, transaction pgx.Tx) error {
+	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
+		alwaysActualCtx := context.WithoutCancel(ctx)
 		tx.mu.Lock()
 		transId, prepared := tx.preparedForCommit[transaction]
 		tx.mu.Unlock()
 		var err error
 		if prepared {
-			_, err = transaction.Exec(ctx, "ROLLBACK PREPARED $1;", transId)
+			_, err = transaction.Exec(alwaysActualCtx, "ROLLBACK PREPARED '"+transId+"'")
 		} else {
-			err = transaction.Rollback(ctx)
-		}
-		if errors.Is(err, pgx.ErrTxClosed) {
-			return nil
+			err = transaction.Rollback(alwaysActualCtx)
 		}
 		return err
 	})
 }
 
-// переводит все транзакции в prepared
+// prepareForCommit переводит все транзакции в prepared
 func (tx *distributedTransaction) prepareForCommit(ctx context.Context) error {
-	return tx.forEachTransaction(ctx, func(ctx context.Context, transaction pgx.Tx) error {
+	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
 		transId := tx.createTransactionID()
-		_, err := transaction.Exec(ctx, "PREPARE TRANSACTION $1;", transId)
+		_, err := transaction.Exec(ctx, "PREPARE TRANSACTION '"+transId+"'")
 		if err == nil {
 			tx.mu.Lock()
 			tx.preparedForCommit[transaction] = transId
@@ -105,23 +110,36 @@ func (tx *distributedTransaction) createTransactionID() string {
 	return guid.String()
 }
 
-func (tx *distributedTransaction) commit(ctx context.Context) error {
-	return tx.forEachTransaction(ctx, func(ctx context.Context, transaction pgx.Tx) error {
-		transId, _ := tx.preparedForCommit[transaction]
-		_, err := transaction.Exec(ctx, "COMMIT PREPARED $1;", transId)
+func (tx *distributedTransaction) commitPrepared(ctx context.Context) error {
+	return tx.forEachTransaction(ctx, func(ctx context.Context, conn TxBeginner, transaction pgx.Tx) error {
+		transId := tx.preparedForCommit[transaction]
+		_, err := transaction.Exec(ctx, "COMMIT PREPARED '"+transId+"'")
+		if err == nil {
+			tx.excludeTransaction(conn)
+		}
 		return err
 	})
 }
 
-func (tx *distributedTransaction) forEachTransaction(ctx context.Context, f func(context.Context, pgx.Tx) error) error {
+func (tx *distributedTransaction) excludeTransaction(conn TxBeginner) {
+	tx.mu.Lock()
+	defer tx.mu.Unlock()
+	tr, ok := tx.openedTransactions[conn]
+	if ok {
+		delete(tx.openedTransactions, conn)
+		delete(tx.preparedForCommit, tr)
+	}
+}
+
+func (tx *distributedTransaction) forEachTransaction(ctx context.Context, f func(context.Context, TxBeginner, pgx.Tx) error) error {
 	transactions := tx.transactionsAsSlice()
 	errs := make([]error, len(transactions))
 	wg := sync.WaitGroup{}
 	wg.Add(len(transactions))
-	for ind, transaction := range transactions {
+	for ind, connectionWithTransaction := range transactions {
 		go func() {
 			defer wg.Done()
-			err := f(ctx, transaction)
+			err := f(ctx, connectionWithTransaction.conn, connectionWithTransaction.tr)
 			errs[ind] = err
 		}()
 	}
@@ -129,12 +147,12 @@ func (tx *distributedTransaction) forEachTransaction(ctx context.Context, f func
 	return errors.Join(errs...)
 }
 
-func (tx *distributedTransaction) transactionsAsSlice() []pgx.Tx {
+func (tx *distributedTransaction) transactionsAsSlice() []connWithTr {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	trs := make([]pgx.Tx, 0, len(tx.openedTransactions))
-	for _, tx := range tx.openedTransactions {
-		trs = append(trs, tx)
+	trs := make([]connWithTr, 0, len(tx.openedTransactions))
+	for conn, tr := range tx.openedTransactions {
+		trs = append(trs, connWithTr{conn: conn, tr: tr})
 	}
 	return trs
 }

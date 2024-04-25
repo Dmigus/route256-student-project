@@ -3,7 +3,7 @@ package loms
 import (
 	"route256.ozon.ru/project/loms/internal/apps"
 	"route256.ozon.ru/project/loms/internal/pkg/sqltracing"
-	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/shardmanager"
+	"route256.ozon.ru/project/loms/internal/providers/multipostgres/shardmanager"
 )
 
 type ShardConfig struct {
