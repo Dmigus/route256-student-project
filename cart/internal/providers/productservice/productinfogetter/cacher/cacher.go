@@ -23,16 +23,20 @@ type (
 		Get(context.Context, CacheKey) (CacheValue, bool)
 		Store(context.Context, CacheKey, CacheValue)
 	}
+	counter interface {
+		Inc()
+	}
 	Cacher struct {
-		rcPerformer callPerformer
-		cache       cache
-		coordinator *execOnceCoordinator
+		rcPerformer                       callPerformer
+		cache                             cache
+		coordinator                       *execOnceCoordinator
+		cacheHitCounter, cacheMissCounter counter
 	}
 )
 
-func NewCacher(rcPerformer callPerformer, cache cache) *Cacher {
+func NewCacher(rcPerformer callPerformer, cache cache, cacheHitCounter, cacheMissCounter counter) *Cacher {
 	coordinator := newExecOnceCoordinator()
-	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator}
+	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator, cacheHitCounter: cacheHitCounter, cacheMissCounter: cacheMissCounter}
 }
 
 func (c *Cacher) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error) {
@@ -40,7 +44,10 @@ func (c *Cacher) Perform(ctx context.Context, method string, reqBody productserv
 	key := CacheKey{Method: method, Request: requestStruct}
 	result, present := c.cache.Get(ctx, key)
 	if !present {
+		c.cacheMissCounter.Inc()
 		result = c.performExecAndSave(ctx, key)
+	} else {
+		c.cacheHitCounter.Inc()
 	}
 	if result.Err != nil {
 		return nil, result.Err

@@ -88,7 +88,19 @@ func (a *App) init() error {
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(itPresPerformer)
 	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
 	cache := rediscache.NewRedisCache(a.config.Redis.Addr, rediscache.WithLogger(a.config.Logger))
-	cacherPerformer := cacher.NewCacher(piPerformer, cache)
+
+	cacheHitCntr := promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "cart",
+		Name:      "cache_hit_total",
+		Help:      "cache hit count on call product info",
+	})
+	cacheMissCntr := promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "cart",
+		Name:      "cache_miss_total",
+		Help:      "cache miss count on call product info",
+	})
+
+	cacherPerformer := cacher.NewCacher(piPerformer, cache, cacheHitCntr, cacheMissCntr)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(cacherPerformer)
 
 	lomsConfig := a.config.LOMS
