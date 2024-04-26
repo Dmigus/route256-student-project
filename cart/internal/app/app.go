@@ -89,18 +89,20 @@ func (a *App) init() error {
 	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
 	cache := rediscache.NewRedisCache(a.config.Redis.Addr, rediscache.WithLogger(a.config.Logger))
 
-	cacheHitCntr := promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "cart",
-		Name:      "cache_hit_total",
-		Help:      "cache hit count on call product info",
+	cacheHitSumm := promauto.NewSummary(prometheus.SummaryOpts{
+		Namespace:  "cart",
+		Name:       "cache_hit_seconds",
+		Help:       "cache response time if was hit",
+		Objectives: map[float64]float64{0.25: 0.05, 0.5: 0.05, 0.75: 0.05, 1: 0.05},
 	})
-	cacheMissCntr := promauto.NewCounter(prometheus.CounterOpts{
-		Namespace: "cart",
-		Name:      "cache_miss_total",
-		Help:      "cache miss count on call product info",
+	cacheMissSumm := promauto.NewSummary(prometheus.SummaryOpts{
+		Namespace:  "cart",
+		Name:       "cache_miss_seconds",
+		Help:       "product service response time",
+		Objectives: map[float64]float64{0.25: 0.05, 0.5: 0.05, 0.75: 0.05, 1: 0.05},
 	})
 
-	cacherPerformer := cacher.NewCacher(piPerformer, cache, cacheHitCntr, cacheMissCntr)
+	cacherPerformer := cacher.NewCacher(piPerformer, cache, cacheHitSumm, cacheMissSumm)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(cacherPerformer)
 
 	lomsConfig := a.config.LOMS

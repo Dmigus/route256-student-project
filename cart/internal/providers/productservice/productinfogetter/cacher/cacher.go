@@ -5,6 +5,7 @@ import (
 	"errors"
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
+	"time"
 )
 
 type (
@@ -23,31 +24,34 @@ type (
 		Get(context.Context, CacheKey) (CacheValue, bool)
 		Store(context.Context, CacheKey, CacheValue)
 	}
-	counter interface {
-		Inc()
+	summary interface {
+		Observe(float64)
 	}
 	Cacher struct {
 		rcPerformer                       callPerformer
 		cache                             cache
 		coordinator                       *execOnceCoordinator
-		cacheHitCounter, cacheMissCounter counter
+		cacheHitSummary, cacheMissSummary summary
 	}
 )
 
-func NewCacher(rcPerformer callPerformer, cache cache, cacheHitCounter, cacheMissCounter counter) *Cacher {
+func NewCacher(rcPerformer callPerformer, cache cache, cacheHitSummary, cacheMissSummary summary) *Cacher {
 	coordinator := newExecOnceCoordinator()
-	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator, cacheHitCounter: cacheHitCounter, cacheMissCounter: cacheMissCounter}
+	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator, cacheHitSummary: cacheHitSummary, cacheMissSummary: cacheMissSummary}
 }
 
 func (c *Cacher) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error) {
 	requestStruct := *reqBody.(*productinfogetter.GetProductRequest)
 	key := CacheKey{Method: method, Request: requestStruct}
-	result, present := c.cache.Get(ctx, key)
+	var result CacheValue
+	var present bool
+	dur := compDuration(func() {
+		result, present = c.cache.Get(ctx, key)
+	})
 	if !present {
-		c.cacheMissCounter.Inc()
 		result = c.performExecAndSave(ctx, key)
 	} else {
-		c.cacheHitCounter.Inc()
+		c.cacheHitSummary.Observe(dur)
 	}
 	if result.Err != nil {
 		return nil, result.Err
@@ -63,7 +67,12 @@ func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue 
 
 func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedAtMostOnce {
 	return func() CacheValue {
-		response, err := c.rcPerformer.Perform(ctx, k.Method, &k.Request)
+		var response *productinfogetter.GetProductResponse
+		var err error
+		dur := compDuration(func() {
+			response, err = c.rcPerformer.Perform(ctx, k.Method, &k.Request)
+		})
+		c.cacheMissSummary.Observe(dur)
 		val := CacheValue{Err: err}
 		if response != nil {
 			val.Response = *response
@@ -73,4 +82,11 @@ func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBe
 		}
 		return val
 	}
+}
+
+func compDuration(f func()) float64 {
+	before := time.Now()
+	f()
+	after := time.Now()
+	return after.Sub(before).Seconds()
 }
