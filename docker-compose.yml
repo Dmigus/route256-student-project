@@ -11,6 +11,8 @@ services:
         condition: service_started
       jaeger:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
 
@@ -192,7 +194,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana/:/etc/grafana/provisioning/datasources/
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/dashboards/:/var/lib/grafana/dashboards/
   redis:
     image: redis:7.2.4-alpine
     ports:

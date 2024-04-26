@@ -64,7 +64,10 @@ func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue 
 func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedAtMostOnce {
 	return func() CacheValue {
 		response, err := c.rcPerformer.Perform(ctx, k.Method, &k.Request)
-		val := CacheValue{Response: *response, Err: err}
+		val := CacheValue{Err: err}
+		if response != nil {
+			val.Response = *response
+		}
 		if !errors.Is(err, context.Canceled) {
 			c.cache.Store(ctx, k, val)
 		}
