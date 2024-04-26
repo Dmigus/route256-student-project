@@ -64,6 +64,8 @@ func (tx *distributedTransaction) WithinTransaction(ctx context.Context, command
 }
 
 func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner TxBeginner) (pgx.Tx, error) {
+	tx.mu.Lock()
+	defer tx.mu.Unlock()
 	if transaction, ok := tx.openedTransactions[beginner]; ok {
 		return transaction, nil
 	}
@@ -77,21 +79,23 @@ func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner T
 
 func (tx *distributedTransaction) rollback(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
-		alwaysActualCtx := context.WithoutCancel(ctx)
 		tx.mu.Lock()
 		transId, prepared := tx.preparedForCommit[transaction]
 		tx.mu.Unlock()
 		var err error
 		if prepared {
+			alwaysActualCtx := context.WithoutCancel(ctx)
 			_, err = transaction.Exec(alwaysActualCtx, "ROLLBACK PREPARED '"+transId+"'")
+			// release connection to pool
+			_ = transaction.Rollback(alwaysActualCtx)
 		} else {
-			err = transaction.Rollback(alwaysActualCtx)
+			err = transaction.Rollback(ctx)
 		}
 		return err
 	})
 }
 
-// prepareForCommit переводит все транзакции в prepared
+// prepareForCommit переводит все транзакции в prepared. Оставляет коннекты
 func (tx *distributedTransaction) prepareForCommit(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
 		transId := tx.createTransactionID()
@@ -116,6 +120,8 @@ func (tx *distributedTransaction) commitPrepared(ctx context.Context) error {
 		_, err := transaction.Exec(ctx, "COMMIT PREPARED '"+transId+"'")
 		if err == nil {
 			tx.excludeTransaction(conn)
+			// release connection to pool
+			_ = transaction.Commit(ctx)
 		}
 		return err
 	})
@@ -139,8 +145,7 @@ func (tx *distributedTransaction) forEachTransaction(ctx context.Context, f func
 	for ind, connectionWithTransaction := range transactions {
 		go func() {
 			defer wg.Done()
-			err := f(ctx, connectionWithTransaction.conn, connectionWithTransaction.tr)
-			errs[ind] = err
+			errs[ind] = f(ctx, connectionWithTransaction.conn, connectionWithTransaction.tr)
 		}()
 	}
 	wg.Wait()

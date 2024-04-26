@@ -92,7 +92,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		return nil, err
 	}
 
-	canceller := orderscanceller.NewOrderCanceller(multipostgres.NewTxManager3(*shardManager,
+	canceller := orderscanceller.NewOrderCanceller(multipostgres.NewTxManager3(
 		func(tc multipostgres.TransactionCreator) orderscanceller.OrderRepo {
 			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}, func(tc multipostgres.TransactionCreator) orderscanceller.StockRepo {
@@ -100,7 +100,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tc multipostgres.TransactionCreator) orderscanceller.EventSender {
 			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	creator := orderscreator.NewOrdersCreator(multipostgres.NewTxManager3(*shardManager,
+	creator := orderscreator.NewOrdersCreator(multipostgres.NewTxManager3(
 		func(tc multipostgres.TransactionCreator) orderscreator.OrderRepo {
 			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}, func(tc multipostgres.TransactionCreator) orderscreator.StockRepo {
@@ -108,11 +108,11 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tc multipostgres.TransactionCreator) orderscreator.EventSender {
 			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	getter := ordersgetter.NewOrdersGetter(multipostgres.NewTxManager1(*shardManager,
+	getter := ordersgetter.NewOrdersGetter(multipostgres.NewTxManager1(
 		func(tc multipostgres.TransactionCreator) ordersgetter.OrderRepo {
 			return ordersToRead.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}))
-	payer := orderspayer.NewOrdersPayer(multipostgres.NewTxManager3(*shardManager,
+	payer := orderspayer.NewOrdersPayer(multipostgres.NewTxManager3(
 		func(tc multipostgres.TransactionCreator) orderspayer.OrderRepo {
 			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}, func(tc multipostgres.TransactionCreator) orderspayer.StockRepo {
@@ -120,7 +120,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		}, func(tc multipostgres.TransactionCreator) orderspayer.EventSender {
 			return eventsToModify.NewEventsToInsert(tc, *shardManager, sqlDurationRecorder)
 		}))
-	stocksInfoGetter := stocksinfogetter.NewGetter(multipostgres.NewTxManager1(*shardManager,
+	stocksInfoGetter := stocksinfogetter.NewGetter(multipostgres.NewTxManager1(
 		func(tc multipostgres.TransactionCreator) stocksinfogetter.StockRepo {
 			return stocksToRead.NewStocks(tc, *shardManager, sqlDurationRecorder)
 		}))

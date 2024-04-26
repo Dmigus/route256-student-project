@@ -1,10 +1,18 @@
 {
-  "Outbox": {
-    "Host": "loms-postgres-master",
-    "Port": 5432,
-    "Database": "postgres",
-    "User": "postgres"
-  },
+  "Outbox": [
+    {
+      "Host": "loms-postgres-master-1",
+      "Port": 5432,
+      "Database": "postgres",
+      "User": "postgres"
+    },
+    {
+      "Host": "loms-postgres-master-2",
+      "Port": 5432,
+      "Database": "postgres",
+      "User": "postgres"
+    }
+  ],
   "Kafka": {
     "Brokers": ["kafka0:29092"],
     "Topic": "loms.order-events"

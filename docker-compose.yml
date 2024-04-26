@@ -78,6 +78,9 @@ services:
       interval: 1s
       timeout: 1s
       retries: 5
+    command:
+      - "-c"
+      - "max_prepared_transactions=100"
 
   loms-postgres-master-2:
     image: postgres:16.2-bullseye
@@ -116,6 +119,9 @@ services:
       interval: 1s
       timeout: 1s
       retries: 5
+    command:
+      - "-c"
+      - "max_prepared_transactions=100"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest

@@ -8,7 +8,7 @@ import (
 
 // Config это конфигурация для приложения outboxsender
 type Config struct {
-	Outbox apps.PostgresConnectConfig `json:"Outbox"`
+	Outbox []apps.PostgresConnectConfig `json:"Outbox"`
 	Kafka  struct {
 		Brokers []string `json:"Brokers"`
 		Topic   string   `json:"Topic"`

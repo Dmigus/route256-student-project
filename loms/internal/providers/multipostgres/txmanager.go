@@ -11,40 +11,34 @@ type (
 		GetTransaction(ctx context.Context, beginner TxBeginner) (pgx.Tx, error)
 	}
 	TxManager1[T any] struct {
-		sm      shardmanager.Manager
 		creator func(TransactionCreator) T
 	}
 	TxManager2[T1 any, T2 any] struct {
-		sm       shardmanager.Manager
 		creator1 func(TransactionCreator) T1
 		creator2 func(TransactionCreator) T2
 	}
 	TxManager3[T1 any, T2 any, T3 any] struct {
-		sm       shardmanager.Manager
 		creator1 func(TransactionCreator) T1
 		creator2 func(TransactionCreator) T2
 		creator3 func(TransactionCreator) T3
 	}
 )
 
-func NewTxManager1[T any](sm shardmanager.Manager, createProviderFunc func(TransactionCreator) T) *TxManager1[T] {
+func NewTxManager1[T any](createProviderFunc func(TransactionCreator) T) *TxManager1[T] {
 	return &TxManager1[T]{
-		sm:      sm,
 		creator: createProviderFunc,
 	}
 }
 
-func NewTxManager2[T1 any, T2 any](sm shardmanager.Manager, creator1 func(TransactionCreator) T1, creator2 func(TransactionCreator) T2) *TxManager2[T1, T2] {
+func NewTxManager2[T1 any, T2 any](creator1 func(TransactionCreator) T1, creator2 func(TransactionCreator) T2) *TxManager2[T1, T2] {
 	return &TxManager2[T1, T2]{
-		sm:       sm,
 		creator1: creator1,
 		creator2: creator2,
 	}
 }
 
-func NewTxManager3[T1 any, T2 any, T3 any](sm shardmanager.Manager, creator1 func(TransactionCreator) T1, creator2 func(TransactionCreator) T2, creator3 func(creator TransactionCreator) T3) *TxManager3[T1, T2, T3] {
+func NewTxManager3[T1 any, T2 any, T3 any](creator1 func(TransactionCreator) T1, creator2 func(TransactionCreator) T2, creator3 func(creator TransactionCreator) T3) *TxManager3[T1, T2, T3] {
 	return &TxManager3[T1, T2, T3]{
-		sm:       sm,
 		creator1: creator1,
 		creator2: creator2,
 		creator3: creator3,
