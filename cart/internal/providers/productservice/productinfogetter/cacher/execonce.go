@@ -7,7 +7,7 @@ import (
 
 type funcToBeExecutedAtMostOnce func() CacheValue
 
-// oneTimeExecutor это одноразовый executor, который должен выполнить переданную ему функцию
+// oneTimeExecutor это одноразовый executor, который должен выполнить переданную ему функцию, сохранить себе результат
 type oneTimeExecutor struct {
 	key        CacheKey
 	val        CacheValue

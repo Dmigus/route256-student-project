@@ -31,7 +31,7 @@ import (
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
-	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher/inmemorycache"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher/rediscache"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
 	"route256.ozon.ru/project/cart/internal/usecases"
 	"route256.ozon.ru/project/cart/internal/usecases/adder"
@@ -87,7 +87,7 @@ func (a *App) init() error {
 	itPresPerformer := productservice.NewRCPerformer[itempresencechecker.ListSkusResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
 	itPresChecker := itempresencechecker.NewItemPresenceChecker(itPresPerformer)
 	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
-	cache := inmemorycache.NewInMemoryCache(inmemorycache.WithMaxCacheSize(5))
+	cache := rediscache.NewRedisCache(a.config.Redis.Addr, rediscache.WithLogger(a.config.Logger))
 	cacherPerformer := cacher.NewCacher(piPerformer, cache)
 	prodInfoGetter := productinfogetter.NewProductInfoGetter(cacherPerformer)
 

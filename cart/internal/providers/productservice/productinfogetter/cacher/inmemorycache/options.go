@@ -4,14 +4,14 @@ type Option interface {
 	apply(c *InMemoryCache)
 }
 
-type MaxCacheSizeOption struct {
-	size uint
+type optionFunc func(cache *InMemoryCache)
+
+func (o optionFunc) apply(cache *InMemoryCache) {
+	o(cache)
 }
 
-func (m MaxCacheSizeOption) apply(c *InMemoryCache) {
-	c.maxSize = m.size
-}
-
-func WithMaxCacheSize(size uint) MaxCacheSizeOption {
-	return MaxCacheSizeOption{size}
+func WithMaxCacheSize(size uint) Option {
+	return optionFunc(func(cache *InMemoryCache) {
+		cache.maxSize = size
+	})
 }

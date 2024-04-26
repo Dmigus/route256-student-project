@@ -48,6 +48,7 @@ func NewRCPerformer[respT any](httpClient httpClient, baseURL *url.URL, token st
 func (rcp *RemoteCallPerformer[respT]) Perform(ctx context.Context, method string, reqBody RequestWithSettableToken) (*respT, error) {
 	reqBody.SetToken(rcp.token)
 	req, err := rcp.newPOSTRequest(ctx, method, reqBody)
+	reqBody.SetToken("")
 	if err != nil {
 		return nil, err
 	}

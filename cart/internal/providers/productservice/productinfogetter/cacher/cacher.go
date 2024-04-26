@@ -9,19 +9,19 @@ import (
 
 type (
 	CacheKey struct {
-		method  string
-		request productinfogetter.GetProductRequest
+		Method  string
+		Request productinfogetter.GetProductRequest
 	}
 	CacheValue struct {
-		response productinfogetter.GetProductResponse
-		err      error
+		Response productinfogetter.GetProductResponse
+		Err      error
 	}
 	callPerformer interface {
 		Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error)
 	}
 	cache interface {
-		Get(CacheKey) (CacheValue, bool)
-		Store(CacheKey, CacheValue)
+		Get(context.Context, CacheKey) (CacheValue, bool)
+		Store(context.Context, CacheKey, CacheValue)
 	}
 	Cacher struct {
 		rcPerformer callPerformer
@@ -37,15 +37,15 @@ func NewCacher(rcPerformer callPerformer, cache cache) *Cacher {
 
 func (c *Cacher) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error) {
 	requestStruct := *reqBody.(*productinfogetter.GetProductRequest)
-	key := CacheKey{method: method, request: requestStruct}
-	result, present := c.cache.Get(key)
+	key := CacheKey{Method: method, Request: requestStruct}
+	result, present := c.cache.Get(ctx, key)
 	if !present {
 		result = c.performExecAndSave(ctx, key)
 	}
-	if result.err != nil {
-		return nil, result.err
+	if result.Err != nil {
+		return nil, result.Err
 	}
-	return &result.response, nil
+	return &result.Response, nil
 }
 
 func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue {
@@ -56,10 +56,10 @@ func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue 
 
 func (c *Cacher) getPerformAndSaveFunc(ctx context.Context, k CacheKey) funcToBeExecutedAtMostOnce {
 	return func() CacheValue {
-		response, err := c.rcPerformer.Perform(ctx, k.method, &k.request)
-		val := CacheValue{response: *response, err: err}
+		response, err := c.rcPerformer.Perform(ctx, k.Method, &k.Request)
+		val := CacheValue{Response: *response, Err: err}
 		if !errors.Is(err, context.Canceled) {
-			c.cache.Store(k, val)
+			c.cache.Store(ctx, k, val)
 		}
 		return val
 	}

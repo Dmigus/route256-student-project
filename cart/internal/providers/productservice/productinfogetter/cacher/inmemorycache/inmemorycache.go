@@ -2,6 +2,7 @@ package inmemorycache
 
 import (
 	"container/list"
+	"context"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
 	"sync"
 )
@@ -35,7 +36,7 @@ func NewInMemoryCache(opts ...Option) *InMemoryCache {
 	return cache
 }
 
-func (c *InMemoryCache) Get(k cacher.CacheKey) (cacher.CacheValue, bool) {
+func (c *InMemoryCache) Get(_ context.Context, k cacher.CacheKey) (cacher.CacheValue, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	valElement, present := c.kv[k]
@@ -47,7 +48,7 @@ func (c *InMemoryCache) Get(k cacher.CacheKey) (cacher.CacheValue, bool) {
 	return val.v, true
 }
 
-func (c *InMemoryCache) Store(k cacher.CacheKey, v cacher.CacheValue) {
+func (c *InMemoryCache) Store(_ context.Context, k cacher.CacheKey, v cacher.CacheValue) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.Size() >= c.maxSize {

@@ -28,6 +28,9 @@ type Config struct {
 		Address string `json:"Address"`
 	}
 	Logger *zap.Logger
+	Redis  struct {
+		Addr string `json:"Addr"`
+	} `json:"Redis"`
 }
 
 // NewConfig читает файл configPath в формате json в структуру типа configType и возвращает её

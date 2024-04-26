@@ -15,5 +15,8 @@
   },
   "LOMS": {
     "Address": "loms:50051"
+  },
+  "Redis": {
+    "Addr":"redis:6379"
   }
 }
