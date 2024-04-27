@@ -27,6 +27,8 @@ type LOMServiceClient interface {
 	OrderCreate(ctx context.Context, in *OrderCreateRequest, opts ...grpc.CallOption) (*OrderId, error)
 	// Shows order information
 	OrderInfo(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*OrderInfoResponse, error)
+	// Shows all orders information
+	AllOrdersInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AllOrdersInfoResponse, error)
 	// Marks the order as paid. Reserved items become purchased.
 	OrderPay(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Cancels an order, removes the reserve from all items in the order.
@@ -55,6 +57,15 @@ func (c *lOMServiceClient) OrderCreate(ctx context.Context, in *OrderCreateReque
 func (c *lOMServiceClient) OrderInfo(ctx context.Context, in *OrderId, opts ...grpc.CallOption) (*OrderInfoResponse, error) {
 	out := new(OrderInfoResponse)
 	err := c.cc.Invoke(ctx, "/LOMService/OrderInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lOMServiceClient) AllOrdersInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AllOrdersInfoResponse, error) {
+	out := new(AllOrdersInfoResponse)
+	err := c.cc.Invoke(ctx, "/LOMService/AllOrdersInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +107,8 @@ type LOMServiceServer interface {
 	OrderCreate(context.Context, *OrderCreateRequest) (*OrderId, error)
 	// Shows order information
 	OrderInfo(context.Context, *OrderId) (*OrderInfoResponse, error)
+	// Shows all orders information
+	AllOrdersInfo(context.Context, *emptypb.Empty) (*AllOrdersInfoResponse, error)
 	// Marks the order as paid. Reserved items become purchased.
 	OrderPay(context.Context, *OrderId) (*emptypb.Empty, error)
 	// Cancels an order, removes the reserve from all items in the order.
@@ -114,6 +127,9 @@ func (UnimplementedLOMServiceServer) OrderCreate(context.Context, *OrderCreateRe
 }
 func (UnimplementedLOMServiceServer) OrderInfo(context.Context, *OrderId) (*OrderInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OrderInfo not implemented")
+}
+func (UnimplementedLOMServiceServer) AllOrdersInfo(context.Context, *emptypb.Empty) (*AllOrdersInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllOrdersInfo not implemented")
 }
 func (UnimplementedLOMServiceServer) OrderPay(context.Context, *OrderId) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OrderPay not implemented")
@@ -169,6 +185,24 @@ func _LOMService_OrderInfo_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LOMServiceServer).OrderInfo(ctx, req.(*OrderId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LOMService_AllOrdersInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LOMServiceServer).AllOrdersInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/LOMService/AllOrdersInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LOMServiceServer).AllOrdersInfo(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -241,6 +275,10 @@ var LOMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OrderInfo",
 			Handler:    _LOMService_OrderInfo_Handler,
+		},
+		{
+			MethodName: "AllOrdersInfo",
+			Handler:    _LOMService_AllOrdersInfo_Handler,
 		},
 		{
 			MethodName: "OrderPay",

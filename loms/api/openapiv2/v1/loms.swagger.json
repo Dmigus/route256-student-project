@@ -216,6 +216,43 @@
         ]
       }
     },
+    "/api/v1/orders": {
+      "get": {
+        "summary": "Shows all orders information",
+        "operationId": "LOMService_AllOrdersInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/AllOrdersInfoResponse"
+            }
+          },
+          "404": {
+            "description": "Returned when the resource does not exist.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "412": {
+            "description": "The system state is unsuitable for this operation.",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "LOMService"
+        ]
+      }
+    },
     "/api/v1/stocks/{sku}": {
       "get": {
         "summary": "Returns the number of products that can be purchased.",
@@ -270,6 +307,18 @@
     }
   },
   "definitions": {
+    "AllOrdersInfoResponse": {
+      "type": "object",
+      "properties": {
+        "OrdersInfo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/OrderInfoWithID"
+          }
+        }
+      }
+    },
     "Item": {
       "type": "object",
       "properties": {
@@ -336,6 +385,17 @@
             "type": "object",
             "$ref": "#/definitions/Item"
           }
+        }
+      }
+    },
+    "OrderInfoWithID": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/OrderId"
+        },
+        "OrdersInfo": {
+          "$ref": "#/definitions/OrderInfoResponse"
         }
       }
     },

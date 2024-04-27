@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"net"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
+	"route256.ozon.ru/project/loms/internal/services/loms/allordersgetter"
 	"sync"
 	"time"
 
@@ -112,6 +113,10 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		func(tc multipostgres.TransactionCreator) ordersgetter.OrderRepo {
 			return ordersToRead.NewOrders(tc, *shardManager, sqlDurationRecorder)
 		}))
+	allOrdersGetter := allordersgetter.NewOrdersGetter(multipostgres.NewTxManager1(
+		func(tc multipostgres.TransactionCreator) allordersgetter.OrderRepo {
+			return ordersToRead.NewOrders(tc, *shardManager, sqlDurationRecorder)
+		}))
 	payer := orderspayer.NewOrdersPayer(multipostgres.NewTxManager3(
 		func(tc multipostgres.TransactionCreator) orderspayer.OrderRepo {
 			return ordersToModify.NewOrders(tc, *shardManager, sqlDurationRecorder)
@@ -130,6 +135,7 @@ func (a *App) initServiceWithPostgres() (*loms.LOMService, error) {
 		stocksInfoGetter,
 		getter,
 		canceller,
+		allOrdersGetter,
 	), nil
 }
 
