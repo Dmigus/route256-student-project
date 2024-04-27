@@ -13,13 +13,13 @@ import (
 const BucketsNum = 1000
 
 type (
-	// ShardBucket бакет, которому принадлежит тот или иной заказ
-	ShardBucket int64
+	// VShard это виртуальный шард, которому принадлежит тот или иной заказ
+	VShard int64
 	// ShardHash хэш бакета
 	ShardHash uint32
 	// HashFn хеш функция, используемая для преобразования бакета в число
-	HashFn func(ShardBucket) ShardHash
-	// Manager это структура, ответсвенная за выдачу коннекта к шарду
+	HashFn func(VShard) ShardHash
+	// Manager это структура, ответсвенная за хранение и выдачу шардов
 	Manager struct {
 		fn           HashFn
 		shards       []Shard
@@ -45,8 +45,8 @@ func New(shards []Shard, opts ...Option) (*Manager, error) {
 	return m, nil
 }
 
-// GetShard возвращает шард, относящийся к бакету
-func (m *Manager) GetShard(key ShardBucket) Shard {
+// GetShard возвращает шард, относящийся к виртуальному
+func (m *Manager) GetShard(key VShard) Shard {
 	shardHash := m.fn(key)
 	return m.mapHashtoShard(shardHash)
 }
@@ -74,7 +74,7 @@ func (m *Manager) GetShardByInd(ind int) Shard {
 func Murmur3HashFn() HashFn {
 	// всегда инициируется with seed = 0
 	hasher := murmur3.New32()
-	return func(key ShardBucket) ShardHash {
+	return func(key VShard) ShardHash {
 		defer hasher.Reset()
 		buf := new(bytes.Buffer)
 		_ = binary.Write(buf, binary.LittleEndian, key)

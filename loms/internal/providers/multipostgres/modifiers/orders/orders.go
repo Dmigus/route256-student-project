@@ -64,7 +64,7 @@ func (po *Orders) Create(ctx context.Context, userID int64, items []models.Order
 	return order, nil
 }
 
-func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardKey shardmanager.ShardBucket) (*Queries, error) {
+func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardKey shardmanager.VShard) (*Queries, error) {
 	shard := po.shardManager.GetShard(shardKey).Master()
 	tx, err := po.trGetter.GetTransaction(ctx, shard)
 	if err != nil {
@@ -82,9 +82,9 @@ func insertItemParamsFrom(orderID int64, items []models.OrderItem) []insertOrder
 	return itemsParams
 }
 
-func (po *Orders) chooseShardKeyToNewOrder(_ int64) shardmanager.ShardBucket {
+func (po *Orders) chooseShardKeyToNewOrder(_ int64) shardmanager.VShard {
 	bucket := rand.Intn(shardmanager.BucketsNum)
-	return shardmanager.ShardBucket(bucket)
+	return shardmanager.VShard(bucket)
 }
 
 // Save сохраняет заказ в БД в PostgreSQL. Изменение позиций заказа не предусмотрено

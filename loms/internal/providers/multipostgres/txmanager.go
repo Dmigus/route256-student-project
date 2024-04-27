@@ -88,6 +88,6 @@ func (txm *TxManager3[T1, T2, T3]) WithinTransaction(ctx context.Context, f func
 }
 
 // OrderIDToShardBucket вычисляет номер бакета, к которому принадлежит заказ с id = orderID
-func OrderIDToShardBucket(orderID int64) shardmanager.ShardBucket {
-	return shardmanager.ShardBucket(orderID % shardmanager.BucketsNum)
+func OrderIDToShardBucket(orderID int64) shardmanager.VShard {
+	return shardmanager.VShard(orderID % shardmanager.BucketsNum)
 }
