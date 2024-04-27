@@ -27,9 +27,9 @@ func TestProductInfoGetter_GetProductsInfoSuccess(t *testing.T) {
 		{"second", 20},
 		{"third", 30},
 	}
-	helper.performMock.Set(func(_ context.Context, _ string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
+	helper.performMock.Set(func(_ context.Context, _ string, reqBody productservice.RequestWithSettableToken) (*GetProductResponse, error) {
 		req := reqBody.(*GetProductRequest)
-		respToSet := respBody.(*GetProductResponse)
+		var respBody GetProductResponse
 		prodName := ""
 		prodPrice := uint32(0)
 		switch req.Sku {
@@ -43,8 +43,9 @@ func TestProductInfoGetter_GetProductsInfoSuccess(t *testing.T) {
 			prodName = "third"
 			prodPrice = 30
 		}
-		*respToSet = GetProductResponse{Name: &prodName, Price: &prodPrice}
-		return nil
+		respBody.Price = &prodPrice
+		respBody.Name = &prodName
+		return &respBody, nil
 	})
 	returned, err := helper.prodInfoGetter.GetProductsInfo(context.Background(), skuIDs)
 	require.NoError(t, err)
@@ -55,7 +56,7 @@ func TestProductInfoGetter_GetProductsInfoError(t *testing.T) {
 	helper := newTestHelper(t)
 	skuIDs := []int64{1, 2}
 	errorToThrow := fmt.Errorf("oops error")
-	helper.performMock.Return(errorToThrow)
+	helper.performMock.Return(nil, errorToThrow)
 	_, err := helper.prodInfoGetter.GetProductsInfo(context.Background(), skuIDs)
 	assert.ErrorIs(t, err, errorToThrow)
 }
@@ -69,24 +70,20 @@ func TestProductInfoGetter_GetProductsInfoContextCancellation(t *testing.T) {
 	contextCancelled := &atomic.Bool{}
 	wg := sync.WaitGroup{}
 	wg.Add(len(skuIDs))
-	helper.performMock.Set(func(ctx context.Context, _ string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
+	helper.performMock.Set(func(ctx context.Context, _ string, reqBody productservice.RequestWithSettableToken) (*GetProductResponse, error) {
 		defer wg.Done()
 		req := reqBody.(*GetProductRequest)
 		if req.Sku == 1 {
-			return errorToThrow
+			return nil, errorToThrow
 		}
 		select {
 		case <-ctx.Done():
 			contextCancelled.Store(true)
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-time.After(contextCancelTimeout):
 		}
-		respToSet := respBody.(*GetProductResponse)
-		prodName := ""
-		prodPrice := uint32(0)
-		respToSet.Price = &prodPrice
-		respToSet.Name = &prodName
-		return nil
+		var response GetProductResponse
+		return &response, nil
 	})
 	_, err := helper.prodInfoGetter.GetProductsInfo(context.Background(), skuIDs)
 	assert.ErrorIs(t, err, errorToThrow)

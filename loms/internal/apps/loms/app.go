@@ -176,9 +176,10 @@ func (a *App) Run(ctx context.Context) error {
 		<-serverRunCtx.Done()
 		a.stop(grpcServer)
 	}()
+	var errGRPC error
 	go func() {
 		defer wg.Done()
-		err = grpcServer.Serve(lis)
+		errGRPC = grpcServer.Serve(lis)
 		cancel()
 	}()
 	a.httpController, err = httpContoller.NewServer(
@@ -201,7 +202,7 @@ func (a *App) Run(ctx context.Context) error {
 		cancel()
 	}()
 	wg.Wait()
-	return errors.Join(err, errHTTP, errHTTPClose)
+	return errors.Join(errGRPC, errHTTP, errHTTPClose)
 }
 
 // stop останавливает запущенный grpc сервер в течение ShutdownTimoutSeconds секунд.
