@@ -1,10 +1,12 @@
+// Package inmemorycache содержит in-memory реализацию кэша
 package inmemorycache
 
 import (
 	"container/list"
 	"context"
-	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
 	"sync"
+
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
 )
 
 const defaultMaxSize = uint(10)
@@ -16,6 +18,7 @@ type (
 		k cacher.CacheKey
 		v cacher.CacheValue
 	}
+	// InMemoryCache это in-memory реализация кэша
 	InMemoryCache struct {
 		mu      sync.Mutex
 		kv      map[cacher.CacheKey]*list.Element
@@ -24,6 +27,7 @@ type (
 	}
 )
 
+// NewInMemoryCache создаёт новый InMemoryCache
 func NewInMemoryCache(opts ...Option) *InMemoryCache {
 	cache := &InMemoryCache{
 		kv:      make(map[cacher.CacheKey]*list.Element),
@@ -36,6 +40,7 @@ func NewInMemoryCache(opts ...Option) *InMemoryCache {
 	return cache
 }
 
+// Get возвращает значение, сохранённое в кэше и true, если оно там было. Если не было, то false
 func (c *InMemoryCache) Get(_ context.Context, k cacher.CacheKey) (cacher.CacheValue, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -48,15 +53,21 @@ func (c *InMemoryCache) Get(_ context.Context, k cacher.CacheKey) (cacher.CacheV
 	return val.v, true
 }
 
+// Store сохраняет новое или обновляет старое значение в кэше. Вытесняет наименее актуальное значение, если это необходимо.
 func (c *InMemoryCache) Store(_ context.Context, k cacher.CacheKey, v cacher.CacheValue) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.Size() >= c.maxSize {
+	valElement, present := c.kv[k]
+	if present {
+		c.queue.Remove(valElement)
+		delete(c.kv, k)
+	} else if c.Size() >= c.maxSize {
 		c.deleteLastLocked()
 	}
 	c.insertLocked(k, v)
 }
 
+// Size возвращает текущее количество элементов в кэше
 func (c *InMemoryCache) Size() uint {
 	return uint(len(c.kv))
 }

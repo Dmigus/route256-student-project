@@ -1,18 +1,22 @@
+// Package cacher содержит клиент product service для ручки get_product c кешированием
 package cacher
 
 import (
 	"context"
 	"errors"
+	"time"
+
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
-	"time"
 )
 
 type (
+	// CacheKey это ключ, по которому сохраняются занчения в кеше
 	CacheKey struct {
 		Method  string
 		Request productinfogetter.GetProductRequest
 	}
+	// CacheValue это тип, данных, которые сохраняются в кэше
 	CacheValue struct {
 		Response productinfogetter.GetProductResponse
 		Err      error
@@ -27,6 +31,7 @@ type (
 	summary interface {
 		Observe(float64)
 	}
+	// Cacher это клиент Product Service, который кеширует ответы
 	Cacher struct {
 		rcPerformer                       callPerformer
 		cache                             cache
@@ -35,11 +40,13 @@ type (
 	}
 )
 
+// NewCacher создаёт новый Cacher, который кэширует в cache
 func NewCacher(rcPerformer callPerformer, cache cache, cacheHitSummary, cacheMissSummary summary) *Cacher {
 	coordinator := newExecOnceCoordinator()
 	return &Cacher{rcPerformer: rcPerformer, cache: cache, coordinator: coordinator, cacheHitSummary: cacheHitSummary, cacheMissSummary: cacheMissSummary}
 }
 
+// Perform возвращает значение из кэша, а если его нет, то сохраняет в кэш и возвращает
 func (c *Cacher) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*productinfogetter.GetProductResponse, error) {
 	requestStruct := *reqBody.(*productinfogetter.GetProductRequest)
 	key := CacheKey{Method: method, Request: requestStruct}
@@ -59,6 +66,7 @@ func (c *Cacher) Perform(ctx context.Context, method string, reqBody productserv
 	return &result.Response, nil
 }
 
+// performExecAndSave осуществляет поход в нижележащий rcPerformer и сохраняет в кэш. Среди всех конкурирующих вызовов по этому ключу k выполнится только один
 func (c *Cacher) performExecAndSave(ctx context.Context, k CacheKey) CacheValue {
 	execOnceAmongGroup := c.coordinator.getExecutor(k)
 	funcToExec := c.getPerformAndSaveFunc(ctx, k)

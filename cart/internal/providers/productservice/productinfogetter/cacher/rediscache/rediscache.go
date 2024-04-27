@@ -1,9 +1,12 @@
+// Package rediscache содержит реализацию адаптера к кэшу в redis
 package rediscache
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/eko/gocache/lib/v4/cache"
 	"github.com/eko/gocache/lib/v4/store"
 	redisstore "github.com/eko/gocache/store/redis/v4"
@@ -11,19 +14,18 @@ import (
 	"go.uber.org/zap"
 	"route256.ozon.ru/project/cart/internal/pkg/logging"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
-	"time"
 )
 
 const defaultTTL = 100 * time.Second
 
-type (
-	RedisCache struct {
-		cache  *cache.Cache[string]
-		logger *zap.Logger
-		ttl    time.Duration
-	}
-)
+// RedisCache это адаптер кэша к redis
+type RedisCache struct {
+	cache  *cache.Cache[string]
+	logger *zap.Logger
+	ttl    time.Duration
+}
 
+// NewRedisCache возвращает новый RedisCache, который работает с redis по адресу addr
 func NewRedisCache(addr string, opts ...Option) *RedisCache {
 	redisStore := redisstore.NewRedis(redis.NewClient(&redis.Options{Addr: addr}))
 	myCache := &RedisCache{
@@ -37,6 +39,7 @@ func NewRedisCache(addr string, opts ...Option) *RedisCache {
 	return myCache
 }
 
+// Get возвращает значение, сохранённое в кэше и true, если оно там было. Если не было, то false
 func (r *RedisCache) Get(ctx context.Context, key cacher.CacheKey) (cacher.CacheValue, bool) {
 	val, err := r.cache.Get(ctx, key)
 	if err != nil {
@@ -58,6 +61,7 @@ func isErrorNotFound(err error) bool {
 	return ok
 }
 
+// Store сохраняет новое или обновляет старое значение в кэше. Вытесняет наименее актуальное значение, если это необходимо.
 func (r *RedisCache) Store(ctx context.Context, key cacher.CacheKey, value cacher.CacheValue) {
 	bytes, err := r.marshalVal(value)
 	if err != nil {

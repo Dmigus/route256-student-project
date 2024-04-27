@@ -35,6 +35,7 @@ type (
 	}
 )
 
+// NewRCPerformer создаёт новый RemoteCallPerformer
 func NewRCPerformer[respT any](httpClient httpClient, baseURL *url.URL, token string) *RemoteCallPerformer[respT] {
 	return &RemoteCallPerformer[respT]{
 		baseURL: baseURL,
@@ -54,7 +55,7 @@ func (rcp *RemoteCallPerformer[respT]) Perform(ctx context.Context, method strin
 	}
 	response, err := rcp.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error during request: %s\n", err)
+		return nil, fmt.Errorf("error during request: %s", err)
 	}
 	if response.StatusCode != http.StatusOK {
 		errorResp, err := rcp.parseError(response)
