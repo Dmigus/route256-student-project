@@ -1,7 +1,10 @@
+// Package orders содержит реализацию заказов только для чтения из шардированного PostgreSQL.
 package orders
 
 import (
 	"context"
+	"sort"
+
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 	"route256.ozon.ru/project/loms/internal/models"
@@ -9,7 +12,6 @@ import (
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres/shardmanager"
 	"route256.ozon.ru/project/loms/internal/providers/singlepostgres/readers/orders"
-	"sort"
 )
 
 // Orders представялет реализацию репозитория заказов с методами для чтения данных
@@ -31,7 +33,7 @@ func NewOrders(trGetter multipostgres.TransactionCreator, shardManager shardmana
 
 // Load загружает информацию о заказе из БД в PostgreSQL
 func (o *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error) {
-	shardKey := multipostgres.OrderIDToShardKey(orderID)
+	shardKey := multipostgres.OrderIDToShardBucket(orderID)
 	shard := o.shardManager.GetShard(shardKey).Replica()
 	tr, err := o.trGetter.GetTransaction(ctx, shard)
 	if err != nil {

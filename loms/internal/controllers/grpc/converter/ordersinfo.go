@@ -6,6 +6,7 @@ import (
 	v1 "route256.ozon.ru/project/loms/internal/pkg/api/loms/v1"
 )
 
+// OrdersAllOrdersInfoResponse конвертирует []*models.Order в AllOrdersInfoResponse
 func OrdersAllOrdersInfoResponse(orders []*models.Order) *v1.AllOrdersInfoResponse {
 	dtoOrders := &v1.AllOrdersInfoResponse{}
 	dtoOrders.OrdersInfo = lo.Map(orders, func(item *models.Order, _ int) *v1.OrderInfoWithID {

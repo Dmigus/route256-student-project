@@ -1,8 +1,10 @@
+// Package orders содержит реализацию заказов для транзакционной модификации данных в шардированном PostgreSQL.
 package orders
 
 import (
 	"context"
 	"math/rand"
+
 	"route256.ozon.ru/project/loms/internal/models"
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
@@ -19,6 +21,7 @@ type (
 	durationRecorder interface {
 		RecordDuration(table string, category sqlmetrics.SQLCategory, f func() error)
 	}
+	// Orders представялет реализацию репозитория заказов с методами для модификации данных
 	Orders struct {
 		trGetter     multipostgres.TransactionCreator
 		shardManager shardmanager.Manager
@@ -61,7 +64,7 @@ func (po *Orders) Create(ctx context.Context, userID int64, items []models.Order
 	return order, nil
 }
 
-func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardKey shardmanager.ShardKey) (*Queries, error) {
+func (po *Orders) initQueriesForNewOrder(ctx context.Context, shardKey shardmanager.ShardBucket) (*Queries, error) {
 	shard := po.shardManager.GetShard(shardKey).Master()
 	tx, err := po.trGetter.GetTransaction(ctx, shard)
 	if err != nil {
@@ -79,14 +82,14 @@ func insertItemParamsFrom(orderID int64, items []models.OrderItem) []insertOrder
 	return itemsParams
 }
 
-func (po *Orders) chooseShardKeyToNewOrder(userID int64) shardmanager.ShardKey {
-	maxVal := 1000
-	return shardmanager.ShardKey(rand.Intn(maxVal))
+func (po *Orders) chooseShardKeyToNewOrder(_ int64) shardmanager.ShardBucket {
+	bucket := rand.Intn(shardmanager.BucketsNum)
+	return shardmanager.ShardBucket(bucket)
 }
 
 // Save сохраняет заказ в БД в PostgreSQL. Изменение позиций заказа не предусмотрено
 func (po *Orders) Save(ctx context.Context, order *models.Order) error {
-	shardKey := multipostgres.OrderIDToShardKey(order.Id())
+	shardKey := multipostgres.OrderIDToShardBucket(order.Id())
 	shard := po.shardManager.GetShard(shardKey).Master()
 	tr, err := po.trGetter.GetTransaction(ctx, shard)
 	if err != nil {
@@ -98,7 +101,7 @@ func (po *Orders) Save(ctx context.Context, order *models.Order) error {
 
 // Load загружает информацию о заказе из БД в PostgreSQL, производя SELECT FOR UPDATE
 func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error) {
-	shardKey := multipostgres.OrderIDToShardKey(orderID)
+	shardKey := multipostgres.OrderIDToShardBucket(orderID)
 	shard := po.shardManager.GetShard(shardKey).Master()
 	tr, err := po.trGetter.GetTransaction(ctx, shard)
 	if err != nil {

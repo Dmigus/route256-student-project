@@ -2,18 +2,22 @@ package shardmanager
 
 import "github.com/jackc/pgx/v5/pgxpool"
 
-type ShardConnection struct {
+// Shard представляет шард
+type Shard struct {
 	master, replica *pgxpool.Pool
 }
 
-func NewShardConnection(master, replica *pgxpool.Pool) *ShardConnection {
-	return &ShardConnection{master: master, replica: replica}
+// NewShard создаёт новый шард с двумя коннектами master replica
+func NewShard(master, replica *pgxpool.Pool) *Shard {
+	return &Shard{master: master, replica: replica}
 }
 
-func (s ShardConnection) Master() *pgxpool.Pool {
+// Master возвращает соединение к мастер узлу шарда
+func (s Shard) Master() *pgxpool.Pool {
 	return s.master
 }
 
-func (s ShardConnection) Replica() *pgxpool.Pool {
+// Replica возвращает соединение к слейв узлу шарда
+func (s Shard) Replica() *pgxpool.Pool {
 	return s.replica
 }

@@ -1,7 +1,9 @@
+// Package stocks содержит реализацию стоков только для чтения из шардированного PostgreSQL.
 package stocks
 
 import (
 	"context"
+
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres/shardmanager"

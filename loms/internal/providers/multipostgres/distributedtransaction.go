@@ -3,11 +3,12 @@ package multipostgres
 import (
 	"context"
 	"errors"
+	"sync"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/xid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"sync"
 )
 
 var tracer = otel.Tracer("postgres distributed transaction")
@@ -80,12 +81,12 @@ func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner T
 func (tx *distributedTransaction) rollback(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
 		tx.mu.Lock()
-		transId, prepared := tx.preparedForCommit[transaction]
+		transID, prepared := tx.preparedForCommit[transaction]
 		tx.mu.Unlock()
 		var err error
 		if prepared {
 			alwaysActualCtx := context.WithoutCancel(ctx)
-			_, err = transaction.Exec(alwaysActualCtx, "ROLLBACK PREPARED '"+transId+"'")
+			_, err = transaction.Exec(alwaysActualCtx, "ROLLBACK PREPARED '"+transID+"'")
 			// release connection to pool
 			_ = transaction.Rollback(alwaysActualCtx)
 		} else {
@@ -98,11 +99,11 @@ func (tx *distributedTransaction) rollback(ctx context.Context) error {
 // prepareForCommit переводит все транзакции в prepared. Оставляет коннекты
 func (tx *distributedTransaction) prepareForCommit(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
-		transId := tx.createTransactionID()
-		_, err := transaction.Exec(ctx, "PREPARE TRANSACTION '"+transId+"'")
+		transID := tx.createTransactionID()
+		_, err := transaction.Exec(ctx, "PREPARE TRANSACTION '"+transID+"'")
 		if err == nil {
 			tx.mu.Lock()
-			tx.preparedForCommit[transaction] = transId
+			tx.preparedForCommit[transaction] = transID
 			tx.mu.Unlock()
 		}
 		return err
@@ -116,8 +117,8 @@ func (tx *distributedTransaction) createTransactionID() string {
 
 func (tx *distributedTransaction) commitPrepared(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, conn TxBeginner, transaction pgx.Tx) error {
-		transId := tx.preparedForCommit[transaction]
-		_, err := transaction.Exec(ctx, "COMMIT PREPARED '"+transId+"'")
+		transID := tx.preparedForCommit[transaction]
+		_, err := transaction.Exec(ctx, "COMMIT PREPARED '"+transID+"'")
 		if err == nil {
 			tx.excludeTransaction(conn)
 			// release connection to pool

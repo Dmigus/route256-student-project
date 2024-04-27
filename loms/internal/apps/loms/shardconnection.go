@@ -6,13 +6,14 @@ import (
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres/shardmanager"
 )
 
+// ShardConfig это конфигурация соединений к шарду в виде json
 type ShardConfig struct {
 	Master  apps.PostgresConnectConfig `json:"Master"`
 	Replica apps.PostgresConnectConfig `json:"Replica"`
 }
 
 func newShardManager(config []ShardConfig) (*shardmanager.Manager, error) {
-	connections := make([]shardmanager.ShardConnection, 0, len(config))
+	connections := make([]shardmanager.Shard, 0, len(config))
 	for _, conf := range config {
 		conn, err := newShardConnection(conf)
 		if err != nil {
@@ -23,7 +24,7 @@ func newShardManager(config []ShardConfig) (*shardmanager.Manager, error) {
 	return shardmanager.New(connections)
 }
 
-func newShardConnection(config ShardConfig) (*shardmanager.ShardConnection, error) {
+func newShardConnection(config ShardConfig) (*shardmanager.Shard, error) {
 	connMaster, err := sqltracing.CreateConnToPostgres(config.Master.GetPostgresDSN())
 	if err != nil {
 		return nil, err
@@ -32,5 +33,5 @@ func newShardConnection(config ShardConfig) (*shardmanager.ShardConnection, erro
 	if err != nil {
 		return nil, err
 	}
-	return shardmanager.NewShardConnection(connMaster, connReplica), nil
+	return shardmanager.NewShard(connMaster, connReplica), nil
 }

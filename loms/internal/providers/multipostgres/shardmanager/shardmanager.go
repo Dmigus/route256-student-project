@@ -1,26 +1,36 @@
+// Package shardmanager содержит реализацию шард менеджера
 package shardmanager
 
 import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+
 	"github.com/spaolacci/murmur3"
 )
 
+// BucketsNum это количество бакетов, в которыми работает весь сервис
+const BucketsNum = 1000
+
 type (
-	ShardKey  int64
+	// ShardBucket бакет, которому принадлежит тот или иной заказ
+	ShardBucket int64
+	// ShardHash хэш бакета
 	ShardHash uint32
-	HashFn    func(ShardKey) ShardHash
-	Manager   struct {
+	// HashFn хеш функция, используемая для преобразования бакета в число
+	HashFn func(ShardBucket) ShardHash
+	// Manager это структура, ответсвенная за выдачу коннекта к шарду
+	Manager struct {
 		fn           HashFn
-		shards       []ShardConnection
-		defaultShard ShardConnection
+		shards       []Shard
+		defaultShard Shard
 	}
 )
 
 var errShardsEmpty = errors.New("shards must be not empty")
 
-func New(shards []ShardConnection, opts ...Option) (*Manager, error) {
+// New создаёт новый Manager
+func New(shards []Shard, opts ...Option) (*Manager, error) {
 	if len(shards) == 0 {
 		return nil, errShardsEmpty
 	}
@@ -35,31 +45,36 @@ func New(shards []ShardConnection, opts ...Option) (*Manager, error) {
 	return m, nil
 }
 
-func (m *Manager) GetShard(key ShardKey) ShardConnection {
+// GetShard возвращает шард, относящийся к бакету
+func (m *Manager) GetShard(key ShardBucket) Shard {
 	shardHash := m.fn(key)
 	return m.mapHashtoShard(shardHash)
 }
 
-func (m *Manager) mapHashtoShard(hash ShardHash) ShardConnection {
+func (m *Manager) mapHashtoShard(hash ShardHash) Shard {
 	return m.shards[int(hash)%len(m.shards)]
 }
 
-func (m *Manager) GetDefaultShard() ShardConnection {
+// GetDefaultShard возвращает "дефолтный" шард
+func (m *Manager) GetDefaultShard() Shard {
 	return m.defaultShard
 }
 
+// ShardNum возвращает количество шардов всего
 func (m *Manager) ShardNum() int {
 	return len(m.shards)
 }
 
-func (m *Manager) GetShardByInd(ind int) ShardConnection {
+// GetShardByInd возвращает шард по порядковому номеру ind
+func (m *Manager) GetShardByInd(ind int) Shard {
 	return m.shards[ind]
 }
 
+// Murmur3HashFn возвращает хеш функцию, которая вычисляет по номеру бакета вычисляет хэш
 func Murmur3HashFn() HashFn {
 	// всегда инициируется with seed = 0
 	hasher := murmur3.New32()
-	return func(key ShardKey) ShardHash {
+	return func(key ShardBucket) ShardHash {
 		defer hasher.Reset()
 		buf := new(bytes.Buffer)
 		_ = binary.Write(buf, binary.LittleEndian, key)

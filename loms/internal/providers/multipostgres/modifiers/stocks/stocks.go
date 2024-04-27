@@ -1,7 +1,9 @@
+// Package stocks содержит реализацию стоков для транзакционной модификации данных в шардированном PostgreSQL.
 package stocks
 
 import (
 	"context"
+
 	"route256.ozon.ru/project/loms/internal/models"
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"

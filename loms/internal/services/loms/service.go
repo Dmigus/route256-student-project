@@ -78,6 +78,7 @@ func (s *LOMService) CancelOrder(ctx context.Context, orderId int64) error {
 	return s.ordersCanceller.Cancel(ctx, orderId)
 }
 
+// GetAllOrders возвращает все заказы в порядке убывания id
 func (s *LOMService) GetAllOrders(ctx context.Context) ([]*models.Order, error) {
 	return s.allOrdersGetter.Get(ctx)
 }

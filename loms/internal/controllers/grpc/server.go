@@ -70,6 +70,7 @@ func (s *Server) OrderCancel(ctx context.Context, req *v1.OrderId) (*emptypb.Emp
 	return &emptypb.Empty{}, nil
 }
 
+// AllOrdersInfo это реализация grpc метода AllOrdersInfo
 func (s *Server) AllOrdersInfo(ctx context.Context, _ *emptypb.Empty) (*v1.AllOrdersInfoResponse, error) {
 	orders, err := s.service.GetAllOrders(ctx)
 	if err != nil {

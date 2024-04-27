@@ -1,8 +1,10 @@
+// Package allordersgetter содержит реализацию юзкейса получения всех заказов
 package allordersgetter
 
 import (
 	"context"
 	"fmt"
+
 	"route256.ozon.ru/project/loms/internal/models"
 )
 

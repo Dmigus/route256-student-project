@@ -1,7 +1,9 @@
+// Package events содержит функциональность для работы с очередью сообщений, хранящихся в шардированном postgres
 package events
 
 import (
 	"context"
+
 	"route256.ozon.ru/project/loms/internal/models"
 	"route256.ozon.ru/project/loms/internal/pkg/sqlmetrics"
 	"route256.ozon.ru/project/loms/internal/providers/multipostgres"
@@ -39,7 +41,7 @@ func NewEventsToPull(trGetter multipostgres.TransactionCreator, shard multipostg
 
 // OrderStatusChanged сохраняет новое событие изменения статуса заказа
 func (e *EventsToInsert) OrderStatusChanged(ctx context.Context, order *models.Order) error {
-	shardKey := multipostgres.OrderIDToShardKey(order.Id())
+	shardKey := multipostgres.OrderIDToShardBucket(order.Id())
 	shard := e.shardManager.GetShard(shardKey).Master()
 	tr, err := e.trGetter.GetTransaction(ctx, shard)
 	if err != nil {
