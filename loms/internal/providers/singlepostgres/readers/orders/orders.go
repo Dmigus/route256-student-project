@@ -66,6 +66,62 @@ func (po *Orders) Load(ctx context.Context, orderID int64) (*models.Order, error
 	return order, nil
 }
 
+// LoadAll загружает информацию о всех заказах из БД PostgreSQL
+func (po *Orders) LoadAll(ctx context.Context) ([]*models.Order, error) {
+	orders, err := po.loadAllOrdersRowWithoutItems(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, err := po.loadItemsForAllOrders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, order := range orders {
+		order.Items = items[order.Id()]
+	}
+	return orders, nil
+}
+
+// loadAllOrdersRowWithoutItems загружает информацию о заказах без их товаров
+func (po *Orders) loadAllOrdersRowWithoutItems(ctx context.Context) ([]*models.Order, error) {
+	var orders []Order
+	var err error
+	po.reqDur.RecordDuration(orderTableName, sqlmetrics.Select, func() error {
+		orders, err = po.queries.selectAllOrders(ctx)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	modelOrders := make([]*models.Order, 0, len(orders))
+	for _, order := range orders {
+		modelOrder := models.NewOrder(order.UserID, order.ID)
+		modelOrder.IsItemsReserved = order.AreItemsReserved
+		modelOrder.Status = orderStatusFromString(order.Status)
+		modelOrders = append(modelOrders, modelOrder)
+	}
+	return modelOrders, nil
+}
+
+// loadItemsForAllOrders загружает информацию о товарах заказов
+func (po *Orders) loadItemsForAllOrders(ctx context.Context) (map[int64][]models.OrderItem, error) {
+	var items []OrderItem
+	var err error
+	po.reqDur.RecordDuration(orderItemTableName, sqlmetrics.Select, func() error {
+		items, err = po.queries.selectAllOrdersItems(ctx)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	orderNumWithItems := make(map[int64][]models.OrderItem)
+	for _, it := range items {
+		item := models.OrderItem{SkuId: it.SkuID, Count: uint16(it.Count)}
+		orderNumWithItems[it.OrderID] = append(orderNumWithItems[it.OrderID], item)
+	}
+	return orderNumWithItems, nil
+}
+
 func (po *Orders) loadOrderRowWithoutItems(ctx context.Context, orderID int64) (*models.Order, error) {
 	var row selectOrderRow
 	var err error

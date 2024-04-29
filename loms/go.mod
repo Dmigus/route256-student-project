@@ -13,6 +13,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.19.2
 	github.com/prometheus/client_golang v1.14.0
+	github.com/rs/xid v1.5.0
+	github.com/samber/lo v1.39.0
+	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.29.1
@@ -22,6 +25,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.25.0
 	go.opentelemetry.io/otel/trace v1.25.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/sync v0.6.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de
 	google.golang.org/grpc v1.63.0
 	google.golang.org/protobuf v1.33.0
@@ -100,7 +104,6 @@ require (
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect

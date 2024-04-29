@@ -13,6 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"os/signal"
@@ -44,9 +45,10 @@ func (s *Suite) SetupSuite() {
 	ctx := context.Background()
 	postgresContainer, err := postgres.RunContainer(ctx,
 		testcontainers.WithImage("docker.io/postgres:16.2-bullseye"),
-		postgres.WithDatabase(config.Storage.Master.Database),
-		postgres.WithUsername(config.Storage.Master.User),
-		postgres.WithPassword(config.Storage.Master.Password),
+		customCMD([]string{"postgres", "-c", "fsync=off", "-c", "max_prepared_transactions=100"}),
+		postgres.WithDatabase(config.Storages[0].Master.Database),
+		postgres.WithUsername(config.Storages[0].Master.User),
+		postgres.WithPassword(config.Storages[0].Master.Password),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
@@ -64,15 +66,16 @@ func (s *Suite) SetupSuite() {
 	// app
 	s.Pg = postgresContainer
 	host, err := postgresContainer.Host(ctx)
-	config.Storage.Master.Host = host
-	config.Storage.Replica.Host = host
+	config.Storages[0].Master.Host = host
+	config.Storages[0].Replica.Host = host
 	exposedTcpPort, err := postgresContainer.MappedPort(ctx, "5432")
 	s.Require().NoError(err)
 	port := exposedTcpPort.Int()
-	config.Storage.Master.Port = uint16(port)
-	config.Storage.Replica.Port = uint16(port)
+	config.Storages[0].Master.Port = uint16(port)
+	config.Storages[0].Replica.Port = uint16(port)
 	config.MetricsRegisterer = prometheus.DefaultRegisterer
 	config.MetricsHandler = promhttp.Handler()
+	config.Logger = zap.Must(zap.NewDevelopment())
 	app, err := loms.NewApp(config)
 	s.Require().NoError(err)
 
@@ -129,7 +132,7 @@ func (s *Suite) TestOrderCreate() {
 	req := &v1.OrderCreateRequest{User: 123, Items: items}
 	ordId, err := s.client.OrderCreate(ctx, req)
 	s.Require().NoError(err)
-	s.Assert().Equal(int64(1), ordId.OrderID)
+	s.Assert().Equal(int64(1), ordId.OrderID/1000)
 
 	orderRow := s.ConnToDB.QueryRowContext(ctx, "SELECT status, are_items_reserved FROM \"order\";")
 	var orderStatus string
@@ -229,4 +232,10 @@ func (s *Suite) TestStockGet() {
 	resp, err := s.client.StocksInfo(ctx, req)
 	s.Require().NoError(err)
 	s.Assert().Equal(uint64(25), resp.Count)
+}
+
+func customCMD(cmds []string) testcontainers.CustomizeRequestOption {
+	return func(req *testcontainers.GenericContainerRequest) {
+		req.Cmd = cmds
+	}
 }

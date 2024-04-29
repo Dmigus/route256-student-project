@@ -21,3 +21,14 @@ func AddTraceFieldsFromCtx(ctx context.Context, fields ...zap.Field) []zap.Field
 	}
 	return fields
 }
+
+// EmptyLogger это пустой логер, который ничего не логирует
+func EmptyLogger() *zap.Logger {
+	config := zap.Config{
+		Level:            zap.NewAtomicLevelAt(zap.FatalLevel),
+		OutputPaths:      []string{},
+		ErrorOutputPaths: []string{},
+	}
+	emptyL, _ := config.Build()
+	return emptyL
+}

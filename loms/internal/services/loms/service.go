@@ -22,6 +22,10 @@ type ordersGetter interface {
 	Get(ctx context.Context, orderId int64) (*models.Order, error)
 }
 
+type allOrdersGetter interface {
+	Get(ctx context.Context) ([]*models.Order, error)
+}
+
 type ordersCanceller interface {
 	Cancel(ctx context.Context, orderId int64) error
 }
@@ -33,6 +37,7 @@ type LOMService struct {
 	stocksInfoGetter stocksInfoGetter
 	ordersGetter     ordersGetter
 	ordersCanceller  ordersCanceller
+	allOrdersGetter  allOrdersGetter
 }
 
 // NewLOMService создаёт новый экземпляр LOMService
@@ -41,8 +46,16 @@ func NewLOMService(
 	ordersPayer ordersPayer,
 	stocksInfoGetter stocksInfoGetter,
 	ordersGetter ordersGetter,
-	ordersCanceller ordersCanceller) *LOMService {
-	return &LOMService{ordersCreator: ordersCreator, ordersPayer: ordersPayer, stocksInfoGetter: stocksInfoGetter, ordersGetter: ordersGetter, ordersCanceller: ordersCanceller}
+	ordersCanceller ordersCanceller,
+	allOrdersGetter allOrdersGetter) *LOMService {
+	return &LOMService{
+		ordersCreator:    ordersCreator,
+		ordersPayer:      ordersPayer,
+		stocksInfoGetter: stocksInfoGetter,
+		ordersGetter:     ordersGetter,
+		ordersCanceller:  ordersCanceller,
+		allOrdersGetter:  allOrdersGetter,
+	}
 }
 
 func (s *LOMService) CreateOrder(ctx context.Context, userId int64, items []models.OrderItem) (int64, error) {
@@ -63,4 +76,9 @@ func (s *LOMService) GetOrder(ctx context.Context, orderId int64) (*models.Order
 
 func (s *LOMService) CancelOrder(ctx context.Context, orderId int64) error {
 	return s.ordersCanceller.Cancel(ctx, orderId)
+}
+
+// GetAllOrders возвращает все заказы в порядке убывания id
+func (s *LOMService) GetAllOrders(ctx context.Context) ([]*models.Order, error) {
+	return s.allOrdersGetter.Get(ctx)
 }

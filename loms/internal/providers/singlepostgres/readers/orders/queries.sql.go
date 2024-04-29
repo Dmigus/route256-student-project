@@ -9,6 +9,63 @@ import (
 	"context"
 )
 
+const selectAllOrders = `-- name: selectAllOrders :many
+SELECT id, user_id, status, are_items_reserved
+FROM "order"
+ORDER BY id desc
+`
+
+func (q *Queries) selectAllOrders(ctx context.Context) ([]Order, error) {
+	rows, err := q.db.Query(ctx, selectAllOrders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Order
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Status,
+			&i.AreItemsReserved,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectAllOrdersItems = `-- name: selectAllOrdersItems :many
+SELECT order_id, sku_id, count
+FROM order_item
+ORDER BY order_id desc
+`
+
+func (q *Queries) selectAllOrdersItems(ctx context.Context) ([]OrderItem, error) {
+	rows, err := q.db.Query(ctx, selectAllOrdersItems)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OrderItem
+	for rows.Next() {
+		var i OrderItem
+		if err := rows.Scan(&i.OrderID, &i.SkuID, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const selectOrder = `-- name: selectOrder :one
 SELECT user_id, status, are_items_reserved
 FROM "order"

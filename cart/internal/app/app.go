@@ -30,6 +30,8 @@ import (
 	"route256.ozon.ru/project/cart/internal/providers/productservice"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/itempresencechecker"
 	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher"
+	"route256.ozon.ru/project/cart/internal/providers/productservice/productinfogetter/cacher/rediscache"
 	"route256.ozon.ru/project/cart/internal/providers/repository"
 	"route256.ozon.ru/project/cart/internal/usecases"
 	"route256.ozon.ru/project/cart/internal/usecases/adder"
@@ -82,9 +84,26 @@ func (a *App) init() error {
 	rateLimitedTripper := ratelimiterhttp.NewRateLimitedTripper(rateLimiter, observerTripper)
 
 	clientForProductService := &http.Client{Transport: retriablehttp.NewRetryRoundTripper(rateLimitedTripper, retryPolicy)}
-	rcPerformer := productservice.NewRCPerformer(clientForProductService, baseUrl, prodServConfig.AccessToken)
-	itPresChecker := itempresencechecker.NewItemPresenceChecker(rcPerformer)
-	prodInfoGetter := productinfogetter.NewProductInfoGetter(rcPerformer)
+	itPresPerformer := productservice.NewRCPerformer[itempresencechecker.ListSkusResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
+	itPresChecker := itempresencechecker.NewItemPresenceChecker(itPresPerformer)
+	piPerformer := productservice.NewRCPerformer[productinfogetter.GetProductResponse](clientForProductService, baseUrl, prodServConfig.AccessToken)
+	cache := rediscache.NewRedisCache(a.config.Redis.Addr, rediscache.WithLogger(a.config.Logger))
+
+	cacheHitSumm := promauto.NewSummary(prometheus.SummaryOpts{
+		Namespace:  "cart",
+		Name:       "cache_hit_seconds",
+		Help:       "cache response time if was hit",
+		Objectives: map[float64]float64{0.25: 0.05, 0.5: 0.05, 0.75: 0.05, 1: 0.05},
+	})
+	cacheMissSumm := promauto.NewSummary(prometheus.SummaryOpts{
+		Namespace:  "cart",
+		Name:       "cache_miss_seconds",
+		Help:       "product service response time",
+		Objectives: map[float64]float64{0.25: 0.05, 0.5: 0.05, 0.75: 0.05, 1: 0.05},
+	})
+
+	cacherPerformer := cacher.NewCacher(piPerformer, cache, cacheHitSumm, cacheMissSumm)
+	prodInfoGetter := productinfogetter.NewProductInfoGetter(cacherPerformer)
 
 	lomsConfig := a.config.LOMS
 	lomsResponseTime := promauto.NewHistogramVec(prometheus.HistogramOpts{

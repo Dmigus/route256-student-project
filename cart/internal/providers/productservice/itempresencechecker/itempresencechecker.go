@@ -13,7 +13,7 @@ var (
 )
 
 type callPerformer interface {
-	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) error
+	Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (*ListSkusResponse, error)
 }
 
 // ItemPresenceChecker предназначен для проверки существования товара
@@ -32,16 +32,15 @@ func (ipc *ItemPresenceChecker) IsItemPresent(ctx context.Context, skuId int64) 
 	if err := ipc.checkSkuId(skuId); err != nil {
 		return false, errSkuIdIsNotUInt32
 	}
-	reqBody := listSkusRequest{
+	reqBody := ListSkusRequest{
 		StartAfterSku: uint32(skuId - 1),
 		Count:         1,
 	}
-	var respDTO listSkusResponse
-	err := ipc.rcPerformer.Perform(ctx, "list_skus", &reqBody, &respDTO)
+	respDTO, err := ipc.rcPerformer.Perform(ctx, "list_skus", &reqBody)
 	if err != nil {
 		return false, err
 	}
-	err = validateListSkusResponse(respDTO)
+	err = validateListSkusResponse(*respDTO)
 	if err != nil {
 		return false, err
 	}
@@ -58,7 +57,7 @@ func (ipc *ItemPresenceChecker) checkSkuId(skuId int64) error {
 	return nil
 }
 
-func validateListSkusResponse(resp listSkusResponse) error {
+func validateListSkusResponse(resp ListSkusResponse) error {
 	if resp.Skus == nil {
 		return errInvalidSkusArray
 	}

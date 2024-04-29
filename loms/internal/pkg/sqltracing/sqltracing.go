@@ -19,5 +19,8 @@ func CreateConnToPostgres(dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
+	if err = conn.Ping(context.Background()); err != nil {
+		return nil, fmt.Errorf("connect to database: %w", err)
+	}
 	return conn, nil
 }

@@ -17,8 +17,8 @@ func setupLOMSConfig() (loms.Config, error) {
 	if err != nil {
 		return config, err
 	}
-	if config.Storage == nil {
-		return config, fmt.Errorf("storage must be set")
+	if config.Storages == nil {
+		return config, fmt.Errorf("storages must be set")
 	}
 
 	dbPassFromEnv := os.Getenv("POSTGRES_PASSWORD_FILE")
@@ -27,8 +27,10 @@ func setupLOMSConfig() (loms.Config, error) {
 		if err != nil {
 			return loms.Config{}, err
 		}
-		config.Storage.Master.Password = postgresPwd
-		config.Storage.Replica.Password = postgresPwd
+		for i := range config.Storages {
+			config.Storages[i].Master.Password = postgresPwd
+			config.Storages[i].Replica.Password = postgresPwd
+		}
 	}
 	config.MetricsRegisterer = prometheus.DefaultRegisterer
 	config.MetricsHandler = promhttp.Handler()
@@ -47,7 +49,9 @@ func setupOutboxSenderConfig() (outboxsender.Config, error) {
 		if err != nil {
 			return config, err
 		}
-		config.Outbox.Password = postgresPwd
+		for i := range config.Outbox {
+			config.Outbox[i].Password = postgresPwd
+		}
 	}
 	config.MetricsRegisterer = prometheus.DefaultRegisterer
 	return config, nil

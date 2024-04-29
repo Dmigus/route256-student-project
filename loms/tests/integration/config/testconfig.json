@@ -3,16 +3,17 @@
   "Port": 50051,
   "ShutdownTimoutSeconds": 1
   },
-  "Storage": {
-    "Master" : {
-      "Database": "postgres",
-      "User": "postgres",
-      "Password": "password"
-    },
-    "Replica" : {
-      "Database": "postgres",
-      "User": "postgres",
-      "Password": "password"
+  "Storages": [{
+      "Master" : {
+        "Database": "postgres",
+        "User": "postgres",
+        "Password": "password"
+      },
+      "Replica" : {
+        "Database": "postgres",
+        "User": "postgres",
+        "Password": "password"
+      }
     }
-  }
+    ]
 }

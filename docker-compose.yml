@@ -11,6 +11,8 @@ services:
         condition: service_started
       jaeger:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
 
@@ -28,16 +30,20 @@ services:
     secrets:
       - postgres-passwd
     depends_on:
-      loms-postgres-master:
+      loms-postgres-master-1:
         condition: service_healthy
-      loms-postgres-replica:
+      loms-postgres-replica-1:
+        condition: service_healthy
+      loms-postgres-master-2:
+        condition: service_healthy
+      loms-postgres-replica-2:
         condition: service_healthy
       kafka-init-topics:
         condition: service_completed_successfully
       jaeger:
         condition: service_started
 
-  loms-postgres-master:
+  loms-postgres-master-1:
     image: postgres:16.2-bullseye
     ports:
       - "5432:5432"
@@ -56,8 +62,10 @@ services:
       - "postgres"
       - "-c"
       - "wal_level=logical"
+      - "-c"
+      - "max_prepared_transactions=100"
 
-  loms-postgres-replica:
+  loms-postgres-replica-1:
     image: postgres:16.2-bullseye
     ports:
       - "5433:5432"
@@ -72,6 +80,50 @@ services:
       interval: 1s
       timeout: 1s
       retries: 5
+    command:
+      - "-c"
+      - "max_prepared_transactions=100"
+
+  loms-postgres-master-2:
+    image: postgres:16.2-bullseye
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+    secrets:
+      - postgres-passwd
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_prepared_transactions=100"
+
+  loms-postgres-replica-2:
+    image: postgres:16.2-bullseye
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+    secrets:
+      - postgres-passwd
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+    command:
+      - "-c"
+      - "max_prepared_transactions=100"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -137,13 +189,23 @@ services:
       - ./prometheus/:/etc/prometheus/
     ports:
       - "9090:9090"
-
   grafana:
     image: grafana/grafana:10.4.2
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana/:/etc/grafana/provisioning/datasources/
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana/dashboards/:/var/lib/grafana/dashboards/
+  redis:
+    image: redis:7.2.4-alpine
+    ports:
+      - "6379:6379"
+    command:
+      - "redis-server"
+      - "--maxmemory"
+      - "5mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
 
 
 secrets:

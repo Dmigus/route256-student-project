@@ -23,7 +23,7 @@ func TestOrderCancellerPositive(t *testing.T) {
 	helper.orderLoadRepoMock.Expect(minimock.AnyContext, 1234).Return(order, nil)
 	helper.stocksMock.Expect(minimock.AnyContext, items).Return(nil)
 	helper.orderSaveRepoMock.Expect(minimock.AnyContext, order).Return(nil)
-	err := helper.canceller.Cancel(minimock.AnyContext, 1234)
+	err := helper.canceller.Cancel(context.Background(), 1234)
 	require.NoError(t, err)
 	assert.Equal(t, models.Cancelled, order.Status)
 	assert.False(t, order.IsItemsReserved)

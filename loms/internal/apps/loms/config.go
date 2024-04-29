@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"route256.ozon.ru/project/loms/internal/apps"
 )
 
 //go:embed stock-data.json
@@ -26,10 +25,7 @@ type Config struct {
 	Swagger struct {
 		Path string `json:"Path"`
 	} `json:"Swagger"`
-	Storage *struct {
-		Master  apps.PostgresConnectConfig `json:"Master"`
-		Replica apps.PostgresConnectConfig `json:"Replica"`
-	} `json:"Storage"`
+	Storages          []ShardConfig `json:"Storages"`
 	MetricsRegisterer prometheus.Registerer
 	MetricsHandler    http.Handler
 	Logger            *zap.Logger

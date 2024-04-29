@@ -40,3 +40,11 @@ sql:
         package: "stocks"
         sql_package: "pgx/v5"
         out: "../internal/providers/singlepostgres/readers/stocks"
+  - engine: "postgresql"
+    queries: "../internal/providers/multipostgres/modifiers/orders/queries.sql"
+    schema: "../migrations"
+    gen:
+      go:
+        package: "orders"
+        sql_package: "pgx/v5"
+        out: "../internal/providers/multipostgres/modifiers/orders"

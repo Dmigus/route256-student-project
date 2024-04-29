@@ -65,6 +65,13 @@ service LOMService {
     };
   };
 
+  // Shows all orders information
+  rpc AllOrdersInfo(google.protobuf.Empty) returns (AllOrdersInfoResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/orders"
+    };
+  };
+
   // Marks the order as paid. Reserved items become purchased.
   rpc OrderPay(OrderId) returns (google.protobuf.Empty) {
     option (google.api.http) = {
@@ -158,6 +165,15 @@ message OrderInfoResponse {
     format: "integer"
   }];
   repeated Item items = 3;
+}
+
+message AllOrdersInfoResponse {
+    repeated OrderInfoWithID OrdersInfo = 1;
+}
+
+message OrderInfoWithID {
+  OrderId id = 1;
+  OrderInfoResponse OrdersInfo = 2;
 }
 
 message StocksInfoRequest {

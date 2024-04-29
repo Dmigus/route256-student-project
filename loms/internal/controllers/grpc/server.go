@@ -14,6 +14,7 @@ type service interface {
 	GetNumOfAvailable(ctx context.Context, skuId int64) (uint64, error)
 	GetOrder(ctx context.Context, orderId int64) (*models.Order, error)
 	CancelOrder(ctx context.Context, orderId int64) error
+	GetAllOrders(ctx context.Context) ([]*models.Order, error)
 }
 
 type Server struct {
@@ -67,4 +68,13 @@ func (s *Server) OrderCancel(ctx context.Context, req *v1.OrderId) (*emptypb.Emp
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
+}
+
+// AllOrdersInfo это реализация grpc метода AllOrdersInfo
+func (s *Server) AllOrdersInfo(ctx context.Context, _ *emptypb.Empty) (*v1.AllOrdersInfoResponse, error) {
+	orders, err := s.service.GetAllOrders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return converter.OrdersAllOrdersInfoResponse(orders), nil
 }

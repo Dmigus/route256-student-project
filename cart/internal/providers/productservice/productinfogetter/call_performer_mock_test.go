@@ -19,8 +19,8 @@ type CallPerformerMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcPerform          func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) (err error)
-	inspectFuncPerform   func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any)
+	funcPerform          func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (gp1 *GetProductResponse, err error)
+	inspectFuncPerform   func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken)
 	afterPerformCounter  uint64
 	beforePerformCounter uint64
 	PerformMock          mCallPerformerMockPerform
@@ -61,19 +61,19 @@ type CallPerformerMockPerformExpectation struct {
 
 // CallPerformerMockPerformParams contains parameters of the callPerformer.Perform
 type CallPerformerMockPerformParams struct {
-	ctx      context.Context
-	method   string
-	reqBody  productservice.RequestWithSettableToken
-	respBody any
+	ctx     context.Context
+	method  string
+	reqBody productservice.RequestWithSettableToken
 }
 
 // CallPerformerMockPerformResults contains results of the callPerformer.Perform
 type CallPerformerMockPerformResults struct {
+	gp1 *GetProductResponse
 	err error
 }
 
 // Expect sets up expected params for callPerformer.Perform
-func (mmPerform *mCallPerformerMockPerform) Expect(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) *mCallPerformerMockPerform {
+func (mmPerform *mCallPerformerMockPerform) Expect(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) *mCallPerformerMockPerform {
 	if mmPerform.mock.funcPerform != nil {
 		mmPerform.mock.t.Fatalf("CallPerformerMock.Perform mock is already set by Set")
 	}
@@ -82,7 +82,7 @@ func (mmPerform *mCallPerformerMockPerform) Expect(ctx context.Context, method s
 		mmPerform.defaultExpectation = &CallPerformerMockPerformExpectation{}
 	}
 
-	mmPerform.defaultExpectation.params = &CallPerformerMockPerformParams{ctx, method, reqBody, respBody}
+	mmPerform.defaultExpectation.params = &CallPerformerMockPerformParams{ctx, method, reqBody}
 	for _, e := range mmPerform.expectations {
 		if minimock.Equal(e.params, mmPerform.defaultExpectation.params) {
 			mmPerform.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmPerform.defaultExpectation.params)
@@ -93,7 +93,7 @@ func (mmPerform *mCallPerformerMockPerform) Expect(ctx context.Context, method s
 }
 
 // Inspect accepts an inspector function that has same arguments as the callPerformer.Perform
-func (mmPerform *mCallPerformerMockPerform) Inspect(f func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any)) *mCallPerformerMockPerform {
+func (mmPerform *mCallPerformerMockPerform) Inspect(f func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken)) *mCallPerformerMockPerform {
 	if mmPerform.mock.inspectFuncPerform != nil {
 		mmPerform.mock.t.Fatalf("Inspect function is already set for CallPerformerMock.Perform")
 	}
@@ -104,7 +104,7 @@ func (mmPerform *mCallPerformerMockPerform) Inspect(f func(ctx context.Context, 
 }
 
 // Return sets up results that will be returned by callPerformer.Perform
-func (mmPerform *mCallPerformerMockPerform) Return(err error) *CallPerformerMock {
+func (mmPerform *mCallPerformerMockPerform) Return(gp1 *GetProductResponse, err error) *CallPerformerMock {
 	if mmPerform.mock.funcPerform != nil {
 		mmPerform.mock.t.Fatalf("CallPerformerMock.Perform mock is already set by Set")
 	}
@@ -112,12 +112,12 @@ func (mmPerform *mCallPerformerMockPerform) Return(err error) *CallPerformerMock
 	if mmPerform.defaultExpectation == nil {
 		mmPerform.defaultExpectation = &CallPerformerMockPerformExpectation{mock: mmPerform.mock}
 	}
-	mmPerform.defaultExpectation.results = &CallPerformerMockPerformResults{err}
+	mmPerform.defaultExpectation.results = &CallPerformerMockPerformResults{gp1, err}
 	return mmPerform.mock
 }
 
 // Set uses given function f to mock the callPerformer.Perform method
-func (mmPerform *mCallPerformerMockPerform) Set(f func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) (err error)) *CallPerformerMock {
+func (mmPerform *mCallPerformerMockPerform) Set(f func(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (gp1 *GetProductResponse, err error)) *CallPerformerMock {
 	if mmPerform.defaultExpectation != nil {
 		mmPerform.mock.t.Fatalf("Default expectation is already set for the callPerformer.Perform method")
 	}
@@ -132,35 +132,35 @@ func (mmPerform *mCallPerformerMockPerform) Set(f func(ctx context.Context, meth
 
 // When sets expectation for the callPerformer.Perform which will trigger the result defined by the following
 // Then helper
-func (mmPerform *mCallPerformerMockPerform) When(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) *CallPerformerMockPerformExpectation {
+func (mmPerform *mCallPerformerMockPerform) When(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) *CallPerformerMockPerformExpectation {
 	if mmPerform.mock.funcPerform != nil {
 		mmPerform.mock.t.Fatalf("CallPerformerMock.Perform mock is already set by Set")
 	}
 
 	expectation := &CallPerformerMockPerformExpectation{
 		mock:   mmPerform.mock,
-		params: &CallPerformerMockPerformParams{ctx, method, reqBody, respBody},
+		params: &CallPerformerMockPerformParams{ctx, method, reqBody},
 	}
 	mmPerform.expectations = append(mmPerform.expectations, expectation)
 	return expectation
 }
 
 // Then sets up callPerformer.Perform return parameters for the expectation previously defined by the When method
-func (e *CallPerformerMockPerformExpectation) Then(err error) *CallPerformerMock {
-	e.results = &CallPerformerMockPerformResults{err}
+func (e *CallPerformerMockPerformExpectation) Then(gp1 *GetProductResponse, err error) *CallPerformerMock {
+	e.results = &CallPerformerMockPerformResults{gp1, err}
 	return e.mock
 }
 
 // Perform implements callPerformer
-func (mmPerform *CallPerformerMock) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken, respBody any) (err error) {
+func (mmPerform *CallPerformerMock) Perform(ctx context.Context, method string, reqBody productservice.RequestWithSettableToken) (gp1 *GetProductResponse, err error) {
 	mm_atomic.AddUint64(&mmPerform.beforePerformCounter, 1)
 	defer mm_atomic.AddUint64(&mmPerform.afterPerformCounter, 1)
 
 	if mmPerform.inspectFuncPerform != nil {
-		mmPerform.inspectFuncPerform(ctx, method, reqBody, respBody)
+		mmPerform.inspectFuncPerform(ctx, method, reqBody)
 	}
 
-	mm_params := CallPerformerMockPerformParams{ctx, method, reqBody, respBody}
+	mm_params := CallPerformerMockPerformParams{ctx, method, reqBody}
 
 	// Record call args
 	mmPerform.PerformMock.mutex.Lock()
@@ -170,14 +170,14 @@ func (mmPerform *CallPerformerMock) Perform(ctx context.Context, method string, 
 	for _, e := range mmPerform.PerformMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
+			return e.results.gp1, e.results.err
 		}
 	}
 
 	if mmPerform.PerformMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPerform.PerformMock.defaultExpectation.Counter, 1)
 		mm_want := mmPerform.PerformMock.defaultExpectation.params
-		mm_got := CallPerformerMockPerformParams{ctx, method, reqBody, respBody}
+		mm_got := CallPerformerMockPerformParams{ctx, method, reqBody}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmPerform.t.Errorf("CallPerformerMock.Perform got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -186,12 +186,12 @@ func (mmPerform *CallPerformerMock) Perform(ctx context.Context, method string, 
 		if mm_results == nil {
 			mmPerform.t.Fatal("No results are set for the CallPerformerMock.Perform")
 		}
-		return (*mm_results).err
+		return (*mm_results).gp1, (*mm_results).err
 	}
 	if mmPerform.funcPerform != nil {
-		return mmPerform.funcPerform(ctx, method, reqBody, respBody)
+		return mmPerform.funcPerform(ctx, method, reqBody)
 	}
-	mmPerform.t.Fatalf("Unexpected call to CallPerformerMock.Perform. %v %v %v %v", ctx, method, reqBody, respBody)
+	mmPerform.t.Fatalf("Unexpected call to CallPerformerMock.Perform. %v %v %v", ctx, method, reqBody)
 	return
 }
 

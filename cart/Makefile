@@ -87,8 +87,8 @@ bin/protoc-gen-validate:
 
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate
 
-LOMS_PROTO_PATH := ../loms/api/loms
-LOMS_OUT_DIR := internal/clients/loms/protoc
+LOMS_PROTO_PATH := ../loms/api/loms/v1
+LOMS_OUT_DIR := internal/clients/loms/protoc/v1
 
 .PHONY: protoc-generate-loms-client
 protoc-generate-loms-client: .bin-deps .vendor-proto
@@ -104,5 +104,5 @@ protoc-generate-loms-client: .bin-deps .vendor-proto
 	--go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-validate=$(LOCAL_BIN)/protoc-gen-validate \
 	--validate_out="lang=go,paths=source_relative:$(LOMS_OUT_DIR)" \
-	$(LOMS_PROTO_PATH)/v*/*.proto
+	$(LOMS_PROTO_PATH)/loms.proto
 	go mod tidy
