@@ -1,8 +1,8 @@
 package converter
 
 import (
-	v1 "route256.ozon.ru/project/cart/internal/clients/loms/protoc/v1"
 	"route256.ozon.ru/project/cart/internal/models"
+	v1 "route256.ozon.ru/project/cart/internal/providers/loms/client/protoc/v1"
 )
 
 func ModelsToOrderCreateRequest(userId int64, items []models.CartItem) *v1.OrderCreateRequest {

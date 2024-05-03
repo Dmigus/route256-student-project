@@ -88,7 +88,7 @@ bin/protoc-gen-validate:
 .bin-deps: bin/protoc-gen-go bin/protoc-gen-go-grpc bin/protoc-gen-validate
 
 LOMS_PROTO_PATH := ../loms/api/loms/v1
-LOMS_OUT_DIR := internal/clients/loms/protoc/v1
+LOMS_OUT_DIR := internal/providers/loms/client/protoc/v1
 
 .PHONY: protoc-generate-loms-client
 protoc-generate-loms-client: .bin-deps .vendor-proto

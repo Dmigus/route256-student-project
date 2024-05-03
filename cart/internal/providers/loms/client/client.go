@@ -1,4 +1,4 @@
-package loms
+package client
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"route256.ozon.ru/project/cart/internal/clients/loms/converter"
-	v1 "route256.ozon.ru/project/cart/internal/clients/loms/protoc/v1"
 	"route256.ozon.ru/project/cart/internal/models"
+	"route256.ozon.ru/project/cart/internal/providers/loms/client/converter"
+	v1 "route256.ozon.ru/project/cart/internal/providers/loms/client/protoc/v1"
 )
 
 var (

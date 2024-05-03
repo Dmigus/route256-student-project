@@ -1,4 +1,4 @@
-package loms
+package client
 
 import (
 	"context"

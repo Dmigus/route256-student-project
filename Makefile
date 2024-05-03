@@ -5,7 +5,8 @@ build-all:
 
 .PHONY: run-storage
 run-storage:
-	docker-compose up -d --wait loms-postgres-master-1 \
+	docker-compose up -d --wait \
+		loms-postgres-master-1 \
 		loms-postgres-replica-1 \
 		loms-postgres-master-2 \
 		loms-postgres-replica-2 \
@@ -15,6 +16,7 @@ run-storage:
 		redis
 	cd loms && make migrate-postgres && make .setup-replication
 
+.PHONY: run-monitoring
 run-monitoring:
 	docker-compose up -d --wait jaeger prometheus grafana
 

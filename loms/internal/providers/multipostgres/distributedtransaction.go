@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/xid"
+	lop "github.com/samber/lo/parallel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -25,21 +26,24 @@ type (
 		conn TxBeginner
 		tr   pgx.Tx
 	}
-	distributedTransaction struct {
+	// distributedTransactionCoordinator координирует работу нескольких транзакций, используя двухфахный коммит
+	distributedTransactionCoordinator struct {
 		mu                 sync.Mutex
 		openedTransactions map[TxBeginner]pgx.Tx
 		preparedForCommit  map[pgx.Tx]string
 	}
 )
 
-func newDistributedTransaction() *distributedTransaction {
-	return &distributedTransaction{
+// newDistributedTransactionCoordinator возвращает новый distributedTransactionCoordinator
+func newDistributedTransactionCoordinator() *distributedTransactionCoordinator {
+	return &distributedTransactionCoordinator{
 		openedTransactions: make(map[TxBeginner]pgx.Tx),
 		preparedForCommit:  make(map[pgx.Tx]string),
 	}
 }
 
-func (tx *distributedTransaction) WithinTransaction(ctx context.Context, command command) (err error) {
+// WithinTransaction исполняет команду command в рамках распределённой транзакции
+func (tx *distributedTransactionCoordinator) WithinTransaction(ctx context.Context, command command) (err error) {
 	ctx, span := tracer.Start(ctx, "distributed transaction")
 	defer span.End()
 	span.SetStatus(codes.Error, "transaction was not committed")
@@ -64,7 +68,8 @@ func (tx *distributedTransaction) WithinTransaction(ctx context.Context, command
 	return err
 }
 
-func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner TxBeginner) (pgx.Tx, error) {
+// GetTransaction возвращает имеющуюся транзакцию, полученную от beginner или создаёт новую и возвращает её, если её не было
+func (tx *distributedTransactionCoordinator) GetTransaction(ctx context.Context, beginner TxBeginner) (pgx.Tx, error) {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
 	if transaction, ok := tx.openedTransactions[beginner]; ok {
@@ -78,7 +83,8 @@ func (tx *distributedTransaction) GetTransaction(ctx context.Context, beginner T
 	return transaction, nil
 }
 
-func (tx *distributedTransaction) rollback(ctx context.Context) error {
+// rollback производит откат всех открытых транзакций
+func (tx *distributedTransactionCoordinator) rollback(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
 		tx.mu.Lock()
 		transID, prepared := tx.preparedForCommit[transaction]
@@ -96,8 +102,8 @@ func (tx *distributedTransaction) rollback(ctx context.Context) error {
 	})
 }
 
-// prepareForCommit переводит все транзакции в prepared. Оставляет коннекты
-func (tx *distributedTransaction) prepareForCommit(ctx context.Context) error {
+// prepareForCommit переводит все транзакции в prepared. Не завершает открытые коннекты
+func (tx *distributedTransactionCoordinator) prepareForCommit(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, _ TxBeginner, transaction pgx.Tx) error {
 		transID := tx.createTransactionID()
 		_, err := transaction.Exec(ctx, "PREPARE TRANSACTION '"+transID+"'")
@@ -110,12 +116,13 @@ func (tx *distributedTransaction) prepareForCommit(ctx context.Context) error {
 	})
 }
 
-func (tx *distributedTransaction) createTransactionID() string {
+func (tx *distributedTransactionCoordinator) createTransactionID() string {
 	guid := xid.New()
 	return guid.String()
 }
 
-func (tx *distributedTransaction) commitPrepared(ctx context.Context) error {
+// commitPrepared выполняет коммит для подготовленных транзакций
+func (tx *distributedTransactionCoordinator) commitPrepared(ctx context.Context) error {
 	return tx.forEachTransaction(ctx, func(ctx context.Context, conn TxBeginner, transaction pgx.Tx) error {
 		transID := tx.preparedForCommit[transaction]
 		_, err := transaction.Exec(ctx, "COMMIT PREPARED '"+transID+"'")
@@ -128,7 +135,8 @@ func (tx *distributedTransaction) commitPrepared(ctx context.Context) error {
 	})
 }
 
-func (tx *distributedTransaction) excludeTransaction(conn TxBeginner) {
+// excludeTransaction удаляет информацию о транзакции из координатора
+func (tx *distributedTransactionCoordinator) excludeTransaction(conn TxBeginner) {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
 	tr, ok := tx.openedTransactions[conn]
@@ -138,22 +146,15 @@ func (tx *distributedTransaction) excludeTransaction(conn TxBeginner) {
 	}
 }
 
-func (tx *distributedTransaction) forEachTransaction(ctx context.Context, f func(context.Context, TxBeginner, pgx.Tx) error) error {
+func (tx *distributedTransactionCoordinator) forEachTransaction(ctx context.Context, f func(context.Context, TxBeginner, pgx.Tx) error) error {
 	transactions := tx.transactionsAsSlice()
-	errs := make([]error, len(transactions))
-	wg := sync.WaitGroup{}
-	wg.Add(len(transactions))
-	for ind, connectionWithTransaction := range transactions {
-		go func() {
-			defer wg.Done()
-			errs[ind] = f(ctx, connectionWithTransaction.conn, connectionWithTransaction.tr)
-		}()
-	}
-	wg.Wait()
+	errs := lop.Map(transactions, func(item connWithTr, _ int) error {
+		return f(ctx, item.conn, item.tr)
+	})
 	return errors.Join(errs...)
 }
 
-func (tx *distributedTransaction) transactionsAsSlice() []connWithTr {
+func (tx *distributedTransactionCoordinator) transactionsAsSlice() []connWithTr {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
 	trs := make([]connWithTr, 0, len(tx.openedTransactions))

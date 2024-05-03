@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	// TransactionCreator это объект, который умеет выдавать транзакцию из beginner. Реализуется типом distributedTransaction
+	// TransactionCreator это объект, который умеет выдавать транзакцию из beginner. Реализуется типом distributedTransactionCoordinator
 	TransactionCreator interface {
 		GetTransaction(ctx context.Context, beginner TxBeginner) (pgx.Tx, error)
 	}
@@ -56,7 +56,7 @@ func NewTxManager3[T1 any, T2 any, T3 any](creator1 func(TransactionCreator) T1,
 
 // WithinTransaction исполняет функцию f в одной распределённой транзакции
 func (txm *TxManager1[T]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider T) bool) error {
-	tr := newDistributedTransaction()
+	tr := newDistributedTransactionCoordinator()
 	command := &command1[T]{
 		provider: txm.creator(tr),
 		f:        f,
@@ -66,7 +66,7 @@ func (txm *TxManager1[T]) WithinTransaction(ctx context.Context, f func(ctx cont
 
 // WithinTransaction исполняет функцию f в одной распределённой транзакции
 func (txm *TxManager2[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2) bool) error {
-	tr := newDistributedTransaction()
+	tr := newDistributedTransactionCoordinator()
 	command := &command2[T1, T2]{
 		provider1: txm.creator1(tr),
 		provider2: txm.creator2(tr),
@@ -77,7 +77,7 @@ func (txm *TxManager2[T1, T2]) WithinTransaction(ctx context.Context, f func(ctx
 
 // WithinTransaction исполняет функцию f в одной распределённой транзакции
 func (txm *TxManager3[T1, T2, T3]) WithinTransaction(ctx context.Context, f func(ctx context.Context, provider1 T1, provider2 T2, provider3 T3) bool) error {
-	tr := newDistributedTransaction()
+	tr := newDistributedTransactionCoordinator()
 	command := &command3[T1, T2, T3]{
 		provider1: txm.creator1(tr),
 		provider2: txm.creator2(tr),
