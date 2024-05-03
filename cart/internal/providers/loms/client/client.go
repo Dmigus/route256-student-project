@@ -1,3 +1,4 @@
+// Package client содержит реализацию grpc клиента к сервису loms
 package client
 
 import (
