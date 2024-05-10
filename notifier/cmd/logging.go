@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/spf13/viper"
 	"log"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 func getLogger() *zap.Logger {
 	cfg := zap.NewProductionConfig()
-	level, err := zap.ParseAtomicLevel(cliFlags.loggerLevel)
+	level, err := zap.ParseAtomicLevel(viper.GetString("LoggerLevel"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -16,6 +16,7 @@ func CreateConnToPostgres(dsn string) (*pgxpool.Pool, error) {
 	}
 	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
 	conn, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	conn.Close()
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
