@@ -2,8 +2,9 @@ package handlingrunner
 
 import (
 	"context"
-	"github.com/IBM/sarama"
 	"sync"
+
+	"github.com/IBM/sarama"
 )
 
 const groupName = "notifier-group"

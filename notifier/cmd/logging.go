@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/spf13/viper"
 	"log"
 	"time"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

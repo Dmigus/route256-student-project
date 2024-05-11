@@ -3,12 +3,13 @@ package handlingrunner
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
+
 	"github.com/IBM/sarama"
 	"github.com/dnwe/otelsarama"
 	"go.uber.org/zap"
 	"route256.ozon.ru/project/notifier/internal/service"
-	"sync"
-	"sync/atomic"
 )
 
 // KafkaConsumerGroupRunner это структура, которая умеет запускать обработку событий, получаемых из кафки
@@ -85,6 +86,7 @@ func (k *KafkaConsumerGroupRunner) consumeCycle(ctx context.Context, handler *sa
 	}
 }
 
+// ConsumerGroupRunnerConfig это конфигурация для KafkaConsumerGroupRunner
 type ConsumerGroupRunnerConfig struct {
 	Brokers []string
 	Topic   string

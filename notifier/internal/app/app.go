@@ -53,6 +53,7 @@ func (a *App) Run(ctx context.Context) error {
 	return a.service.Run(ctx)
 }
 
+// Update обновляет конфигурацию приложения на лету
 func (a *App) Update(config Config) {
 	a.config = config
 	err := a.runner.Update(a.createRunnerConfig())

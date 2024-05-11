@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"route256.ozon.ru/project/notifier/internal/app"
@@ -14,10 +15,13 @@ func init() {
 	flag.String(configNameFlag, "./configs/local.json", "path to config file for notifier")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-	viper.BindPFlags(pflag.CommandLine)
+	err := viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		panic(fmt.Errorf("fatal error binding flags: %w", err))
+	}
 	configName := viper.GetString(configNameFlag)
 	viper.SetConfigFile(configName)
-	err := viper.ReadInConfig() // Find and read the config file
+	err = viper.ReadInConfig() // Find and read the config file
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}

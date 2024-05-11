@@ -3,11 +3,11 @@ package main
 
 import (
 	"context"
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
 	"os/signal"
 	"syscall"
 
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"route256.ozon.ru/project/notifier/internal/app"
 )
@@ -28,9 +28,9 @@ func main() {
 	}
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		if in.Has(fsnotify.Create) || in.Has(fsnotify.Write) {
-			newConfig, err := getNotifierConfig()
-			if err != nil {
-				logger.Error("", zap.Error(err))
+			newConfig, updateErr := getNotifierConfig()
+			if updateErr != nil {
+				logger.Error("", zap.Error(updateErr))
 			}
 			newConfig.Logger = notifierLogger
 			notifierApp.Update(newConfig)
