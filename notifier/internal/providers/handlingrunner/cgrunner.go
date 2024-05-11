@@ -43,12 +43,15 @@ func (k *KafkaConsumerGroupRunner) initFromConfig(config ConsumerGroupRunnerConf
 	return nil
 }
 
+// Update это блокируюший вызов, который обновляет KafkaConsumerGroupRunner в соответствии переданным config.
+// Если не удалось обновить с таким конфигом, предыдущая версия конфигурации остаётся работать
 func (k *KafkaConsumerGroupRunner) Update(config ConsumerGroupRunnerConfig) error {
 	return k.initFromConfig(config)
 }
 
 // Run обрабатывает поступающие сообщения переданным хандлером в рамках группы. Блокирующий.
 func (k *KafkaConsumerGroupRunner) Run(ctx context.Context, handler service.EventHandler) (err error) {
+	defer k.cg.Close()
 	k.mu.Lock()
 	saramaHandler := newConsumerGroupHandler(handler, k.logger)
 	k.mu.Unlock()
@@ -68,9 +71,9 @@ func (k *KafkaConsumerGroupRunner) consumeCycle(ctx context.Context, handler *sa
 	configVer := k.configVersion.Load()
 	topic := k.topic
 	k.mu.Unlock()
-	cg, ok := <-k.cg.GetInitializedCG(ctx)
+	cg := k.cg.GetInitializedCG(ctx)
 	// проверяем, что полученный cg всё ещё актуален
-	if ok == false || configVer != k.configVersion.Load() {
+	if cg == nil || configVer != k.configVersion.Load() {
 		return
 	}
 	err := cg.Consume(ctx, []string{topic}, *handler)

@@ -37,25 +37,17 @@ func (r *reconfigurableConsumerGroup) Init(addrs []string, config *sarama.Config
 	return nil
 }
 
-// GetInitializedCG возвращает канал для хранения одной ConsumerGroup, когда та будет инициализирована.
-// Если контекст будет отменён, канал будет закрыт без отправки в него ConsumerGroup
-func (r *reconfigurableConsumerGroup) GetInitializedCG(ctx context.Context) chan sarama.ConsumerGroup {
-	res := make(chan sarama.ConsumerGroup, 1)
+// GetInitializedCG возвращает ConsumerGroup, когда та будет инициализирована.
+// Если контекст будет отменён, вернётся nil
+func (r *reconfigurableConsumerGroup) GetInitializedCG(ctx context.Context) sarama.ConsumerGroup {
 	select {
+	case <-r.cgReady:
+		res := r.cg
+		r.cgReady <- struct{}{}
+		return res
 	case <-ctx.Done():
-		close(res)
-	default:
-		go func() {
-			defer close(res)
-			select {
-			case <-r.cgReady:
-				res <- r.cg
-				r.cgReady <- struct{}{}
-			case <-ctx.Done():
-			}
-		}()
+		return nil
 	}
-	return res
 }
 
 func (r *reconfigurableConsumerGroup) closeWhenReadyLocked() {
@@ -69,7 +61,8 @@ func (r *reconfigurableConsumerGroup) closeWhenReadyLocked() {
 	r.cg = nil
 }
 
-func (r *reconfigurableConsumerGroup) Shutdown() {
+// Close очищает инициализированную cg
+func (r *reconfigurableConsumerGroup) Close() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.closeWhenReadyLocked()
