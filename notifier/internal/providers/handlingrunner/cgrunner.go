@@ -32,6 +32,7 @@ func NewKafkaConsumerGroupRunner(config ConsumerGroupRunnerConfig) (*KafkaConsum
 }
 
 func (k *KafkaConsumerGroupRunner) initFromConfig(config ConsumerGroupRunnerConfig) error {
+	k.configVersion.Add(1)
 	err := k.cg.Init(config.Brokers, getConfig())
 	if err != nil {
 		return err
@@ -40,7 +41,6 @@ func (k *KafkaConsumerGroupRunner) initFromConfig(config ConsumerGroupRunnerConf
 	defer k.mu.Unlock()
 	k.logger = config.Logger
 	k.topic = config.Topic
-	k.configVersion.Add(1)
 	return nil
 }
 
