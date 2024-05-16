@@ -3,84 +3,79 @@ package handlingrunner
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
-
 	"github.com/IBM/sarama"
-	"github.com/dnwe/otelsarama"
 	"go.uber.org/zap"
 	"route256.ozon.ru/project/notifier/internal/service"
+	"sync"
 )
+
+const groupName = "notifier-group"
 
 // KafkaConsumerGroupRunner это структура, которая умеет запускать обработку событий, получаемых из кафки
 type KafkaConsumerGroupRunner struct {
-	configVersion atomic.Uint64
-	cg            *reconfigurableConsumerGroup
-	mu            sync.Mutex
-	logger        *zap.Logger
-	topic         string
+	mu     sync.Mutex
+	config ConsumerGroupRunnerConfig
+	cg     *underCounterCG
 }
 
 // NewKafkaConsumerGroupRunner возращает новый KafkaConsumerGroupRunner, сконфигурированный на брокеры brokers и топик topic
 func NewKafkaConsumerGroupRunner(config ConsumerGroupRunnerConfig) (*KafkaConsumerGroupRunner, error) {
-	runner := &KafkaConsumerGroupRunner{cg: newReconfigurableConsumerGroup()}
-	err := runner.initFromConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return runner, nil
+	return &KafkaConsumerGroupRunner{config: config}, nil
 }
 
-func (k *KafkaConsumerGroupRunner) initFromConfig(config ConsumerGroupRunnerConfig) error {
-	k.configVersion.Add(1)
-	err := k.cg.Init(config.Brokers, getConfig())
+// init предназначен для инициализации коннекта
+func (k *KafkaConsumerGroupRunner) init() error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	cg, err := sarama.NewConsumerGroup(k.config.Brokers, groupName, getConfig())
 	if err != nil {
 		return err
 	}
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	k.logger = config.Logger
-	k.topic = config.Topic
+	if k.cg != nil {
+		k.cg.CloseWhenIsNotUsed()
+	}
+	k.cg = newUnderCounterCG(cg)
 	return nil
 }
 
-// Update это блокируюший вызов, который обновляет KafkaConsumerGroupRunner в соответствии переданным config.
+// UpdateConfig это блокируюший вызов, который обновляет KafkaConsumerGroupRunner в соответствии переданным config.
 // Если не удалось обновить с таким конфигом, предыдущая версия конфигурации остаётся работать
-func (k *KafkaConsumerGroupRunner) Update(config ConsumerGroupRunnerConfig) error {
-	return k.initFromConfig(config)
+func (k *KafkaConsumerGroupRunner) UpdateConfig(config ConsumerGroupRunnerConfig) error {
+	k.mu.Lock()
+	k.config = config
+	k.mu.Unlock()
+	return k.init()
 }
 
 // Run обрабатывает поступающие сообщения переданным хандлером в рамках группы. Блокирующий.
 func (k *KafkaConsumerGroupRunner) Run(ctx context.Context, handler service.EventHandler) (err error) {
-	defer k.cg.Close()
-	k.mu.Lock()
-	saramaHandler := newConsumerGroupHandler(handler, k.logger)
-	k.mu.Unlock()
-	tracedHandler := otelsarama.WrapConsumerGroupHandler(saramaHandler)
+	err = k.init()
+	if err != nil {
+		return err
+	}
+	defer k.cg.CloseWhenIsNotUsed()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			k.consumeCycle(ctx, &tracedHandler)
+			k.consumeCycle(ctx, handler)
 		}
 	}
 }
 
-func (k *KafkaConsumerGroupRunner) consumeCycle(ctx context.Context, handler *sarama.ConsumerGroupHandler) {
+func (k *KafkaConsumerGroupRunner) consumeCycle(ctx context.Context, handler service.EventHandler) {
 	k.mu.Lock()
-	configVer := k.configVersion.Load()
-	topic := k.topic
+	saramaHandler := newConsumerGroupHandler(handler, k.config.Logger)
+	topic := k.config.Topic
+	cgWrapper := k.cg
+	cg := cgWrapper.GetForUsage()
+	defer cgWrapper.Done()
 	k.mu.Unlock()
-	cg := k.cg.GetInitializedCG(ctx)
-	// проверяем, что полученный cg всё ещё актуален
-	if cg == nil || configVer != k.configVersion.Load() {
-		return
-	}
-	err := cg.Consume(ctx, []string{topic}, *handler)
+	err := cg.Consume(ctx, []string{topic}, saramaHandler)
 	if err != nil {
 		k.mu.Lock()
-		logger := k.logger
+		logger := k.config.Logger
 		k.mu.Unlock()
 		logger.Error("error in consumer group session", zap.Error(err))
 	}

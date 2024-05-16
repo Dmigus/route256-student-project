@@ -56,7 +56,7 @@ func (a *App) Run(ctx context.Context) error {
 // Update обновляет конфигурацию приложения на лету
 func (a *App) Update(config Config) {
 	a.config = config
-	err := a.runner.Update(a.createRunnerConfig())
+	err := a.runner.UpdateConfig(a.createRunnerConfig())
 	if err != nil {
 		logger := a.config.Logger
 		if logger != nil {
